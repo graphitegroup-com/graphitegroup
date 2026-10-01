@@ -1,7 +1,7 @@
 import Image from "next/image";
-import Link from "next/link";
-import { FadeIn } from "./motion";
-import { site, type CaseStudy } from "@/content/site";
+import Link from "@/components/app-link";
+import { Mark } from "./mark";
+import type { CaseStudy } from "@/content/site";
 
 export function PageHeader({
   crumb,
@@ -23,7 +23,7 @@ export function PageHeader({
       <div className={`wrap grid gap-10 py-14 md:py-20 ${image ? "lg:grid-cols-2 lg:items-center" : ""}`}>
         <div className="max-w-2xl">
           <nav aria-label="Breadcrumb" className="text-sm text-slate">
-            <Link href="/" className="hover:text-accent">
+            <Link href="/" className="hover:text-highlight">
               Home
             </Link>
             <span className="px-2 text-mist">/</span>
@@ -83,11 +83,14 @@ export function CaseCard({ c, compact = false }: { c: CaseStudy; compact?: boole
   const digital = c.practice === "Digital";
   return (
     <article className="group flex h-full flex-col border border-line bg-white transition-shadow hover:shadow-[0_8px_30px_rgba(20,24,29,0.08)]">
-      <div className={`relative flex h-40 flex-col justify-between p-6 text-white ${digital ? "bg-accent" : "bg-graphite"}`}>
-        <span className="text-xs font-semibold tracking-[0.12em] uppercase opacity-80">
+      <div
+        className={`relative flex h-40 flex-col justify-between overflow-hidden p-6 text-white ${digital ? "bg-highlight" : "bg-graphite"}`}
+      >
+        <Mark className="pointer-events-none absolute -right-6 -bottom-10 h-40 w-40 text-white/[0.07] transition-transform duration-700 group-hover:scale-105" />
+        <span className="relative text-xs font-semibold tracking-[0.12em] uppercase opacity-80">
           {c.practice} · {c.sector}
         </span>
-        <span className="font-serif text-3xl">{c.client}</span>
+        <span className="relative font-serif text-3xl">{c.client}</span>
       </div>
       <div className="flex flex-1 flex-col p-6">
         <h3 className="h-card">{c.title}</h3>
@@ -108,28 +111,6 @@ export function CaseCard({ c, compact = false }: { c: CaseStudy; compact?: boole
   );
 }
 
-export function StatsRow() {
-  return (
-    <section className="border-y border-line bg-white py-16 md:py-20">
-      <div className="wrap">
-        <h2 className="h-section text-center">Graphite Group by the numbers</h2>
-        <dl className="mt-12 grid grid-cols-2 gap-y-10 md:grid-cols-4">
-          {site.stats.map((s, i) => (
-            <FadeIn
-              key={s.label}
-              delay={i * 0.05}
-              className={`px-4 text-center md:px-8 ${i > 0 ? "md:border-l md:border-line" : ""}`}
-            >
-              <dt className="sr-only">{s.label}</dt>
-              <dd className="font-serif text-5xl text-accent md:text-6xl">{s.value}</dd>
-              <dd className="mx-auto mt-3 max-w-[14rem] text-sm leading-relaxed text-slate">{s.label}</dd>
-            </FadeIn>
-          ))}
-        </dl>
-      </div>
-    </section>
-  );
-}
 
 export function CareersBand() {
   return (

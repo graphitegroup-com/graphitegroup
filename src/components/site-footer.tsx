@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/app-link";
 import { Logo } from "./mark";
 import { site } from "@/content/site";
 
@@ -24,7 +24,7 @@ const columns = [
     links: [
       { href: "/students", label: "Membership" },
       { href: "/students#recruiting", label: "Recruiting Calendar" },
-      { href: "/members", label: "Member Login" },
+      { href: "/login", label: "Member Login" },
     ],
   },
 ];

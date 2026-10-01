@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Static preview build output (scripts/build-preview.mjs).
+    ".next-preview/**",
+    "preview-dist/**",
   ]),
 ]);
 

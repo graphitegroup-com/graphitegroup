@@ -9,6 +9,7 @@ npm install
 npm run dev        # http://localhost:3000
 npm run build && npm start
 npm run lint
+npm run build:preview   # static copy in ./preview-dist (no server needed)
 ```
 
 ## Where things live
@@ -23,7 +24,7 @@ npm run lint
 | Logo (vector, 6 pieces) | `public/brand/mark.svg`, `src/components/mark.tsx` |
 | Design tokens | `src/app/globals.css` |
 
-Updating the site for a new semester is usually a change to `src/content/*` only.
+Exec can update most of the public site without code from the portal (**Login → Website**): numbers, Our People with headshots, case studies, recruiting status and testimonials. `src/content/*` holds the defaults those edits are layered on.
 
 ## Environment
 
@@ -33,8 +34,17 @@ Copy `.env.example` to `.env.local` and set it in Vercel too.
 
 ## Design notes
 
-Modeled on professional-services sites (BCG, L.E.K., Roland Berger, Analysis Group): two-tier header with a utility bar, photo hero with featured work overlapping it, white pages with thin rules, Source Serif headlines over Inter body text, one accent blue on a graphite neutral, near-square corners and only a subtle fade-in for motion. Shared building blocks live in `src/components/blocks.tsx`.
+Two public styles share every component, switched by `data-style` on `<html>` (tokens in `src/app/globals.css`):
+
+- **Classic**: white pages, Source Serif headlines, one blue accent (modeled on BCG, L.E.K., Analysis Group).
+- **Modern**: black and white, tight Inter Tight display type, square edges and cobalt highlights.
+
+A switcher in the bottom-right corner (`src/components/style-switcher.tsx`) lets reviewers compare them, and `?style=modern` works in links. Once a style is chosen, delete the switcher and the boot script in `src/app/layout.tsx`, and keep one token block.
+
+## Preview without a server
+
+`npm run build:preview` writes a static copy to `preview-dist/`, with every page as a top-level `.html` file and relative paths, plus an entry page from `scripts/preview-hub.html`. The contact form is inactive there and the portal uses sample data.
 
 ## Member portal
 
-See [`docs/PORTAL.md`](docs/PORTAL.md) for the plan.
+Built on sample data; see [`docs/PORTAL.md`](docs/PORTAL.md) for the modules and the steps to connect Supabase (`supabase/schema.sql`).

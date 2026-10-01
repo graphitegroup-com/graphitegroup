@@ -34,7 +34,6 @@ export const nav = [
 export const utilityNav = [
   { href: "/students", label: "Careers" },
   { href: "/contact", label: "Contact" },
-  { href: "/members", label: "Member Login" },
 ] as const;
 
 export const pillars = [

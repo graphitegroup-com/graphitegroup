@@ -1,0 +1,202 @@
+<title>Graphite Group Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Source+Serif+4:wght@400&display=swap" />
+<style>
+  /* Layout: one centered column of three choices, styled like the site's Classic theme. */
+  :root {
+    --bg: #f3f5f7;
+    --card: #ffffff;
+    --ink: #14181d;
+    --slate: #5a6472;
+    --line: #dfe3e8;
+    --accent: #1d5bb5;
+    --serif: "Source Serif 4", Georgia, serif;
+    --sans: "Inter", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161b;
+      --card: #1a2028;
+      --ink: #eef1f4;
+      --slate: #a3acb8;
+      --line: #2b333e;
+      --accent: #7aa7ec;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161b;
+    --card: #1a2028;
+    --ink: #eef1f4;
+    --slate: #a3acb8;
+    --line: #2b333e;
+    --accent: #7aa7ec;
+    color-scheme: dark;
+  }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 56px 72px;
+  }
+  .mark {
+    width: 40px;
+    height: 40px;
+    color: var(--ink);
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(30px, 5vw, 44px);
+    line-height: 1.1;
+    margin: 24px 0 10px;
+    text-wrap: balance;
+  }
+  .lede {
+    color: var(--slate);
+    max-width: 62ch;
+    margin: 0;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-top: 36px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--accent);
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+  .kicker {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .card h2 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 24px;
+    margin: 0;
+  }
+  .card p {
+    margin: 0;
+    color: var(--slate);
+    flex: 1;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 6px;
+    padding: 11px 16px;
+    background: var(--ink);
+    color: var(--bg);
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+    border: 0;
+    cursor: pointer;
+  }
+  .btn:hover {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn:focus-visible,
+  .link:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .notes {
+    margin-top: 40px;
+    border-top: 1px solid var(--line);
+    padding-top: 20px;
+    display: grid;
+    gap: 8px;
+    color: var(--slate);
+    font-size: 14px;
+  }
+  .link {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--accent);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+</style>
+
+<main class="wrap">
+  <svg class="mark" viewBox="0 0 100 100" fill="currentColor" aria-hidden="true">
+    <path d="M52.20 5.27 L89.84 27.00 L71.65 37.50 L52.20 26.27Z M57.86 52.00 L89.84 52.00 L89.84 70.46Z M87.64 74.27 L52.20 94.73 L52.20 73.73 L69.45 63.77Z M47.80 94.73 L12.36 74.27 L30.55 63.77 L47.80 73.73Z M10.16 70.46 L10.16 29.54 L28.35 40.04 L28.35 59.96Z M12.36 25.73 L47.80 5.27 L47.80 26.27 L30.55 36.23Z" />
+  </svg>
+  <h1>Graphite Group website preview</h1>
+  <p class="lede">
+    A working copy of the new graphitegroup.co before it moves to Vercel. Compare the two public styles, then log in to
+    the member portal. A switcher in the bottom-right corner of the site flips styles at any time.
+  </p>
+
+  <div class="grid">
+    <section class="card">
+      <span class="kicker">Public site · Style A</span>
+      <h2>Classic</h2>
+      <p>White pages, serif headlines and one blue accent, in the manner of established strategy firms.</p>
+      <a class="btn" href="home.html" data-style="classic">Open Classic →</a>
+    </section>
+    <section class="card">
+      <span class="kicker">Public site · Style B</span>
+      <h2>Modern</h2>
+      <p>Black and white with tight sans-serif display type, square edges and cobalt highlights.</p>
+      <a class="btn" href="home.html" data-style="modern">Open Modern →</a>
+    </section>
+    <section class="card">
+      <span class="kicker">Members</span>
+      <h2>Member portal</h2>
+      <p>Log in as the Managing Director, a Consultant or a new member to see each view. Exec can edit the public site from Website.</p>
+      <a class="btn" href="login.html">Go to login →</a>
+    </section>
+  </div>
+
+  <div class="notes">
+    <span>Everything in the portal is sample data with fictional people. Changes are saved only in your browser.</span>
+    <span>The contact form is inactive in this preview; it needs the live server.</span>
+    <span><button class="link" type="button" id="reset">Reset preview data</button> <span id="reset-status" aria-live="polite"></span></span>
+  </div>
+</main>
+
+<script>
+  document.querySelectorAll("a[data-style]").forEach(function (a) {
+    a.addEventListener("click", function () {
+      try {
+        localStorage.setItem("gg-style", a.getAttribute("data-style"));
+      } catch (e) {}
+    });
+  });
+  document.getElementById("reset").addEventListener("click", function () {
+    try {
+      ["gg-portal-data", "gg-site-content", "gg-session", "gg-style"].forEach(function (k) {
+        localStorage.removeItem(k);
+      });
+      document.getElementById("reset-status").textContent = "Done. Sample data restored.";
+    } catch (e) {
+      document.getElementById("reset-status").textContent = "Browser storage is unavailable here.";
+    }
+  });
+</script>

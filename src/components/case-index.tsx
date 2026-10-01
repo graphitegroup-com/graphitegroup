@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { CaseCard } from "./blocks";
-import { caseStudies } from "@/content/site";
+import { useSiteContent } from "@/lib/use-site-content";
 
 const filters = ["All", "Strategy", "Digital"] as const;
 
 export function CaseIndex() {
+  const { caseStudies } = useSiteContent();
   const [filter, setFilter] = useState<(typeof filters)[number]>("All");
   const items = caseStudies.filter((c) => filter === "All" || c.practice === filter);
 
@@ -22,11 +23,11 @@ export function CaseIndex() {
               aria-selected={filter === f}
               onClick={() => setFilter(f)}
               className={`relative pb-4 text-sm font-semibold transition-colors ${
-                filter === f ? "text-accent" : "text-slate hover:text-ink"
+                filter === f ? "text-highlight" : "text-slate hover:text-ink"
               }`}
             >
               {f === "All" ? "All work" : `Graphite ${f}`}
-              {filter === f && <span className="absolute inset-x-0 -bottom-px h-[3px] bg-accent" />}
+              {filter === f && <span className="absolute inset-x-0 -bottom-px h-[3px] bg-highlight" />}
             </button>
           ))}
         </div>

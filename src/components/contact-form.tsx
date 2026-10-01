@@ -6,7 +6,7 @@ import { site } from "@/content/site";
 type Status = { kind: "idle" } | { kind: "sending" } | { kind: "sent" } | { kind: "error"; message: string };
 
 const field =
-  "mt-2 w-full border border-line bg-white px-4 py-3 text-[0.95rem] text-ink placeholder:text-mist focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+  "mt-2 w-full border border-line bg-white px-4 py-3 text-[0.95rem] text-ink placeholder:text-mist focus:border-highlight focus:outline-none focus:ring-1 focus:ring-highlight";
 const labelCls = "block text-sm font-semibold";
 
 export function ContactForm() {
@@ -23,7 +23,7 @@ export function ContactForm() {
       });
       if (res.ok) return setStatus({ kind: "sent" });
       const body = await res.json().catch(() => ({}));
-      if (body.error === "not_configured" || body.error === "delivery_failed") {
+      if (res.status !== 422) {
         return setStatus({ kind: "error", message: "unavailable" });
       }
       setStatus({ kind: "error", message: body.error ?? "Something went wrong. Please try again." });
@@ -34,7 +34,7 @@ export function ContactForm() {
 
   if (status.kind === "sent") {
     return (
-      <div className="border-t-[3px] border-accent bg-cloud p-10">
+      <div className="border-t-[3px] border-highlight bg-cloud p-10">
         <h2 className="font-serif text-3xl">Thank you</h2>
         <p className="mt-3 text-lg leading-relaxed text-slate">
           We have received your message and will be in touch within a few business days.
@@ -105,7 +105,7 @@ export function ContactForm() {
             {status.message === "unavailable" ? (
               <>
                 Our form is temporarily unavailable. Please message us on{" "}
-                <a href={site.linkedin} className="text-accent underline">
+                <a href={site.linkedin} className="text-highlight underline">
                   LinkedIn
                 </a>
                 .

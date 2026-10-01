@@ -1,6 +1,34 @@
-# Member Portal: plan
+# Member Portal
 
 Goal: institutional memory that doesn't graduate. Everything members learn (who's in the org, how recruiting went, which alumni respond, what past projects looked like, what exec has to do each year) gets captured once and stays useful after people leave.
+
+## Status
+
+Built and clickable, running on sample data in the browser (`src/portal/store.tsx`). Log in from the **Login** button at the top right of the site. The login page offers three preview personas: Managing Director, Consultant and new Associate Consultant.
+
+| Module | Route | What it does |
+| --- | --- | --- |
+| Home | `/portal` | Action items generated from exec's recurring tasks, a recruiting snapshot, recent org activity and (for exec) items that need approval |
+| Directory | `/portal/directory` | Members and alumni with filters. Class standing and alumni status are computed from graduation year. Phone and student ID are visible only to the member and exec |
+| My Recruiting | `/portal/recruiting` | Personal application pipeline by stage, plus your coffee chats |
+| Companies | `/portal/companies` | Every firm members recruit with: interview reports by year, outcomes and discussion |
+| Network | `/portal/network` | Shared contacts with response rate, median response time, helpfulness and referrals, plus an outreach log |
+| Projects | `/portal/projects` | Searchable archive of past engagements and reusable templates |
+| Archive | `/portal/archive` | Link to the historical slide deck (set by exec) |
+| Profile | `/portal/profile` | Onboarding fields: name, emails, phone, school, student ID, grad year, practice, role, headshot |
+| Members & Roles (exec) | `/portal/admin` | Approve proposed promotions, edit roles and exec titles, add members, role history |
+| Recurring Tasks (exec) | `/portal/admin/tasks` | Yearly task calendar aimed at everyone, a role, or whoever holds an exec title |
+| Website (exec) | `/portal/admin/website` | Edit the public site with no code changes: stats, Our People roster with headshots (or sync it from the directory), case studies, recruiting status and testimonials |
+
+The automation rules are pure functions in `src/portal/logic.ts` (academic year, class standing, alumni cutoff, promotion proposals, task generation, response stats), so the same code can run in a nightly job.
+
+## Going live
+
+1. Create a Supabase project and run `supabase/schema.sql`.
+2. Enable Google sign-in and restrict it to 5C domains.
+3. Replace the browser store in `src/portal/store.tsx` and `src/lib/use-site-content.ts` with Supabase queries. The data shapes already match the tables.
+4. Move headshots to Supabase Storage (the preview stores them as resized data URLs).
+5. Add a daily scheduled job for alumni transitions, task generation on July 1 and promotion proposals each term.
 
 ## Stack
 
@@ -71,14 +99,6 @@ templates           title, category, source_project_id, file link, description
 ## Project archive ingestion
 
 With Drive access: crawl the projects folder, extract text from decks and docs, then generate a summary, sector, categories and deliverable types for each project. Exec reviews the results, then they're indexed for full-text search. Templates are tagged from the strongest past deliverables per category.
-
-## Build order
-
-1. Auth + onboarding profile + Directory, with automation for status and roles. (This replaces the Google Form roster.)
-2. My Recruiting + Companies + interview reports.
-3. Network + outreach tracking + response stats.
-4. Home tasks + exec task templates.
-5. Projects archive + Drive ingestion + templates.
 
 ## Decisions needed
 

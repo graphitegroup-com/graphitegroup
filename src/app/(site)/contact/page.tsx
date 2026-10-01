@@ -23,7 +23,7 @@ export default function ContactPage() {
             <ContactForm />
           </div>
           <aside className="space-y-10 lg:col-span-4 lg:col-start-9">
-            <div className="border-t-[3px] border-accent bg-cloud p-7">
+            <div className="border-t-[3px] border-highlight bg-cloud p-7">
               <h2 className="font-serif text-2xl">Project timing</h2>
               <dl className="mt-5 space-y-4 text-[0.95rem]">
                 <div className="flex justify-between gap-4 border-b border-line pb-4">
@@ -44,7 +44,7 @@ export default function ContactPage() {
               <h2 className="font-serif text-2xl">Students</h2>
               <p className="mt-3 leading-relaxed text-slate">
                 Interested in joining? Contact {recruiting.contact.name}, {recruiting.contact.title}, at{" "}
-                <a className="text-accent underline-offset-4 hover:underline" href={`mailto:${recruiting.contact.email}`}>
+                <a className="text-highlight underline-offset-4 hover:underline" href={`mailto:${recruiting.contact.email}`}>
                   {recruiting.contact.email}
                 </a>
                 .
@@ -53,11 +53,11 @@ export default function ContactPage() {
             <div>
               <h2 className="font-serif text-2xl">Elsewhere</h2>
               <p className="mt-3 leading-relaxed text-slate">
-                <a className="text-accent underline-offset-4 hover:underline" href={site.linkedin}>
+                <a className="text-highlight underline-offset-4 hover:underline" href={site.linkedin}>
                   LinkedIn
                 </a>{" "}
                 ·{" "}
-                <a className="text-accent underline-offset-4 hover:underline" href={site.instagram}>
+                <a className="text-highlight underline-offset-4 hover:underline" href={site.instagram}>
                   Instagram
                 </a>
               </p>

@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Link from "@/components/app-link";
+import { usePagePath } from "@/lib/use-page-path";
 import { useEffect, useState } from "react";
 import { Logo } from "./mark";
 import { nav, utilityNav } from "@/content/site";
 
 export function SiteHeader() {
-  const pathname = usePathname();
+  const pathname = usePagePath();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -65,19 +65,25 @@ export function SiteHeader() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`relative flex items-center px-4 text-[0.92rem] font-medium transition-colors hover:text-accent ${
-                  isActive(item.href) ? "text-accent" : "text-ink"
+                className={`relative flex items-center px-4 text-[0.92rem] font-medium transition-colors hover:text-highlight ${
+                  isActive(item.href) ? "text-highlight" : "text-ink"
                 }`}
               >
                 {item.label}
-                {isActive(item.href) && <span className="absolute inset-x-4 bottom-0 h-[3px] bg-accent" />}
+                {isActive(item.href) && <span className="absolute inset-x-4 bottom-0 h-[3px] bg-highlight" />}
               </Link>
             ))}
           </nav>
 
           <div className="flex items-center gap-3">
-            <Link href="/contact" className="btn btn-primary hidden sm:inline-flex">
+            <Link href="/contact" className="btn btn-outline hidden text-ink xl:inline-flex">
               Work with us
+            </Link>
+            <Link href="/login" className="btn btn-dark hidden sm:inline-flex">
+              <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden>
+                <path d="M10 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 1 1 14 0H3Z" />
+              </svg>
+              Login
             </Link>
             <button
               type="button"
@@ -107,7 +113,7 @@ export function SiteHeader() {
                   key={item.href}
                   href={item.href}
                   className={`flex items-center justify-between border-b border-line py-4 text-lg ${
-                    isActive(item.href) ? "text-accent" : "text-ink"
+                    isActive(item.href) ? "text-highlight" : "text-ink"
                   }`}
                 >
                   {item.label}
@@ -123,9 +129,14 @@ export function SiteHeader() {
                   </Link>
                 ))}
               </div>
-              <Link href="/contact" className="btn btn-primary mt-8 w-full justify-center">
-                Work with us
-              </Link>
+              <div className="mt-8 grid gap-3">
+                <Link href="/login" className="btn btn-dark w-full justify-center">
+                  Login
+                </Link>
+                <Link href="/contact" className="btn btn-outline w-full justify-center text-ink">
+                  Work with us
+                </Link>
+              </div>
             </nav>
           </div>
         )}

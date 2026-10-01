@@ -22,11 +22,11 @@ export default function ServicesPage() {
       <nav className="sticky top-[72px] z-30 border-b border-line bg-white" aria-label="Practices">
         <div className="wrap flex gap-8 text-sm font-semibold">
           {practices.map((p) => (
-            <a key={p.slug} href={`#${p.slug}`} className="py-4 text-slate hover:text-accent">
+            <a key={p.slug} href={`#${p.slug}`} className="py-4 text-slate hover:text-highlight">
               {p.name}
             </a>
           ))}
-          <a href="#approach" className="py-4 text-slate hover:text-accent">
+          <a href="#approach" className="py-4 text-slate hover:text-highlight">
             Our approach
           </a>
         </div>
@@ -91,7 +91,7 @@ export default function ServicesPage() {
           <ol className="mt-12 grid gap-px border border-line bg-line md:grid-cols-4">
             {engagement.map((e) => (
               <li key={e.step} className="bg-white p-7">
-                <span className="font-serif text-4xl text-accent">{e.step}</span>
+                <span className="font-serif text-4xl text-highlight">{e.step}</span>
                 <h3 className="mt-5 text-lg font-semibold">{e.title}</h3>
                 <p className="mt-2 leading-relaxed text-slate">{e.body}</p>
               </li>

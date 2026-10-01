@@ -1,27 +1,71 @@
 @import "tailwindcss";
 
 /*
-  Graphite Group design tokens.
-  Modeled on professional-services sites: white pages, one dark brand neutral,
-  one accent blue, serif headlines, near-square corners and very little motion.
+  Two public styles share every component. Components only reference these
+  tokens; [data-style] on <html> swaps the values.
+    classic: white pages, serif headlines, one blue (default)
+    modern:  black-and-white, tight sans display type, cobalt highlights
 */
-@theme {
-  --color-ink: #14181d;
-  --color-graphite: #1c2430;
-  --color-graphite-2: #273241;
-  --color-slate: #5a6472;
-  --color-mist: #8d96a3;
-  --color-line: #dfe3e8;
-  --color-cloud: #f3f5f7;
+@theme inline {
+  --color-ink: var(--t-ink);
+  --color-graphite: var(--t-graphite);
+  --color-graphite-2: var(--t-graphite-2);
+  --color-slate: var(--t-slate);
+  --color-mist: var(--t-mist);
+  --color-line: var(--t-line);
+  --color-cloud: var(--t-cloud);
   --color-paper: #ffffff;
-  --color-accent: #1d5bb5;
-  --color-accent-dark: #164a95;
+  --color-accent: var(--t-accent);
+  --color-accent-dark: var(--t-accent-dark);
+  --color-highlight: var(--t-highlight);
   --color-steel: #a7bee0;
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
+  --font-serif: var(--t-display), ui-serif, Georgia, serif;
+  --font-display-sans: var(--font-inter-tight), var(--font-inter), sans-serif;
 
-  --radius-sm: 2px;
+  --radius-sm: var(--t-radius);
+}
+
+:root,
+[data-style="classic"] {
+  --t-ink: #14181d;
+  --t-graphite: #1c2430;
+  --t-graphite-2: #273241;
+  --t-slate: #5a6472;
+  --t-mist: #8d96a3;
+  --t-line: #dfe3e8;
+  --t-cloud: #f3f5f7;
+  --t-accent: #1d5bb5;
+  --t-accent-dark: #164a95;
+  --t-highlight: #1d5bb5;
+  --t-radius: 2px;
+  --t-display: var(--font-source-serif);
+  --t-display-weight: 400;
+  --t-display-tracking: -0.015em;
+  --t-display-size: clamp(2.5rem, 5.2vw, 4.25rem);
+  --t-section-weight: 400;
+  --t-section-tracking: -0.01em;
+}
+
+[data-style="modern"] {
+  --t-ink: #0a0a0b;
+  --t-graphite: #0a0a0b;
+  --t-graphite-2: #1a1a1d;
+  --t-slate: #55575c;
+  --t-mist: #9a9ca1;
+  --t-line: #e4e4e2;
+  --t-cloud: #f4f4f1;
+  --t-accent: #0a0a0b;
+  --t-accent-dark: #2a2a2e;
+  --t-highlight: #2f55e4;
+  --t-radius: 0px;
+  --t-display: var(--font-inter-tight);
+  --t-display-weight: 600;
+  --t-display-tracking: -0.04em;
+  --t-display-size: clamp(2.9rem, 6.6vw, 5.75rem);
+  --t-section-weight: 600;
+  --t-section-tracking: -0.03em;
 }
 
 :root {
@@ -65,7 +109,7 @@ body {
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--color-accent);
+    color: var(--color-highlight);
   }
   .label-rule::before {
     content: "";
@@ -78,21 +122,22 @@ body {
 
   .h-display {
     font-family: var(--font-serif);
-    font-weight: 400;
-    letter-spacing: -0.015em;
-    line-height: 1.08;
-    font-size: clamp(2.5rem, 5.2vw, 4.25rem);
+    font-weight: var(--t-display-weight);
+    letter-spacing: var(--t-display-tracking);
+    line-height: 1.04;
+    font-size: var(--t-display-size);
   }
   .h-section {
     font-family: var(--font-serif);
-    font-weight: 400;
-    letter-spacing: -0.01em;
-    line-height: 1.15;
+    font-weight: var(--t-section-weight);
+    letter-spacing: var(--t-section-tracking);
+    line-height: 1.12;
     font-size: clamp(1.9rem, 3.4vw, 2.75rem);
   }
   .h-card {
     font-family: var(--font-serif);
-    font-weight: 400;
+    font-weight: var(--t-section-weight);
+    letter-spacing: var(--t-section-tracking);
     line-height: 1.25;
     font-size: 1.375rem;
   }
@@ -125,6 +170,13 @@ body {
   .btn-outline {
     border: 1px solid currentColor;
   }
+  .btn-dark {
+    background: var(--color-ink);
+    color: #fff;
+  }
+  .btn-dark:hover {
+    background: var(--color-graphite-2);
+  }
   .btn-outline:hover {
     background: var(--color-ink);
     border-color: var(--color-ink);
@@ -144,12 +196,34 @@ body {
     gap: 0.4rem;
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--color-accent);
+    color: var(--color-highlight);
   }
   .link-arrow:hover {
     text-decoration: underline;
     text-underline-offset: 4px;
   }
+}
+
+/* Modern style: font-serif utilities become the tight display sans. */
+[data-style="modern"] .font-serif {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+[data-style="modern"] .label-rule::before {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+[data-style="modern"] .hero-overlay {
+  background: linear-gradient(to top, rgb(10 10 11 / 0.92), rgb(10 10 11 / 0.35) 60%, rgb(10 10 11 / 0.2));
+}
+[data-style="modern"] .hero-inner .max-w-2xl {
+  max-width: 60rem;
+}
+[data-style="modern"] .hero-inner {
+  min-height: calc(100svh - 108px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
 }
 
 @media (prefers-reduced-motion: reduce) {
