@@ -1,96 +1,95 @@
 import Link from "next/link";
-import { Mark } from "./mark";
-import { nav, site } from "@/content/site";
+import { Logo } from "./mark";
+import { site } from "@/content/site";
+
+const columns = [
+  {
+    title: "What We Do",
+    links: [
+      { href: "/services#strategy", label: "Graphite Strategy" },
+      { href: "/services#digital", label: "Graphite Digital" },
+      { href: "/work", label: "Our Work" },
+    ],
+  },
+  {
+    title: "About",
+    links: [
+      { href: "/about", label: "Who We Are" },
+      { href: "/team", label: "Our People" },
+      { href: "/contact", label: "Contact" },
+    ],
+  },
+  {
+    title: "Join Us",
+    links: [
+      { href: "/students", label: "Membership" },
+      { href: "/students#recruiting", label: "Recruiting Calendar" },
+      { href: "/members", label: "Member Login" },
+    ],
+  },
+];
 
 export function SiteFooter() {
   return (
-    <footer className="bg-grid-ink relative overflow-hidden bg-ink text-paper">
-      <div className="container-page pt-24 pb-10">
-        <div className="grid gap-12 md:grid-cols-12">
-          <div className="md:col-span-5">
-            <p className="eyebrow text-graphite-400">The Claremont Colleges · Est. {site.founded}</p>
-            <p className="mt-5 max-w-sm text-2xl leading-snug tracking-tight text-paper/90">
-              Student consultants doing <span className="font-serif italic">professional</span> work, for clients who
-              want fresh, rigorous thinking.
+    <footer className="bg-graphite text-white">
+      <div className="wrap py-16">
+        <div className="grid gap-12 lg:grid-cols-12">
+          <div className="lg:col-span-4">
+            <Logo />
+            <p className="mt-6 max-w-xs text-sm leading-relaxed text-white/65">
+              The student consulting group of the Claremont Colleges and the consulting arm of the Randall Lewis Center
+              for Innovation & Entrepreneurship.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-8 text-sm md:col-span-7 md:grid-cols-3">
-            <div>
-              <p className="eyebrow mb-4 text-graphite-400">Explore</p>
-              <ul className="space-y-2.5">
-                <li>
-                  <Link href="/" className="text-paper/75 transition-colors hover:text-paper">
-                    Home
-                  </Link>
-                </li>
-                {nav.map((n) => (
-                  <li key={n.href}>
-                    <Link href={n.href} className="text-paper/75 transition-colors hover:text-paper">
-                      {n.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <p className="eyebrow mb-4 text-graphite-400">Practices</p>
-              <ul className="space-y-2.5">
-                <li>
-                  <Link href="/work#strategy" className="text-paper/75 transition-colors hover:text-paper">
-                    Strategy
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/work#digital" className="text-paper/75 transition-colors hover:text-paper">
-                    Digital
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/students#apply" className="text-paper/75 transition-colors hover:text-paper">
-                    Apply
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <p className="eyebrow mb-4 text-graphite-400">Elsewhere</p>
-              <ul className="space-y-2.5">
-                <li>
-                  <a href={site.linkedin} className="text-paper/75 transition-colors hover:text-paper">
-                    LinkedIn ↗
-                  </a>
-                </li>
-                <li>
-                  <a href={site.instagram} className="text-paper/75 transition-colors hover:text-paper">
-                    Instagram ↗
-                  </a>
-                </li>
-                <li>
-                  <Link href="/members" className="text-paper/75 transition-colors hover:text-paper">
-                    Member Portal
-                  </Link>
-                </li>
-              </ul>
-            </div>
+          <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 lg:col-span-6">
+            {columns.map((col) => (
+              <div key={col.title}>
+                <p className="text-sm font-semibold">{col.title}</p>
+                <ul className="mt-4 space-y-3 text-sm text-white/65">
+                  {col.links.map((l) => (
+                    <li key={l.href}>
+                      <Link href={l.href} className="transition-colors hover:text-white">
+                        {l.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div className="lg:col-span-2">
+            <p className="text-sm font-semibold">Follow</p>
+            <ul className="mt-4 flex gap-3">
+              <li>
+                <a
+                  href={site.linkedin}
+                  aria-label="Graphite Group on LinkedIn"
+                  className="flex h-9 w-9 items-center justify-center border border-white/25 transition-colors hover:bg-white hover:text-graphite"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
+                    <path d="M4.98 3.5A2.5 2.5 0 1 1 5 8.5a2.5 2.5 0 0 1-.02-5zM3 9.75h4v11H3zM9.5 9.75h3.8v1.5h.06c.53-1 1.83-2.06 3.77-2.06 4.03 0 4.77 2.65 4.77 6.1v5.46h-4v-4.84c0-1.16-.02-2.64-1.61-2.64-1.61 0-1.86 1.26-1.86 2.56v4.92h-4z" />
+                  </svg>
+                </a>
+              </li>
+              <li>
+                <a
+                  href={site.instagram}
+                  aria-label="Graphite Group on Instagram"
+                  className="flex h-9 w-9 items-center justify-center border border-white/25 transition-colors hover:bg-white hover:text-graphite"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <rect x="3" y="3" width="18" height="18" rx="5" />
+                    <circle cx="12" cy="12" r="4" />
+                    <circle cx="17.5" cy="6.5" r="0.6" fill="currentColor" />
+                  </svg>
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
-
-        <div className="mt-24 flex items-end gap-4 md:gap-8">
-          <Mark className="h-[14vw] w-[14vw] max-h-48 max-w-48 shrink-0 text-paper" />
-          <p
-            aria-hidden
-            className="text-sheen-light -mb-[0.06em] text-[18vw] leading-[0.8] font-semibold tracking-[-0.06em] md:text-[15.5vw] xl:text-[13.5rem]"
-          >
-            Graphite
-          </p>
-        </div>
-
-        <div className="mt-10 flex flex-col justify-between gap-3 border-t border-paper/10 pt-6 text-xs text-graphite-400 sm:flex-row">
-          <p>
-            © {new Date().getFullYear()} Graphite Group. Consulting arm of the Randall Lewis Center for Innovation &
-            Entrepreneurship.
-          </p>
-          <p className="font-mono">{site.tagline}</p>
+        <div className="mt-14 flex flex-col justify-between gap-3 border-t border-white/15 pt-6 text-xs text-white/50 sm:flex-row">
+          <p>© {new Date().getFullYear()} Graphite Group. All rights reserved.</p>
+          <p>Claremont, California</p>
         </div>
       </div>
     </footer>

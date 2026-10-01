@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
  * should also be written to a `leads` table.
  */
 
-const FIELDS = ["name", "email", "organization", "practice", "timing", "message"] as const;
+const FIELDS = ["firstName", "lastName", "email", "organization", "practice", "timing", "message"] as const;
 type Inquiry = Record<(typeof FIELDS)[number], string>;
 
 export async function POST(req: Request) {
@@ -26,7 +26,8 @@ export async function POST(req: Request) {
     FIELDS.map((f) => [f, typeof body[f] === "string" ? (body[f] as string).trim().slice(0, 4000) : ""]),
   ) as Inquiry;
 
-  if (!data.name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email) || data.message.length < 10) {
+  const name = `${data.firstName} ${data.lastName}`.trim();
+  if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email) || data.message.length < 10) {
     return NextResponse.json({ error: "Please add your name, a valid email and a short description." }, { status: 422 });
   }
 
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
   }
 
   const text = [
-    `*New client inquiry* from ${data.name} <${data.email}>`,
+    `*New client inquiry* from ${name} <${data.email}>`,
     data.organization && `*Organization:* ${data.organization}`,
     data.practice && `*Practice:* ${data.practice}`,
     data.timing && `*Timing:* ${data.timing}`,

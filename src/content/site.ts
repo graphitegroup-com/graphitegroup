@@ -14,20 +14,43 @@ export const site = {
   instagram: "https://www.instagram.com/thegraphitegroup/",
   instagramHandle: "@thegraphitegroup",
   linkedin: "https://www.linkedin.com/company/graphitegroup/",
+  email: "", // TODO: set a shared inbox; the contact form uses INQUIRY_WEBHOOK_URL meanwhile
   stats: [
-    { value: 77, suffix: "", label: "Projects delivered" },
-    { value: 9, suffix: "", label: "Sectors served" },
-    { value: 5, suffix: "", label: "Colleges, one team" },
-    { value: 90, suffix: "+", label: "Members & alumni" },
+    { value: "77", label: "Client engagements completed since 2018" },
+    { value: "9", label: "Sectors, from fintech and healthcare to real estate" },
+    { value: "5", label: "Claremont Colleges represented on every team" },
+    { value: "90+", label: "Members and alumni in the Graphite network" },
   ],
 } as const;
 
 export const nav = [
-  { href: "/work", label: "Work" },
-  { href: "/students", label: "For Students" },
-  { href: "/team", label: "Team" },
-  { href: "/#contact", label: "Contact" },
+  { href: "/services", label: "What We Do" },
+  { href: "/work", label: "Our Work" },
+  { href: "/about", label: "About" },
+  { href: "/team", label: "Our People" },
+  { href: "/students", label: "Join Us" },
 ] as const;
+
+export const utilityNav = [
+  { href: "/students", label: "Careers" },
+  { href: "/contact", label: "Contact" },
+  { href: "/members", label: "Member Login" },
+] as const;
+
+export const pillars = [
+  {
+    title: "Realize potential",
+    body: "Members get extensive professional development and hands-on experience with innovative organizations.",
+  },
+  {
+    title: "Foster community",
+    body: "A close-knit group whose relationships last well beyond campus. Once a member of Graphite, always a member.",
+  },
+  {
+    title: "Uphold integrity",
+    body: "Since 2018 we have held ourselves to high standards of honesty and accountability, with clients and with each other.",
+  },
+];
 
 export const clients = [
   "IBM",
@@ -41,19 +64,6 @@ export const clients = [
 ] as const;
 
 export const colleges = ["Pomona", "Claremont McKenna", "Harvey Mudd", "Scripps", "Pitzer"] as const;
-
-export const disciplines = [
-  "Economics",
-  "Computer Science",
-  "Data Science",
-  "Political Science",
-  "Engineering",
-  "Public Policy",
-  "Mathematics",
-  "PPE",
-  "Psychology",
-  "Design",
-] as const;
 
 export type Practice = {
   slug: "strategy" | "digital";

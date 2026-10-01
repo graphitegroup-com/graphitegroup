@@ -1,22 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Inter_Tight, Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import { Inter, Source_Serif_4 } from "next/font/google";
 import { site } from "@/content/site";
 import "./globals.css";
 
-const sans = Inter_Tight({ variable: "--font-inter-tight", subsets: ["latin"] });
-const serif = Instrument_Serif({
-  variable: "--font-instrument-serif",
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
-});
-const mono = JetBrains_Mono({ variable: "--font-jetbrains-mono", subsets: ["latin"] });
+const sans = Inter({ variable: "--font-inter", subsets: ["latin"] });
+const serif = Source_Serif_4({ variable: "--font-source-serif", subsets: ["latin"], weight: ["400", "500", "600"] });
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
-    default: "Graphite Group · Student consulting at the Claremont Colleges",
-    template: "%s · Graphite Group",
+    default: "Graphite Group | Consulting at the Claremont Colleges",
+    template: "%s | Graphite Group",
   },
   description: site.description,
   openGraph: {
@@ -30,12 +24,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0c0d0f",
+  themeColor: "#1c2430",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${sans.variable} ${serif.variable} ${mono.variable} antialiased`}>
+    <html lang="en" className={`${sans.variable} ${serif.variable} antialiased`}>
       <body className="min-h-dvh">{children}</body>
     </html>
   );

@@ -2,44 +2,26 @@
 
 /*
   Graphite Group design tokens.
-  Graphite is stacked sheets of hexagonal carbon: the palette is pencil lead on
-  warm paper, with the steel blue from the old site kept as the single accent.
+  Modeled on professional-services sites: white pages, one dark brand neutral,
+  one accent blue, serif headlines, near-square corners and very little motion.
 */
 @theme {
-  --color-ink: #0c0d0f;
-  --color-graphite-950: #0f1013;
-  --color-graphite-900: #15171b;
-  --color-graphite-800: #1e2126;
-  --color-graphite-700: #2b2f36;
-  --color-graphite-600: #3d424b;
-  --color-graphite-500: #5e6672;
-  --color-graphite-400: #858c97;
-  --color-graphite-300: #aab0b9;
-  --color-graphite-200: #cdd1d6;
-  --color-paper: #f3f1ec;
-  --color-paper-2: #e9e6df;
-  --color-paper-3: #dcd8cf;
+  --color-ink: #14181d;
+  --color-graphite: #1c2430;
+  --color-graphite-2: #273241;
+  --color-slate: #5a6472;
+  --color-mist: #8d96a3;
+  --color-line: #dfe3e8;
+  --color-cloud: #f3f5f7;
+  --color-paper: #ffffff;
+  --color-accent: #1d5bb5;
+  --color-accent-dark: #164a95;
   --color-steel: #a7bee0;
-  --color-steel-deep: #5b7bb0;
-  --color-steel-ink: #2f4a78;
 
-  --font-sans: var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-instrument-serif), ui-serif, Georgia, serif;
-  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
 
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
-
-  --animate-marquee: marquee var(--marquee-duration, 40s) linear infinite;
-
-  @keyframes marquee {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(-50%);
-    }
-  }
+  --radius-sm: 2px;
 }
 
 :root {
@@ -47,15 +29,14 @@
 }
 
 html {
-  background: var(--color-ink);
   -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  font-feature-settings: "ss01", "cv11";
   text-rendering: optimizeLegibility;
 }
 
@@ -64,83 +45,121 @@ body {
   color: var(--color-ink);
 }
 
-/* Lenis */
-html.lenis,
-html.lenis body {
-  height: auto;
-}
-.lenis.lenis-smooth {
-  scroll-behavior: auto !important;
-}
-.lenis.lenis-stopped {
-  overflow: hidden;
-}
-
 @layer components {
-  .container-page {
+  .wrap {
     width: 100%;
-    max-width: 88rem;
+    max-width: 80rem;
     margin-inline: auto;
     padding-inline: 1.25rem;
   }
   @media (min-width: 768px) {
-    .container-page {
+    .wrap {
       padding-inline: 2.5rem;
     }
   }
 
-  .eyebrow {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.14em;
+  /* Small uppercase section label with a short accent rule above it. */
+  .label {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
+    color: var(--color-accent);
   }
-
-  /* Faint graph-paper grid, the "pencil on paper" texture. */
-  .bg-grid-paper {
-    background-image:
-      linear-gradient(to right, rgb(12 13 15 / 0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(12 13 15 / 0.05) 1px, transparent 1px);
-    background-size: 48px 48px;
-  }
-  .bg-grid-ink {
-    background-image:
-      linear-gradient(to right, rgb(243 241 236 / 0.045) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(243 241 236 / 0.045) 1px, transparent 1px);
-    background-size: 48px 48px;
-  }
-
-  /* Graphite sheen: the slate-to-ink gradient headline from the old site, sharpened. */
-  .text-sheen {
-    background: linear-gradient(100deg, var(--color-steel-deep) 0%, var(--color-graphite-700) 45%, var(--color-ink) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-  .text-sheen-light {
-    background: linear-gradient(100deg, var(--color-steel) 0%, #e6ecf5 50%, var(--color-paper) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
-  .grain::after {
+  .label-rule::before {
     content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.07;
-    mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    display: block;
+    width: 2.5rem;
+    height: 3px;
+    margin-bottom: 1rem;
+    background: currentColor;
+  }
+
+  .h-display {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: -0.015em;
+    line-height: 1.08;
+    font-size: clamp(2.5rem, 5.2vw, 4.25rem);
+  }
+  .h-section {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+    font-size: clamp(1.9rem, 3.4vw, 2.75rem);
+  }
+  .h-card {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    line-height: 1.25;
+    font-size: 1.375rem;
+  }
+  .lede {
+    font-size: 1.125rem;
+    line-height: 1.7;
+    color: var(--color-slate);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.85rem 1.4rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    transition:
+      background-color 0.2s,
+      color 0.2s,
+      border-color 0.2s;
+  }
+  .btn-primary {
+    background: var(--color-accent);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background: var(--color-accent-dark);
+  }
+  .btn-outline {
+    border: 1px solid currentColor;
+  }
+  .btn-outline:hover {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    color: #fff;
+  }
+  .btn-light {
+    background: #fff;
+    color: var(--color-ink);
+  }
+  .btn-light:hover {
+    background: var(--color-cloud);
+  }
+
+  .link-arrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-accent);
+  }
+  .link-arrow:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   *,
   *::before,
   *::after {
     animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
 }
