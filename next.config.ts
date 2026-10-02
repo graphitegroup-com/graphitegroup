@@ -16,12 +16,14 @@ const nextConfig: NextConfig = preview
         return [
           { source: "/for-students", destination: "/students", permanent: true },
           { source: "/apply", destination: "/students#recruiting", permanent: true },
-          { source: "/for-clients", destination: "/services", permanent: true },
+          { source: "/for-clients", destination: "/clients", permanent: true },
           { source: "/about-us", destination: "/about", permanent: true },
           { source: "/members", destination: "/login", permanent: false },
-          { source: "/our-team", destination: "/team", permanent: true },
-          { source: "/our-work-strategy", destination: "/services#strategy", permanent: true },
-          { source: "/our-work-digital", destination: "/services#digital", permanent: true },
+          { source: "/our-team", destination: "/people", permanent: true },
+          { source: "/team", destination: "/people", permanent: true },
+          { source: "/services", destination: "/clients", permanent: true },
+          { source: "/our-work-strategy", destination: "/clients#strategy", permanent: true },
+          { source: "/our-work-digital", destination: "/clients#digital", permanent: true },
         ];
       },
     };

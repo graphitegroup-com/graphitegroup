@@ -1,71 +1,37 @@
 @import "tailwindcss";
 
 /*
-  Two public styles share every component. Components only reference these
-  tokens; [data-style] on <html> swaps the values.
-    classic: white pages, serif headlines, one blue (default)
-    modern:  black-and-white, tight sans display type, cobalt highlights
+  Graphite Group design system.
+  Editorial and typographic: large serif headlines, a quiet sans for reading,
+  photography, hairline rules and lists instead of boxes. Links are words, not
+  buttons; the only filled button is a form submit.
 */
-@theme inline {
-  --color-ink: var(--t-ink);
-  --color-graphite: var(--t-graphite);
-  --color-graphite-2: var(--t-graphite-2);
-  --color-slate: var(--t-slate);
-  --color-mist: var(--t-mist);
-  --color-line: var(--t-line);
-  --color-cloud: var(--t-cloud);
+@theme {
+  --color-ink: #15171a;
+  --color-ink-2: #3b3f46;
+  --color-muted: #6c7079;
+  --color-faint: #a2a6ad;
+  --color-line: #e3e2de;
+  --color-stone: #f4f3f0;
   --color-paper: #ffffff;
-  --color-accent: var(--t-accent);
-  --color-accent-dark: var(--t-accent-dark);
-  --color-highlight: var(--t-highlight);
-  --color-steel: #a7bee0;
+  --color-night: #111315;
+  --color-accent: #23466f;
+  --color-accent-soft: #e9eef5;
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--t-display), ui-serif, Georgia, serif;
-  --font-display-sans: var(--font-inter-tight), var(--font-inter), sans-serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-newsreader), ui-serif, Georgia, serif;
 
-  --radius-sm: var(--t-radius);
-}
-
-:root,
-[data-style="classic"] {
-  --t-ink: #14181d;
-  --t-graphite: #1c2430;
-  --t-graphite-2: #273241;
-  --t-slate: #5a6472;
-  --t-mist: #8d96a3;
-  --t-line: #dfe3e8;
-  --t-cloud: #f3f5f7;
-  --t-accent: #1d5bb5;
-  --t-accent-dark: #164a95;
-  --t-highlight: #1d5bb5;
-  --t-radius: 2px;
-  --t-display: var(--font-source-serif);
-  --t-display-weight: 400;
-  --t-display-tracking: -0.015em;
-  --t-display-size: clamp(2.5rem, 5.2vw, 4.25rem);
-  --t-section-weight: 400;
-  --t-section-tracking: -0.01em;
-}
-
-[data-style="modern"] {
-  --t-ink: #0a0a0b;
-  --t-graphite: #0a0a0b;
-  --t-graphite-2: #1a1a1d;
-  --t-slate: #55575c;
-  --t-mist: #9a9ca1;
-  --t-line: #e4e4e2;
-  --t-cloud: #f4f4f1;
-  --t-accent: #0a0a0b;
-  --t-accent-dark: #2a2a2e;
-  --t-highlight: #2f55e4;
-  --t-radius: 0px;
-  --t-display: var(--font-inter-tight);
-  --t-display-weight: 600;
-  --t-display-tracking: -0.04em;
-  --t-display-size: clamp(2.9rem, 6.6vw, 5.75rem);
-  --t-section-weight: 600;
-  --t-section-tracking: -0.03em;
+  --text-display-xl: clamp(3rem, 7.2vw, 6.75rem);
+  --text-display-xl--line-height: 0.98;
+  --text-display-xl--letter-spacing: -0.025em;
+  --text-display-l: clamp(2.25rem, 4.6vw, 4.25rem);
+  --text-display-l--line-height: 1.03;
+  --text-display-l--letter-spacing: -0.02em;
+  --text-display-m: clamp(1.75rem, 3vw, 2.6rem);
+  --text-display-m--line-height: 1.1;
+  --text-display-m--letter-spacing: -0.015em;
+  --text-display-s: 1.5rem;
+  --text-display-s--line-height: 1.2;
 }
 
 :root {
@@ -81,18 +47,32 @@ body {
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background: var(--color-steel);
+  background: var(--color-accent-soft);
   color: var(--color-ink);
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
 }
 
 @layer components {
   .wrap {
     width: 100%;
-    max-width: 80rem;
+    max-width: 84rem;
     margin-inline: auto;
     padding-inline: 1.25rem;
   }
@@ -102,128 +82,70 @@ body {
     }
   }
 
-  /* Small uppercase section label with a short accent rule above it. */
-  .label {
-    display: inline-block;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--color-highlight);
-  }
-  .label-rule::before {
-    content: "";
-    display: block;
-    width: 2.5rem;
-    height: 3px;
-    margin-bottom: 1rem;
-    background: currentColor;
+  .display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-optical-sizing: auto;
   }
 
-  .h-display {
-    font-family: var(--font-serif);
-    font-weight: var(--t-display-weight);
-    letter-spacing: var(--t-display-tracking);
-    line-height: 1.04;
-    font-size: var(--t-display-size);
-  }
-  .h-section {
-    font-family: var(--font-serif);
-    font-weight: var(--t-section-weight);
-    letter-spacing: var(--t-section-tracking);
-    line-height: 1.12;
-    font-size: clamp(1.9rem, 3.4vw, 2.75rem);
-  }
-  .h-card {
-    font-family: var(--font-serif);
-    font-weight: var(--t-section-weight);
-    letter-spacing: var(--t-section-tracking);
-    line-height: 1.25;
-    font-size: 1.375rem;
-  }
-  .lede {
-    font-size: 1.125rem;
-    line-height: 1.7;
-    color: var(--color-slate);
-  }
-
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.85rem 1.4rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    border-radius: var(--radius-sm);
+  /* A word that is a link: hairline underline that tightens on hover. */
+  .link-u {
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.3em;
+    text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
     transition:
-      background-color 0.2s,
-      color 0.2s,
-      border-color 0.2s;
+      text-decoration-color 0.2s,
+      color 0.2s;
   }
-  .btn-primary {
-    background: var(--color-accent);
-    color: #fff;
-  }
-  .btn-primary:hover {
-    background: var(--color-accent-dark);
-  }
-  .btn-outline {
-    border: 1px solid currentColor;
-  }
-  .btn-dark {
-    background: var(--color-ink);
-    color: #fff;
-  }
-  .btn-dark:hover {
-    background: var(--color-graphite-2);
-  }
-  .btn-outline:hover {
-    background: var(--color-ink);
-    border-color: var(--color-ink);
-    color: #fff;
-  }
-  .btn-light {
-    background: #fff;
-    color: var(--color-ink);
-  }
-  .btn-light:hover {
-    background: var(--color-cloud);
+  .link-u:hover {
+    text-decoration-color: currentColor;
   }
 
-  .link-arrow {
+  /* Call to action: sentence, then an arrow that moves on hover. */
+  .cta {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5em;
+    font-weight: 500;
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 0.2em;
+    transition: color 0.2s;
+  }
+  .cta::after {
+    content: "→";
+    transition: transform 0.25s ease;
+  }
+  .cta:hover::after {
+    transform: translateX(0.25em);
+  }
+
+  /* The only filled button: form submits and the login action. */
+  .btn-solid {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--color-highlight);
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 0.8rem 1.4rem;
+    background: var(--color-ink);
+    color: #fff;
+    font-weight: 500;
+    font-size: 0.9375rem;
+    transition: background-color 0.2s;
   }
-  .link-arrow:hover {
-    text-decoration: underline;
-    text-underline-offset: 4px;
+  .btn-solid:hover {
+    background: var(--color-ink-2);
   }
-}
+  .btn-solid:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
 
-/* Modern style: font-serif utilities become the tight display sans. */
-[data-style="modern"] .font-serif {
-  font-weight: 600;
-  letter-spacing: -0.03em;
-}
-[data-style="modern"] .label-rule::before {
-  width: 0.5rem;
-  height: 0.5rem;
-}
-[data-style="modern"] .hero-overlay {
-  background: linear-gradient(to top, rgb(10 10 11 / 0.92), rgb(10 10 11 / 0.35) 60%, rgb(10 10 11 / 0.2));
-}
-[data-style="modern"] .hero-inner .max-w-2xl {
-  max-width: 60rem;
-}
-[data-style="modern"] .hero-inner {
-  min-height: calc(100svh - 108px);
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
+  /* Section heading in the left column of the editorial grid. */
+  .kicker {
+    font-size: 0.9375rem;
+    color: var(--color-muted);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

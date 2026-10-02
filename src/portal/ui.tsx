@@ -1,26 +1,60 @@
 "use client";
 
+import Link from "@/components/app-link";
 import { useEffect, type ReactNode } from "react";
 
-export function PageTitle({ title, sub, actions }: { title: string; sub?: string; actions?: ReactNode }) {
+/*
+  Portal UI kit. Same language as the public site: white canvas, hairline rules
+  instead of boxes, serif page titles, quiet sans for everything else.
+*/
+
+export function PageTitle({
+  title,
+  sub,
+  actions,
+  back,
+}: {
+  title: ReactNode;
+  sub?: ReactNode;
+  actions?: ReactNode;
+  back?: { href: string; label: string };
+}) {
   return (
-    <div className="mb-8 flex flex-col justify-between gap-4 border-b border-line pb-6 md:flex-row md:items-end">
-      <div>
-        <h1 className="font-serif text-3xl md:text-4xl">{title}</h1>
-        {sub && <p className="mt-2 max-w-2xl text-slate">{sub}</p>}
+    <header className="mb-10">
+      {back && (
+        <Link href={back.href} className="mb-5 inline-block text-sm text-muted hover:text-ink">
+          ← {back.label}
+        </Link>
+      )}
+      <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
+        <div className="min-w-0">
+          <h1 className="display text-[2.4rem] leading-[1.05] md:text-[2.75rem]">{title}</h1>
+          {sub && <div className="mt-3 max-w-2xl leading-relaxed text-muted">{sub}</div>}
+        </div>
+        {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
-    </div>
+    </header>
   );
 }
 
-export function Card({ children, className = "", title, action }: { children: ReactNode; className?: string; title?: string; action?: ReactNode }) {
+/** A titled region separated by a rule. Not a box. */
+export function Card({
+  children,
+  className = "",
+  title,
+  action,
+}: {
+  children: ReactNode;
+  className?: string;
+  title?: ReactNode;
+  action?: ReactNode;
+}) {
   return (
-    <section className={`border border-line bg-white ${className}`}>
+    <section className={`min-w-0 ${className}`}>
       {title && (
-        <header className="flex items-center justify-between border-b border-line px-5 py-3.5">
-          <h2 className="text-sm font-semibold">{title}</h2>
-          {action}
+        <header className="flex items-baseline justify-between gap-4 border-b border-ink pb-3">
+          <h2 className="font-medium">{title}</h2>
+          {action && <div className="text-sm">{action}</div>}
         </header>
       )}
       {children}
@@ -28,17 +62,23 @@ export function Card({ children, className = "", title, action }: { children: Re
   );
 }
 
-const badgeTones = {
-  gray: "bg-cloud text-slate",
-  blue: "bg-[#e8effa] text-[#1d4f9c]",
-  green: "bg-[#e6f4ec] text-[#1d6b3f]",
-  amber: "bg-[#fdf3e1] text-[#8a5a00]",
-  red: "bg-[#fbe9e9] text-[#9b2c2c]",
-  dark: "bg-ink text-white",
+const dots = {
+  gray: "bg-faint",
+  blue: "bg-accent",
+  green: "bg-[#2f7d4f]",
+  amber: "bg-[#c08419]",
+  red: "bg-[#b4423c]",
+  dark: "bg-ink",
 } as const;
 
-export function Badge({ children, tone = "gray" }: { children: ReactNode; tone?: keyof typeof badgeTones }) {
-  return <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium whitespace-nowrap ${badgeTones[tone]}`}>{children}</span>;
+/** Status marker: a small dot and a word. */
+export function Badge({ children, tone = "gray" }: { children: ReactNode; tone?: keyof typeof dots }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[0.8125rem] whitespace-nowrap text-ink-2">
+      <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${dots[tone]}`} />
+      {children}
+    </span>
+  );
 }
 
 export function Button({
@@ -48,15 +88,16 @@ export function Button({
   ...rest
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" | "danger" }) {
   const v = {
-    primary: "bg-accent text-white hover:bg-accent-dark",
-    secondary: "border border-line bg-white text-ink hover:bg-cloud",
-    ghost: "text-slate hover:bg-cloud hover:text-ink",
-    danger: "border border-[#e7b4b4] bg-white text-[#9b2c2c] hover:bg-[#fbe9e9]",
+    primary: "bg-ink text-white hover:bg-ink-2",
+    secondary: "border border-line bg-paper text-ink hover:border-ink",
+    ghost: "text-muted hover:text-ink",
+    danger: "text-[#b4423c] hover:underline",
   }[variant];
+  const pad = variant === "ghost" || variant === "danger" ? "px-1.5 py-1.5" : "px-4 py-2";
   return (
     <button
       type="button"
-      className={`inline-flex items-center justify-center gap-2 px-3.5 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${v} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${pad} ${v} ${className}`}
       {...rest}
     >
       {children}
@@ -65,14 +106,14 @@ export function Button({
 }
 
 const fieldCls =
-  "w-full border border-line bg-white px-3 py-2 text-sm text-ink placeholder:text-mist focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+  "w-full border border-line bg-paper px-3 py-2 text-[0.9375rem] text-ink placeholder:text-faint focus:border-ink focus:outline-none";
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <label className="block text-sm">
-      <span className="mb-1.5 block font-medium">{label}</span>
+      <span className="mb-1.5 block text-muted">{label}</span>
       {children}
-      {hint && <span className="mt-1 block text-xs text-slate">{hint}</span>}
+      {hint && <span className="mt-1.5 block text-xs text-muted">{hint}</span>}
     </label>
   );
 }
@@ -97,18 +138,19 @@ export function Select({ options, ...props }: React.SelectHTMLAttributes<HTMLSel
   );
 }
 
+/** A figure with its label, no box. */
 export function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: string }) {
   return (
-    <div className="border border-line bg-white p-5">
-      <p className="text-xs font-semibold tracking-[0.08em] text-slate uppercase">{label}</p>
-      <p className="mt-2 font-serif text-3xl">{value}</p>
-      {sub && <p className="mt-1 text-xs text-slate">{sub}</p>}
+    <div className="border-t border-line pt-4">
+      <p className="text-sm text-muted">{label}</p>
+      <p className="display mt-1 text-[2.25rem] leading-none tabular-nums">{value}</p>
+      {sub && <p className="mt-2 text-xs text-muted">{sub}</p>}
     </div>
   );
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return <div className="px-5 py-10 text-center text-sm text-slate">{children}</div>;
+  return <div className="py-10 text-sm text-muted">{children}</div>;
 }
 
 export function Drawer({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
@@ -121,15 +163,15 @@ export function Drawer({ open, onClose, title, children }: { open: boolean; onCl
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label={title}>
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-ink/30" onClick={onClose} />
-      <div className="relative flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
-        <header className="flex items-center justify-between border-b border-line px-6 py-4">
-          <h2 className="font-serif text-xl">{title}</h2>
+      <button type="button" aria-label="Close" className="absolute inset-0 bg-ink/25" onClick={onClose} />
+      <div className="relative flex h-full w-full max-w-lg flex-col bg-paper shadow-[0_0_60px_rgba(0,0,0,0.12)]">
+        <header className="flex items-center justify-between px-7 pt-7 pb-4">
+          <h2 className="display text-[1.75rem] leading-tight">{title}</h2>
           <Button variant="ghost" onClick={onClose} aria-label="Close">
-            ✕
+            Close
           </Button>
         </header>
-        <div className="flex-1 overflow-y-auto px-6 py-6">{children}</div>
+        <div className="flex-1 overflow-y-auto px-7 pb-10">{children}</div>
       </div>
     </div>
   );
@@ -143,12 +185,12 @@ export function Avatar({ name, photo, size = 36 }: { name: string; photo?: strin
     .join("");
   return photo ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={photo} alt="" width={size} height={size} className="shrink-0 object-cover" style={{ width: size, height: size }} />
+    <img src={photo} alt="" width={size} height={size} className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />
   ) : (
     <span
       aria-hidden
-      className="flex shrink-0 items-center justify-center bg-cloud text-xs font-semibold text-slate"
-      style={{ width: size, height: size }}
+      className="flex shrink-0 items-center justify-center rounded-full bg-stone font-medium text-muted"
+      style={{ width: size, height: size, fontSize: Math.max(10, size * 0.34) }}
     >
       {initials}
     </span>
@@ -156,8 +198,8 @@ export function Avatar({ name, photo, size = 36 }: { name: string; photo?: strin
 }
 
 export function Th({ children, className = "" }: { children?: ReactNode; className?: string }) {
-  return <th className={`px-4 py-2.5 text-left text-xs font-semibold tracking-[0.06em] text-slate uppercase ${className}`}>{children}</th>;
+  return <th className={`py-2.5 pr-4 text-left text-[0.8125rem] font-normal text-muted ${className}`}>{children}</th>;
 }
 export function Td({ children, className = "" }: { children?: ReactNode; className?: string }) {
-  return <td className={`px-4 py-3 align-top ${className}`}>{children}</td>;
+  return <td className={`py-3.5 pr-4 align-top ${className}`}>{children}</td>;
 }

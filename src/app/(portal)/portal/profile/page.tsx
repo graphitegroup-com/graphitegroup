@@ -112,7 +112,7 @@ function ProfileForm({ me, exec, onSave }: { me: Member; exec: boolean; onSave: 
                 type="file"
                 accept="image/*"
                 onChange={onPhoto}
-                className="block text-sm text-slate file:mr-3 file:border file:border-line file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-ink hover:file:bg-cloud"
+                className="block text-sm text-muted file:mr-3 file:border file:border-line file:bg-paper file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ink hover:file:bg-stone"
               />
               {form.photo && (
                 <Button variant="secondary" onClick={removePhoto}>
@@ -120,7 +120,7 @@ function ProfileForm({ me, exec, onSave }: { me: Member; exec: boolean; onSave: 
                 </Button>
               )}
               {photoError && <p className="text-xs text-[#9b2c2c]">{photoError}</p>}
-              <p className="text-xs text-slate">Resized to 480px before saving.</p>
+              <p className="text-xs text-muted">Resized to 480px before saving.</p>
             </div>
           </div>
 
@@ -202,7 +202,7 @@ function ProfileForm({ me, exec, onSave }: { me: Member; exec: boolean; onSave: 
             Show me on the public website
           </label>
 
-          <p className="border-l-2 border-accent bg-cloud px-4 py-3 text-sm text-slate">
+          <p className="border-l-2 border-accent bg-stone px-4 py-3 text-sm text-muted">
             Phone and student ID are visible only to you and the executive board. They are used for payroll.
           </p>
 

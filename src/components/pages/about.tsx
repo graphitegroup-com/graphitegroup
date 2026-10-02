@@ -1,113 +1,73 @@
 "use client";
 
-import Image from "next/image";
 import Link from "@/components/app-link";
-import { CareersBand, PageHeader } from "../blocks";
-import { StatsRow } from "../stats-row";
-import { FadeIn } from "../motion";
+import { Figures, PageIntro, Photo, Section } from "../editorial";
 import { colleges, pillars } from "@/content/site";
 import { useSiteContent } from "@/lib/use-site-content";
 
 export function AboutPageView() {
-  const { groups, roster } = useSiteContent();
+  const { groups, roster, stats } = useSiteContent();
   const exec = roster.filter((m) => m.group === groups[0]);
+
   return (
     <>
-      <PageHeader
-        crumb="About"
-        title="Who we are"
-        intro="Established in 2018, Graphite Group is a Claremont-based consulting group dedicated to lasting outcomes for its clients, members and the wider community."
-        image="/images/campus.jpg"
-        imageAlt="The Claremont Colleges with the San Gabriel Mountains behind"
+      <PageIntro
+        title="About Graphite"
+        intro="Established in 2018, Graphite Group is a Claremont-based consulting group dedicated to lasting outcomes for its clients, its members and the wider community."
       />
+      <div className="wrap">
+        <Photo src="/images/campus.jpg" alt="The Claremont Colleges with the San Gabriel Mountains" caption="The Claremont Colleges." ratio="aspect-[16/9] md:aspect-[21/9]" priority />
+      </div>
 
-      <section className="bg-white py-20 md:py-28">
-        <div className="wrap grid gap-12 lg:grid-cols-12">
-          <div className="lg:col-span-5">
-            <p className="label label-rule">Our story</p>
-            <h2 className="h-section">Liberal arts in action</h2>
-          </div>
-          <div className="space-y-6 text-lg leading-relaxed text-slate lg:col-span-7">
-            <p>
-              Graphite gives driven students the chance to engage deeply with business strategy, creating value for the
-              organizations we work with while building collaborative and career-defining experience.
-            </p>
-            <p>
-              Our members study across disciplines at {colleges.slice(0, -1).join(", ")} and {colleges.at(-1)}. That range
-              is the point: clients get several perspectives on a single question, and members put their education to work
-              on real problems.
-            </p>
-            <p>
-              Over the years we have built a national network of clients, experts and alumni, and it keeps growing with
-              every class.
-            </p>
-          </div>
+      <Section heading="Liberal arts in action">
+        <p className="display max-w-3xl text-display-m">
+          Clients get several perspectives on a single question. Members put their education to work on real problems.
+        </p>
+        <div className="mt-8 max-w-2xl space-y-5 leading-relaxed text-ink-2">
+          <p>
+            Our members study across disciplines at {colleges.slice(0, -1).join(", ")} and {colleges.at(-1)}: economics,
+            computer science, data science, engineering, public policy and more.
+          </p>
+          <p>Over the years we have built a national network of clients, experts and alumni, and it grows with every class.</p>
         </div>
-      </section>
+      </Section>
 
-      <section className="bg-cloud py-20 md:py-28">
-        <div className="wrap">
-          <p className="label label-rule">Our mission</p>
-          <h2 className="h-section max-w-2xl">Guided by three pillars</h2>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {pillars.map((p, i) => (
-              <FadeIn key={p.title} delay={i * 0.05} className="border-t-[3px] border-highlight bg-white p-8">
-                <h3 className="font-serif text-2xl">{p.title}</h3>
-                <p className="mt-3 leading-relaxed text-slate">{p.body}</p>
-              </FadeIn>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-white py-20 md:py-28">
-        <div className="wrap grid gap-12 lg:grid-cols-2 lg:items-center">
-          <div className="relative aspect-[3/2] overflow-hidden">
-            <Image
-              src="/images/group-lawn.jpg"
-              alt="Graphite Group at the Kravis Center"
-              fill
-              sizes="(min-width:1024px) 50vw, 100vw"
-              className="object-cover"
-            />
-          </div>
-          <div>
-            <p className="label label-rule">Institutional partner</p>
-            <h2 className="h-section">The Randall Lewis Center for Innovation & Entrepreneurship</h2>
-            <p className="lede mt-5">
-              The RLCIE is the premier entrepreneurship institute of the Claremont Colleges. As its consulting arm,
-              Graphite puts students on real business problems for real clients, building the problem-solving and
-              leadership skills the institute exists to develop.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <StatsRow />
-
-      <section className="bg-white py-20 md:py-28">
-        <div className="wrap">
-          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-            <div>
-              <p className="label label-rule">Leadership</p>
-              <h2 className="h-section">Executive board</h2>
+      <Section heading="What guides us" tone="stone">
+        <dl className="border-t border-ink">
+          {pillars.map((p) => (
+            <div key={p.title} className="grid gap-2 border-b border-line py-6 md:grid-cols-9 md:gap-6">
+              <dt className="display text-display-s md:col-span-3">{p.title}</dt>
+              <dd className="leading-relaxed text-ink-2 md:col-span-6">{p.body}</dd>
             </div>
-            <Link href="/team" className="link-arrow">
-              Meet the full team <span aria-hidden>→</span>
-            </Link>
-          </div>
-          <ul className="mt-10 grid gap-px border border-line bg-line sm:grid-cols-2 lg:grid-cols-5">
-            {exec.map((m) => (
-              <li key={m.id} className="bg-white p-6">
-                <p className="font-serif text-xl">{m.name}</p>
-                <p className="mt-1 text-sm text-slate">{m.role}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+          ))}
+        </dl>
+      </Section>
 
-      <CareersBand />
+      <Section heading="Institutional partner">
+        <p className="display max-w-3xl text-display-m">The consulting arm of the Randall Lewis Center for Innovation & Entrepreneurship.</p>
+        <p className="mt-6 max-w-2xl leading-relaxed text-ink-2">
+          The RLCIE is the premier entrepreneurship institute of the Claremont Colleges. Graphite carries its mission into the
+          field, putting students on real business problems for real clients.
+        </p>
+      </Section>
+
+      <Section heading="In numbers" tone="night">
+        <Figures items={stats} dark />
+      </Section>
+
+      <Section heading="Leadership">
+        <ul className="border-t border-ink">
+          {exec.map((m) => (
+            <li key={m.id} className="flex flex-wrap items-baseline justify-between gap-x-6 border-b border-line py-4">
+              <span className="display text-display-s">{m.name}</span>
+              <span className="text-muted">{m.role}</span>
+            </li>
+          ))}
+        </ul>
+        <Link href="/people" className="cta mt-10">
+          Everyone at Graphite
+        </Link>
+      </Section>
     </>
   );
 }

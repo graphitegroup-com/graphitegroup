@@ -68,12 +68,12 @@ function AdminMembers() {
         ) : (
           <ul className="divide-y divide-line">
             {promos.map((p) => (
-              <li key={p.member.id} className="flex flex-wrap items-center justify-between gap-4 px-5 py-3.5">
+              <li key={p.member.id} className="flex flex-wrap items-center justify-between gap-4 py-3.5">
                 <span className="flex items-center gap-3">
                   <Avatar name={fullName(p.member)} photo={p.member.photo} />
                   <span>
                     <span className="block font-medium">{fullName(p.member)}</span>
-                    <span className="text-sm text-slate">
+                    <span className="text-sm text-muted">
                       {p.member.role} → <strong className="text-ink">{p.to}</strong> · {p.reason}
                     </span>
                   </span>
@@ -94,7 +94,7 @@ function AdminMembers() {
         className="mt-6"
         title="Roster"
         action={
-          <label className="flex items-center gap-2 text-xs text-slate">
+          <label className="flex items-center gap-2 text-xs text-muted">
             <input type="checkbox" checked={showAlumni} onChange={(e) => setShowAlumni(e.target.checked)} />
             Include alumni
           </label>
@@ -116,13 +116,13 @@ function AdminMembers() {
               {roster.map((m) => {
                 const standing = classStanding(m.gradYear, now);
                 return (
-                  <tr key={m.id} className={standing === "Alumni" ? "bg-cloud/50" : ""}>
+                  <tr key={m.id} className={standing === "Alumni" ? "bg-stone" : ""}>
                     <Td>
                       <span className="flex items-center gap-3">
                         <Avatar name={fullName(m)} photo={m.photo} size={30} />
                         <span>
                           <span className="block font-medium">{fullName(m)}</span>
-                          <span className="text-xs text-slate">{m.schoolEmail}</span>
+                          <span className="text-xs text-muted">{m.schoolEmail}</span>
                         </span>
                       </span>
                     </Td>
@@ -150,7 +150,7 @@ function AdminMembers() {
                           className="!w-64"
                         />
                       ) : (
-                        <span className="text-slate">-</span>
+                        <span className="text-muted">-</span>
                       )}
                     </Td>
                     <Td>
@@ -179,9 +179,9 @@ function AdminMembers() {
               const m = data.members.find((x) => x.id === c.memberId);
               const by = data.members.find((x) => x.id === c.approvedBy);
               return (
-                <li key={c.id} className="px-5 py-3">
+                <li key={c.id} className="py-3">
                   <strong>{m ? fullName(m) : "Member"}</strong>: {c.from} → {c.to}{" "}
-                  <span className="text-slate">
+                  <span className="text-muted">
                     ({c.term[0] === "F" ? "Fall" : "Spring"} {c.term.slice(1)}, approved by {by ? fullName(by) : "exec"})
                   </span>
                 </li>
@@ -196,7 +196,7 @@ function AdminMembers() {
         onClose={() => setInviteOpen(false)}
         onAdd={(m) => update((d) => ({ ...d, members: [...d.members, m] }))}
       />
-      <p className="mt-6 text-xs text-slate">Last checked {fmtDate(now)}.</p>
+      <p className="mt-6 text-xs text-muted">Last checked {fmtDate(now)}.</p>
     </div>
   );
 }
@@ -225,7 +225,7 @@ function InviteDrawer({ open, onClose, onAdd }: { open: boolean; onClose: () => 
           onClose();
         }}
       >
-        <p className="text-sm text-slate">They&apos;ll be asked to complete the rest of their profile at first login.</p>
+        <p className="text-sm text-muted">They&apos;ll be asked to complete the rest of their profile at first login.</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="First name">
             <Input value={f.firstName} onChange={(e) => setF({ ...f, firstName: e.target.value })} required />

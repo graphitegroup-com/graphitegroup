@@ -64,7 +64,7 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
         sub="Edit what the public site shows. Changes go live when you publish; no code changes needed."
         actions={
           <>
-            <Link href="/" target="_blank" className="inline-flex items-center px-3.5 py-2 text-sm font-semibold text-accent hover:underline">
+            <Link href="/" target="_blank" className="link-u px-2 text-sm text-ink-2">
               View site ↗
             </Link>
             <Button variant="secondary" disabled={!dirty} onClick={() => setC(initial)}>
@@ -91,19 +91,19 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
             role="tab"
             aria-selected={tab === t}
             onClick={() => setTab(t)}
-            className={`relative pb-3 text-sm font-semibold whitespace-nowrap ${tab === t ? "text-accent" : "text-slate hover:text-ink"}`}
+            className={`relative pb-3 text-[0.9375rem] whitespace-nowrap ${tab === t ? "text-ink" : "text-muted hover:text-ink"}`}
           >
             {t}
-            {tab === t && <span className="absolute inset-x-0 -bottom-px h-[3px] bg-accent" />}
+            {tab === t && <span className="absolute inset-x-0 -bottom-px h-px bg-ink" />}
           </button>
         ))}
       </div>
 
       {tab === "Numbers" && (
-        <Card title="By the numbers" action={<span className="text-xs text-slate">Shown on Home and About</span>}>
-          <div className="grid gap-5 p-5 md:grid-cols-2">
+        <Card title="By the numbers" action={<span className="text-xs text-muted">Shown on Home and About</span>}>
+          <div className="grid gap-5 py-5 md:grid-cols-2">
             {c.stats.map((s, i) => (
-              <div key={i} className="grid grid-cols-3 gap-3 border border-line p-4">
+              <div key={i} className="grid grid-cols-3 gap-3 border-t border-line pt-4">
                 <Field label="Value">
                   <Input value={s.value} onChange={(e) => setC({ ...c, stats: c.stats.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)) })} />
                 </Field>
@@ -115,7 +115,7 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
               </div>
             ))}
           </div>
-          <p className="border-t border-line px-5 py-3 text-xs text-slate">
+          <p className="border-t border-line py-3 text-xs text-muted">
             For reference: {data.projects.length} projects are in the portal archive and {data.members.filter((m) => !isAlum(m)).length} members are active.
           </p>
         </Card>
@@ -125,8 +125,8 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
       {tab === "Case studies" && <CasesEditor c={c} setC={setC} />}
 
       {tab === "Recruiting" && (
-        <Card title="Recruiting status" action={<span className="text-xs text-slate">Shown on Join Us</span>}>
-          <div className="grid gap-5 p-5 md:grid-cols-2">
+        <Card title="Recruiting status" action={<span className="text-xs text-muted">Shown on Join Us</span>}>
+          <div className="grid gap-5 py-5 md:grid-cols-2">
             <Field label="Applications">
               <Select
                 options={["Open", "Closed"]}
@@ -163,7 +163,7 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
         >
           <ul className="divide-y divide-line">
             {c.testimonials.map((t, i) => (
-              <li key={i} className="grid gap-3 p-5 md:grid-cols-12">
+              <li key={i} className="grid gap-3 py-5 md:grid-cols-12">
                 <div className="md:col-span-7">
                   <Field label={i === 0 ? "Quote (featured on Home)" : "Quote"}>
                     <Textarea value={t.quote} onChange={(e) => setC({ ...c, testimonials: c.testimonials.map((x, j) => (j === i ? { ...x, quote: e.target.value } : x)) })} />
@@ -188,7 +188,7 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
         </Card>
       )}
 
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-5 text-xs text-slate">
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-5 text-xs text-muted">
         <span>{initial.updatedAt ? `Last published ${fmtDate(initial.updatedAt)}` : "Showing the default content."}</span>
         <button
           type="button"
@@ -229,7 +229,7 @@ function PeopleEditor({ c, setC, onSync }: { c: SiteContent; setC: (c: SiteConte
           </span>
         }
       >
-        <p className="border-b border-line px-5 py-3 text-xs text-slate">
+        <p className="border-b border-line py-3 text-xs text-muted">
           Sync pulls everyone active in the directory with their role and headshot, so new members and promotions reach the site in one step.
         </p>
         {error && <p className="px-5 pt-3 text-sm text-[#9b2c2c]">{error}</p>}
@@ -237,13 +237,13 @@ function PeopleEditor({ c, setC, onSync }: { c: SiteContent; setC: (c: SiteConte
           const people = c.roster.filter((m) => m.group === g);
           return (
             <Section key={g} title={`${g} (${people.length})`}>
-              {people.length === 0 && <p className="text-sm text-slate">Nobody in this group.</p>}
+              {people.length === 0 && <p className="text-sm text-muted">Nobody in this group.</p>}
               <ul className="grid gap-3 md:grid-cols-2">
                 {people.map((m) => (
-                  <li key={m.id} className="flex gap-4 border border-line p-3">
+                  <li key={m.id} className="flex gap-4 border-t border-line pt-4">
                     <div className="shrink-0 text-center">
                       <Avatar name={m.name} photo={m.photo} size={72} />
-                      <label className="mt-2 block cursor-pointer text-xs font-semibold text-accent hover:underline">
+                      <label className="link-u mt-2 block cursor-pointer text-xs text-ink-2">
                         {m.photo ? "Replace" : "Add photo"}
                         <input
                           type="file"
@@ -262,7 +262,7 @@ function PeopleEditor({ c, setC, onSync }: { c: SiteContent; setC: (c: SiteConte
                         />
                       </label>
                       {m.photo && (
-                        <button type="button" className="text-xs text-slate hover:text-ink" onClick={() => setMember(m.id, { photo: undefined })}>
+                        <button type="button" className="text-xs text-muted hover:text-ink" onClick={() => setMember(m.id, { photo: undefined })}>
                           Remove
                         </button>
                       )}
@@ -314,7 +314,7 @@ function CasesEditor({ c, setC }: { c: SiteContent; setC: (c: SiteContent) => vo
         </Button>
       }
     >
-      <p className="border-b border-line px-5 py-3 text-xs text-slate">The first three are featured on the homepage. All appear on Our Work.</p>
+      <p className="border-b border-line py-3 text-xs text-muted">The first three are featured on the homepage. All appear on Our Work.</p>
       <ul className="divide-y divide-line">
         {c.caseStudies.map((cs, i) => (
           <li key={i} className="p-5">
@@ -368,8 +368,8 @@ function CasesEditor({ c, setC }: { c: SiteContent; setC: (c: SiteContent) => vo
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="border-t border-line p-5 first-of-type:border-t-0">
-      <h3 className="mb-3 text-xs font-semibold tracking-[0.08em] text-slate uppercase">{title}</h3>
+    <div className="border-t border-line py-5 first-of-type:border-t-0">
+      <h3 className="mb-3 text-sm text-muted">{title}</h3>
       {children}
     </div>
   );

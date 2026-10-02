@@ -42,9 +42,9 @@ export default function ArchivePage() {
           )
         }
       >
-        <div className="px-5 py-4">
+        <div className="py-4">
           {noteDraft === null ? (
-            <p className="text-sm text-slate">{archiveNote || "No description yet."}</p>
+            <p className="text-sm text-muted">{archiveNote || "No description yet."}</p>
           ) : (
             <div className="space-y-3">
               <Textarea aria-label="Archive note" value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} />
@@ -61,15 +61,15 @@ export default function ArchivePage() {
 
       <Card>
         <div className="flex flex-col items-center justify-center gap-5 px-6 py-16 text-center md:py-24">
-          <p className="text-xs font-semibold tracking-[0.12em] text-slate uppercase">Graphite Group</p>
-          <h2 className="font-serif text-3xl md:text-4xl">The Graphite archive</h2>
+          <p className="text-sm text-muted">Graphite Group</p>
+          <h2 className="display text-3xl md:text-4xl">The Graphite archive</h2>
           {archiveDeckUrl && urlDraft === null ? (
             <>
               <a
                 href={archiveDeckUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center justify-center bg-accent px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-accent-dark"
+                className="btn-solid"
               >
                 Open the Graphite archive deck
               </a>
@@ -81,7 +81,7 @@ export default function ArchivePage() {
             </>
           ) : (
             <>
-              {!archiveDeckUrl && <p className="text-sm text-slate">No archive deck linked yet.</p>}
+              {!archiveDeckUrl && <p className="text-sm text-muted">No archive deck linked yet.</p>}
               {exec ? (
                 <form
                   className="flex w-full max-w-xl flex-col gap-3 text-left sm:flex-row sm:items-end"
@@ -112,7 +112,7 @@ export default function ArchivePage() {
                   </div>
                 </form>
               ) : (
-                <p className="text-xs text-slate">The executive board will add the link soon.</p>
+                <p className="text-xs text-muted">The executive board will add the link soon.</p>
               )}
             </>
           )}

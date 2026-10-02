@@ -24,16 +24,11 @@ export const site = {
 } as const;
 
 export const nav = [
-  { href: "/services", label: "What We Do" },
+  { href: "/clients", label: "For Clients" },
+  { href: "/students", label: "For Students" },
   { href: "/work", label: "Our Work" },
-  { href: "/about", label: "About" },
-  { href: "/team", label: "Our People" },
-  { href: "/students", label: "Join Us" },
-] as const;
-
-export const utilityNav = [
-  { href: "/students", label: "Careers" },
-  { href: "/contact", label: "Contact" },
+  { href: "/life", label: "Life at Graphite" },
+  { href: "/people", label: "People" },
 ] as const;
 
 export const pillars = [

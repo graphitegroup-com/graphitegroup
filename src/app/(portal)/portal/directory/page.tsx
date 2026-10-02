@@ -27,7 +27,7 @@ function StandingBadge({ gradYear }: { gradYear: number }) {
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid grid-cols-[140px_1fr] gap-3 border-b border-line py-2.5 text-sm last:border-b-0">
-      <dt className="text-slate">{label}</dt>
+      <dt className="text-muted">{label}</dt>
       <dd className="min-w-0 break-words">{children}</dd>
     </div>
   );
@@ -87,7 +87,7 @@ export default function DirectoryPage() {
     <div>
       <PageTitle title="Directory" sub="Every Graphite member and alum across the five Claremont Colleges." />
 
-      <div className="mb-6 flex flex-wrap gap-0 border border-line bg-white" role="tablist">
+      <div className="mb-6 flex flex-wrap gap-6 text-[0.9375rem]" role="tablist">
         {VIEWS.map((v) => (
           <button
             key={v.key}
@@ -95,35 +95,32 @@ export default function DirectoryPage() {
             role="tab"
             aria-selected={view === v.key}
             onClick={() => setView(v.key)}
-            className={`px-4 py-2 text-sm font-semibold transition-colors ${
-              view === v.key ? "bg-accent text-white" : "text-slate hover:bg-cloud hover:text-ink"
-            }`}
+            className={view === v.key ? "text-ink underline decoration-1 underline-offset-[0.45em]" : "text-muted hover:text-ink"}
           >
             {v.label}
           </button>
         ))}
       </div>
 
-      <div className="mb-6 flex flex-wrap items-center gap-2 text-sm">
-        <span className="border border-line bg-white px-3 py-1.5">
-          <span className="font-semibold">{activeCount}</span> <span className="text-slate">active members</span>
+      <div className="mb-8 flex flex-wrap items-baseline gap-x-5 gap-y-2 text-sm">
+        <span>
+          <span className="font-medium">{activeCount}</span> <span className="text-muted">active members:</span>
         </span>
         {bySchool.map((s) => (
           <button
             key={s.school}
             type="button"
             onClick={() => setSchool(school === s.school ? ALL : s.school)}
-            className={`border px-3 py-1.5 transition-colors ${
-              school === s.school ? "border-accent bg-accent text-white" : "border-line bg-white hover:bg-cloud"
-            }`}
+            aria-pressed={school === s.school}
+            className={school === s.school ? "text-ink underline decoration-1 underline-offset-[0.45em]" : "text-ink-2 hover:text-ink"}
           >
-            {s.school} <span className={school === s.school ? "text-white/80" : "text-slate"}>{s.count}</span>
+            {s.school} <span className="text-muted">{s.count}</span>
           </button>
         ))}
       </div>
 
       <Card>
-        <div className="grid gap-3 border-b border-line p-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-3 border-b border-ink pb-4 sm:grid-cols-2 lg:grid-cols-5">
           <Input
             type="search"
             placeholder="Search name or email"
@@ -147,7 +144,7 @@ export default function DirectoryPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-sm">
-              <thead className="border-b border-line bg-cloud/50">
+              <thead className="border-b border-line">
                 <tr>
                   <Th>Name</Th>
                   <Th>School</Th>
@@ -162,11 +159,11 @@ export default function DirectoryPage() {
                   <tr
                     key={m.id}
                     onClick={() => setOpenId(m.id)}
-                    className="cursor-pointer border-b border-line last:border-b-0 hover:bg-cloud/60"
+                    className="cursor-pointer border-b border-line hover:bg-stone/60"
                   >
                     <Td>
                       <span className="flex items-center gap-3">
-                        <Avatar name={fullName(m)} photo={m.photo} />
+                        <Avatar name={fullName(m)} photo={m.photo} size={30} />
                         <span className="font-medium">{fullName(m)}</span>
                       </span>
                     </Td>
@@ -179,13 +176,13 @@ export default function DirectoryPage() {
                     <Td>{m.practice}</Td>
                     <Td>
                       {m.role}
-                      {m.execTitle && <span className="block text-xs text-slate">{m.execTitle}</span>}
+                      {m.execTitle && <span className="block text-xs text-muted">{m.execTitle}</span>}
                     </Td>
                     <Td>
                       <a
                         href={`mailto:${m.schoolEmail}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="text-accent hover:underline"
+                        className="link-u text-ink-2"
                       >
                         {m.schoolEmail}
                       </a>
@@ -197,7 +194,7 @@ export default function DirectoryPage() {
           </div>
         )}
       </Card>
-      <p className="mt-3 text-xs text-slate">Class standing and alumni status update automatically from graduation year.</p>
+      <p className="mt-3 text-xs text-muted">Class standing and alumni status update automatically from graduation year.</p>
 
       <Drawer open={!!selected} onClose={() => setOpenId(null)} title={selected ? fullName(selected) : "Profile"}>
         {selected && (
@@ -205,8 +202,8 @@ export default function DirectoryPage() {
             <div className="mb-6 flex items-center gap-4">
               <Avatar name={fullName(selected)} photo={selected.photo} size={72} />
               <div>
-                <p className="font-serif text-2xl">{fullName(selected)}</p>
-                <p className="text-sm text-slate">
+                <p className="display text-2xl">{fullName(selected)}</p>
+                <p className="text-sm text-muted">
                   {selected.execTitle ?? selected.role} · {selected.practice}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
@@ -232,13 +229,13 @@ export default function DirectoryPage() {
                 </a>
               </Row>
               <Row label="Phone">
-                {canSeePrivate(selected) ? selected.phone || "Not provided" : <span className="text-slate">Visible to exec only</span>}
+                {canSeePrivate(selected) ? selected.phone || "Not provided" : <span className="text-muted">Visible to exec only</span>}
               </Row>
               <Row label="Student ID">
                 {canSeePrivate(selected) ? (
                   selected.studentId || "Not provided"
                 ) : (
-                  <span className="text-slate">Visible to exec only</span>
+                  <span className="text-muted">Visible to exec only</span>
                 )}
               </Row>
               <Row label="LinkedIn">
@@ -247,7 +244,7 @@ export default function DirectoryPage() {
                     {selected.linkedin}
                   </a>
                 ) : (
-                  <span className="text-slate">Not provided</span>
+                  <span className="text-muted">Not provided</span>
                 )}
               </Row>
               <Row label="Membership">

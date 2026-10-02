@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "@/components/app-link";
-import { academicYearLabel, classStanding, fmtDate, fullName, isAlum, isExec, promotionSuggestions, tasksFor, type TaskInstance } from "@/portal/logic";
+import { academicYearLabel, classStanding, companySlug, fmtDate, fullName, isAlum, isExec, promotionSuggestions, tasksFor, type TaskInstance } from "@/portal/logic";
 import { usePortal } from "@/portal/store";
 import { Badge, Card, Empty, PageTitle, Stat } from "@/portal/ui";
 
@@ -20,8 +20,7 @@ export default function PortalHome() {
   const tasks = tasksFor(me, data, now);
   const open = tasks.filter((t) => !t.done);
   const overdue = open.filter((t) => t.due.getTime() < now.getTime());
-  const soon = open.filter((t) => t.due.getTime() >= now.getTime() && t.due.getTime() - now.getTime() <= 45 * DAY);
-  const later = open.filter((t) => t.due.getTime() - now.getTime() > 45 * DAY);
+  const upcoming = open.filter((t) => t.due.getTime() >= now.getTime());
   const done = tasks.filter((t) => t.done);
 
   const toggle = (t: TaskInstance) =>
@@ -39,76 +38,63 @@ export default function PortalHome() {
   const promos = promotionSuggestions(data.members, now);
   const seniors = active.filter((m) => classStanding(m.gradYear, now) === "Senior");
 
-  const recent = [
-    ...data.reports.map((r) => ({ date: `${r.year}-06-01`, text: `${r.position} interview notes for ${r.company}`, who: r.memberId, href: "/portal/companies" })),
-    ...data.comments.map((c) => ({ date: c.createdAt, text: c.body, who: c.memberId, href: c.subject.startsWith("company") ? "/portal/companies" : c.subject.startsWith("contact") ? "/portal/network" : "/portal/projects" })),
-  ]
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 5);
   const name = (id: string) => {
     const m = data.members.find((x) => x.id === id);
     return m ? fullName(m) : "A member";
   };
+  const recent = [
+    ...data.reports.map((r) => ({ date: `${r.year}-06-01`, text: `${r.position}, ${r.round}`, title: r.company, href: `/portal/companies/${companySlug(r.company)}`, who: r.memberId })),
+    ...data.comments
+      .filter((c) => c.subject.startsWith("company:"))
+      .map((c) => ({ date: c.createdAt, text: c.body, title: "Discussion", href: `/portal/companies/${c.subject.slice(8)}`, who: c.memberId })),
+  ]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 5);
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <PageTitle
-        title={`${greeting(now)}, ${me.firstName}`}
-        sub={`${me.execTitle ?? me.role} · ${me.practice} · Academic year ${academicYearLabel()}`}
-      />
+    <div>
+      <PageTitle title={`${greeting(now)}, ${me.firstName}.`} sub={`${me.execTitle ?? me.role}, ${me.practice}. Academic year ${academicYearLabel()}.`} />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Open action items" value={open.length} sub={overdue.length ? `${overdue.length} overdue` : "Nothing overdue"} />
-        <Stat label="Active applications" value={activeApps.length} sub={`${myApps.length} tracked in total`} />
-        <Stat label="Coffee chats logged" value={myChats.length} sub={`${myChats.filter((o) => o.responded).length} responses`} />
-        <Stat label="Active members" value={active.length} sub={`${seniors.length} seniors graduating in ${now.getMonth() >= 6 ? now.getFullYear() + 1 : now.getFullYear()}`} />
+      <div className="grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-4">
+        <Stat label="Open tasks" value={open.length} sub={overdue.length ? `${overdue.length} overdue` : "Nothing overdue"} />
+        <Stat label="Active applications" value={activeApps.length} sub={`${myApps.length} tracked`} />
+        <Stat label="Coffee chats" value={myChats.length} sub={`${myChats.filter((o) => o.responded).length} replied`} />
+        <Stat label="Active members" value={active.length} sub={`${seniors.length} seniors this year`} />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2" title="Your action items" action={<span className="text-xs text-slate">Generated each July from exec&apos;s recurring tasks</span>}>
-          {open.length === 0 && <Empty>You&apos;re all caught up.</Empty>}
-          <TaskGroup label="Overdue" tone="red" tasks={overdue} onToggle={toggle} now={now} />
-          <TaskGroup label="Due soon" tone="amber" tasks={soon} onToggle={toggle} now={now} />
-          <TaskGroup label="Later this year" tone="gray" tasks={later} onToggle={toggle} now={now} />
-          {done.length > 0 && <TaskGroup label="Completed" tone="green" tasks={done} onToggle={toggle} now={now} />}
-        </Card>
+      <div className="mt-16 grid gap-16 lg:grid-cols-12 lg:gap-12">
+        <div className="lg:col-span-7">
+          <Card title="Your tasks" action={<span className="text-muted">Set by the executive board each year</span>}>
+            {open.length === 0 && done.length === 0 && <Empty>No tasks for you this year.</Empty>}
+            <TaskList label="Overdue" tasks={overdue} onToggle={toggle} now={now} />
+            <TaskList label="Coming up" tasks={upcoming} onToggle={toggle} now={now} />
+            <TaskList label="Done" tasks={done} onToggle={toggle} now={now} />
+          </Card>
+        </div>
 
-        <div className="space-y-6">
+        <div className="space-y-14 lg:col-span-5">
           {isExec(me) && (
-            <Card title="Exec attention">
-              <ul className="divide-y divide-line text-sm">
-                <li className="flex items-center justify-between px-5 py-3">
-                  <span>Promotions awaiting approval</span>
-                  <Link href="/portal/admin" className="font-semibold text-accent">
-                    {promos.length} →
-                  </Link>
-                </li>
-                <li className="flex items-center justify-between px-5 py-3">
-                  <span>Seniors to transition to alumni</span>
-                  <Link href="/portal/directory" className="font-semibold text-accent">
-                    {seniors.length} →
-                  </Link>
-                </li>
-                <li className="flex items-center justify-between px-5 py-3">
-                  <span>Public website</span>
-                  <Link href="/portal/admin/website" className="font-semibold text-accent">
-                    Edit →
-                  </Link>
-                </li>
+            <Card title="Needs your attention">
+              <ul className="divide-y divide-line">
+                <Row href="/portal/admin" label="Promotions to approve" value={promos.length} />
+                <Row href="/portal/directory" label="Seniors graduating this year" value={seniors.length} />
+                <Row href="/portal/admin/website" label="Public website" value="Edit" />
               </ul>
             </Card>
           )}
 
-          <Card title="My recruiting" action={<Link href="/portal/recruiting" className="text-xs font-semibold text-accent">Open →</Link>}>
+          <Card title="My recruiting" action={<Link href="/portal/recruiting" className="link-u text-muted">Open</Link>}>
             {myApps.length === 0 ? (
               <Empty>No applications yet.</Empty>
             ) : (
-              <ul className="divide-y divide-line text-sm">
+              <ul className="divide-y divide-line">
                 {myApps.slice(0, 5).map((a) => (
-                  <li key={a.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                  <li key={a.id} className="flex items-baseline justify-between gap-4 py-3">
                     <span className="min-w-0">
-                      <span className="block truncate font-medium">{a.company}</span>
-                      <span className="block truncate text-xs text-slate">{a.position}</span>
+                      <Link href={`/portal/companies/${companySlug(a.company)}`} className="display block truncate text-[1.15rem] hover:text-accent">
+                        {a.company}
+                      </Link>
+                      <span className="block truncate text-sm text-muted">{a.position}</span>
                     </span>
                     <Badge tone={a.stage === "Offer" ? "green" : a.stage === "Rejected" ? "red" : "blue"}>{a.stage}</Badge>
                   </li>
@@ -117,16 +103,17 @@ export default function PortalHome() {
             )}
           </Card>
 
-          <Card title="Recent from the org">
-            <ul className="divide-y divide-line text-sm">
+          <Card title="Latest company notes">
+            <ul className="divide-y divide-line">
               {recent.map((r, i) => (
-                <li key={i} className="px-5 py-3">
-                  <Link href={r.href} className="line-clamp-2 hover:text-accent">
-                    {r.text}
+                <li key={i} className="py-3">
+                  <Link href={r.href} className="group block">
+                    <span className="font-medium group-hover:text-accent">{r.title}</span>
+                    <span className="mt-0.5 line-clamp-2 block text-sm text-ink-2">{r.text}</span>
+                    <span className="mt-1 block text-xs text-muted">
+                      {name(r.who)}, {fmtDate(r.date)}
+                    </span>
                   </Link>
-                  <span className="mt-0.5 block text-xs text-slate">
-                    {name(r.who)} · {fmtDate(r.date)}
-                  </span>
                 </li>
               ))}
             </ul>
@@ -137,44 +124,44 @@ export default function PortalHome() {
   );
 }
 
-function TaskGroup({
-  label,
-  tone,
-  tasks,
-  onToggle,
-  now,
-}: {
-  label: string;
-  tone: "red" | "amber" | "gray" | "green";
-  tasks: TaskInstance[];
-  onToggle: (t: TaskInstance) => void;
-  now: Date;
-}) {
+function Row({ href, label, value }: { href: string; label: string; value: string | number }) {
+  return (
+    <li>
+      <Link href={href} className="flex items-baseline justify-between py-3 hover:text-accent">
+        <span>{label}</span>
+        <span className="text-muted">{value} →</span>
+      </Link>
+    </li>
+  );
+}
+
+function TaskList({ label, tasks, onToggle, now }: { label: string; tasks: TaskInstance[]; onToggle: (t: TaskInstance) => void; now: Date }) {
   if (!tasks.length) return null;
   return (
-    <div>
-      <p className="border-b border-line bg-cloud/60 px-5 py-2 text-xs font-semibold tracking-[0.08em] text-slate uppercase">
-        {label} · {tasks.length}
+    <div className="mt-6">
+      <p className="text-sm text-muted">
+        {label} <span className="text-faint">{tasks.length}</span>
       </p>
-      <ul className="divide-y divide-line">
+      <ul className="mt-2 divide-y divide-line border-t border-line">
         {tasks.map((t) => {
           const days = Math.round((t.due.getTime() - now.getTime()) / DAY);
+          const late = !t.done && days < 0;
           return (
-            <li key={t.key} className="flex gap-4 px-5 py-4">
+            <li key={t.key} className="flex gap-4 py-4">
               <input
                 type="checkbox"
                 checked={!!t.done}
                 onChange={() => onToggle(t)}
-                className="mt-1 h-4 w-4 shrink-0 accent-[var(--color-accent)]"
+                className="mt-1 h-4 w-4 shrink-0 accent-[var(--color-ink)]"
                 aria-label={`Mark "${t.template.title}" ${t.done ? "not done" : "done"}`}
               />
               <div className="min-w-0 flex-1">
-                <p className={`font-medium ${t.done ? "text-slate line-through" : ""}`}>{t.template.title}</p>
-                <p className="mt-0.5 text-sm text-slate">{t.template.body}</p>
+                <p className={t.done ? "text-muted line-through" : "font-medium"}>{t.template.title}</p>
+                {!t.done && <p className="mt-1 text-sm leading-relaxed text-ink-2">{t.template.body}</p>}
               </div>
-              <div className="shrink-0 text-right">
-                <Badge tone={tone}>{fmtDate(t.due)}</Badge>
-                {!t.done && <p className="mt-1 text-xs text-slate">{days < 0 ? `${-days}d late` : days === 0 ? "Today" : `in ${days}d`}</p>}
+              <div className="shrink-0 text-right text-sm">
+                <p className={late ? "text-[#b4423c]" : "text-ink-2"}>{fmtDate(t.due)}</p>
+                {!t.done && <p className="text-xs text-muted">{days < 0 ? `${-days} days late` : days === 0 ? "Today" : `In ${days} days`}</p>}
               </div>
             </li>
           );

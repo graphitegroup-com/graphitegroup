@@ -77,11 +77,11 @@ function TasksAdmin() {
                       </Td>
                       <Td>
                         <span className="block font-medium">{t.title}</span>
-                        <span className="text-slate">{t.body}</span>
+                        <span className="text-muted">{t.body}</span>
                       </Td>
                       <Td>
                         <Badge tone={t.audience.kind === "title" ? "dark" : "gray"}>{audienceLabel(t.audience)}</Badge>
-                        <span className="mt-1 block text-xs text-slate">
+                        <span className="mt-1 block text-xs text-muted">
                           {assignees.length} {assignees.length === 1 ? "person" : "people"}
                         </span>
                       </Td>
@@ -89,7 +89,7 @@ function TasksAdmin() {
                         <span className="font-medium">
                           {done}/{assignees.length}
                         </span>
-                        <span className="mt-1.5 block h-1 w-24 bg-cloud">
+                        <span className="mt-1.5 block h-1 w-24 bg-stone">
                           <span className="block h-1 bg-accent" style={{ width: `${assignees.length ? (done / assignees.length) * 100 : 0}%` }} />
                         </span>
                       </Td>

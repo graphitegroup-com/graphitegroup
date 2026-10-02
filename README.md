@@ -19,7 +19,7 @@ npm run build:preview   # static copy in ./preview-dist (no server needed)
 | Copy, stats, case studies, testimonials, practices | `src/content/site.ts` |
 | Team roster | `src/content/team.ts` (moves to the portal database later) |
 | Recruiting status, dates, application links | `src/content/recruiting.ts` |
-| Pages | `src/app/(site)/`: `/`, `/services`, `/work`, `/about`, `/team`, `/students`, `/contact`, `/members` |
+| Pages | `src/app/(site)/`: `/`, `/clients`, `/students`, `/work`, `/life`, `/people`, `/about`, `/contact` |
 | Client inquiry endpoint | `src/app/api/inquiry/route.ts` |
 | Logo (vector, 6 pieces) | `public/brand/mark.svg`, `src/components/mark.tsx` |
 | Design tokens | `src/app/globals.css` |
@@ -34,12 +34,7 @@ Copy `.env.example` to `.env.local` and set it in Vercel too.
 
 ## Design notes
 
-Two public styles share every component, switched by `data-style` on `<html>` (tokens in `src/app/globals.css`):
-
-- **Classic**: white pages, Source Serif headlines, one blue accent (modeled on BCG, L.E.K., Analysis Group).
-- **Modern**: black and white, tight Inter Tight display type, square edges and cobalt highlights.
-
-A switcher in the bottom-right corner (`src/components/style-switcher.tsx`) lets reviewers compare them, and `?style=modern` works in links. Once a style is chosen, delete the switcher and the boot script in `src/app/layout.tsx`, and keep one token block.
+Editorial and typographic: Newsreader headlines, Geist for reading, ink on white with one deep graphite blue. Content is set as lists and hairline rules rather than cards, links are words rather than buttons (the only filled button is a form submit), and photography carries the warmth. Tokens and the few shared utilities (`display`, `link-u`, `cta`, `btn-solid`) live in `src/app/globals.css`; page building blocks are in `src/components/editorial.tsx`. The portal uses the same language through `src/portal/ui.tsx`.
 
 ## Preview without a server
 

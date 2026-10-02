@@ -6,8 +6,8 @@ import { site } from "@/content/site";
 type Status = { kind: "idle" } | { kind: "sending" } | { kind: "sent" } | { kind: "error"; message: string };
 
 const field =
-  "mt-2 w-full border border-line bg-white px-4 py-3 text-[0.95rem] text-ink placeholder:text-mist focus:border-highlight focus:outline-none focus:ring-1 focus:ring-highlight";
-const labelCls = "block text-sm font-semibold";
+  "mt-1 w-full border-0 border-b border-line bg-transparent px-0 py-2.5 text-lg text-ink placeholder:text-faint focus:border-ink focus:outline-none focus:ring-0";
+const labelCls = "block text-sm text-muted";
 
 export function ContactForm() {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -34,9 +34,9 @@ export function ContactForm() {
 
   if (status.kind === "sent") {
     return (
-      <div className="border-t-[3px] border-highlight bg-cloud p-10">
-        <h2 className="font-serif text-3xl">Thank you</h2>
-        <p className="mt-3 text-lg leading-relaxed text-slate">
+      <div className="border-t border-ink pt-8">
+        <h2 className="display text-display-m">Thank you.</h2>
+        <p className="mt-4 text-lg leading-relaxed text-ink-2">
           We have received your message and will be in touch within a few business days.
         </p>
       </div>
@@ -44,8 +44,8 @@ export function ContactForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      <div className="grid gap-6 sm:grid-cols-2">
+    <form onSubmit={onSubmit} className="space-y-8">
+      <div className="grid gap-8 sm:grid-cols-2">
         <label className={labelCls}>
           First name
           <input name="firstName" required autoComplete="given-name" className={field} />
@@ -55,7 +55,7 @@ export function ContactForm() {
           <input name="lastName" required autoComplete="family-name" className={field} />
         </label>
       </div>
-      <div className="grid gap-6 sm:grid-cols-2">
+      <div className="grid gap-8 sm:grid-cols-2">
         <label className={labelCls}>
           Work email
           <input name="email" type="email" required autoComplete="email" className={field} />
@@ -65,7 +65,7 @@ export function ContactForm() {
           <input name="organization" autoComplete="organization" className={field} />
         </label>
       </div>
-      <div className="grid gap-6 sm:grid-cols-2">
+      <div className="grid gap-8 sm:grid-cols-2">
         <label className={labelCls}>
           Area of interest
           <select name="practice" className={field} defaultValue="Not sure yet">
@@ -97,15 +97,15 @@ export function ContactForm() {
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
 
       <div className="flex flex-wrap items-center gap-5">
-        <button type="submit" disabled={status.kind === "sending"} className="btn btn-primary disabled:opacity-60">
-          {status.kind === "sending" ? "Sending…" : "Submit"}
+        <button type="submit" disabled={status.kind === "sending"} className="btn-solid">
+          {status.kind === "sending" ? "Sending…" : "Send message"}
         </button>
         {status.kind === "error" && (
-          <p role="alert" className="text-sm text-slate">
+          <p role="alert" className="text-sm text-ink-2">
             {status.message === "unavailable" ? (
               <>
                 Our form is temporarily unavailable. Please message us on{" "}
-                <a href={site.linkedin} className="text-highlight underline">
+                <a href={site.linkedin} className="link-u">
                   LinkedIn
                 </a>
                 .
