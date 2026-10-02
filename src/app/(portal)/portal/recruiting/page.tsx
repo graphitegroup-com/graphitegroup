@@ -1,21 +1,25 @@
 "use client";
 
 import Link from "@/components/app-link";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { usePortal } from "@/portal/store";
-import { fmtDate, uid } from "@/portal/logic";
+import { companySlug, fmtDate, uid } from "@/portal/logic";
 import { STAGES, type Application, type Stage } from "@/portal/types";
 import { Badge, Button, Card, Drawer, Empty, Field, Input, PageTitle, Select, Stat, Td, Textarea, Th } from "@/portal/ui";
 
 const INTERVIEW_STAGES: Stage[] = ["Online Assessment", "First Round", "Superday / Final"];
 const CLOSED_STAGES: Stage[] = ["Offer", "Rejected", "Withdrew"];
 
-const today = () => new Date().toISOString().slice(0, 10);
+/** Today as a local calendar date, YYYY-MM-DD. */
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 function stageTone(s: Stage) {
   if (s === "Offer") return "green" as const;
   if (s === "Rejected") return "red" as const;
-  if (s === "Withdrew") return "gray" as const;
+  if (s === "Withdrew" || s === "Researching") return "gray" as const;
   if (INTERVIEW_STAGES.includes(s)) return "amber" as const;
   return "blue" as const;
 }
@@ -25,21 +29,18 @@ const emptyDraft: Draft = { company: "", position: "", cycle: "", stage: "Resear
 
 export default function RecruitingPage() {
   const { data, me, update } = usePortal();
-  const [view, setView] = useState<"board" | "table">("board");
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [confirming, setConfirming] = useState<string | null>(null);
 
   if (!me) return null;
 
-  const mine = data.applications
-    .filter((a) => a.memberId === me.id)
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const mine = data.applications.filter((a) => a.memberId === me.id).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const active = mine.filter((a) => !CLOSED_STAGES.includes(a.stage)).length;
   const interviewing = mine.filter((a) => INTERVIEW_STAGES.includes(a.stage)).length;
   const offers = mine.filter((a) => a.stage === "Offer").length;
-  const myOutreach = data.outreach
-    .filter((o) => o.memberId === me.id)
-    .sort((a, b) => b.date.localeCompare(a.date));
+  const myOutreach = data.outreach.filter((o) => o.memberId === me.id).sort((a, b) => b.date.localeCompare(a.date));
+  const grouped = STAGES.map((s) => ({ stage: s, items: mine.filter((a) => a.stage === s) })).filter((g) => g.items.length > 0);
 
   const setStage = (id: string, stage: Stage) =>
     update((d) => ({
@@ -47,9 +48,14 @@ export default function RecruitingPage() {
       applications: d.applications.map((a) => (a.id === id ? { ...a, stage, updatedAt: today() } : a)),
     }));
 
-  const remove = (app: Application) => {
-    if (!window.confirm(`Delete your ${app.company} application?`)) return;
-    update((d) => ({ ...d, applications: d.applications.filter((a) => a.id !== app.id) }));
+  const remove = (id: string) => {
+    update((d) => ({ ...d, applications: d.applications.filter((a) => a.id !== id) }));
+    setConfirming(null);
+  };
+
+  const openAdd = () => {
+    setDraft(emptyDraft);
+    setAdding(true);
   };
 
   const save = (e: React.FormEvent) => {
@@ -66,171 +72,161 @@ export default function RecruitingPage() {
       updatedAt: today(),
     };
     update((d) => ({ ...d, applications: [app, ...d.applications] }));
-    setDraft(emptyDraft);
     setAdding(false);
   };
 
-  const grouped = STAGES.map((s) => ({ stage: s, items: mine.filter((a) => a.stage === s) })).filter((g) => g.items.length > 0);
-
   return (
-    <div>
+    <div className="mx-auto max-w-6xl">
       <PageTitle
-        title="My Recruiting"
-        sub="Track your applications and coffee chats in one place. Only you and the executive board see your pipeline."
-        actions={<Button onClick={() => setAdding(true)}>Add application</Button>}
+        title="My recruiting"
+        sub="Your applications and coffee chats. Only you and the executive board can see this page."
+        actions={<Button onClick={openAdd}>Add application</Button>}
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label="Active applications" value={active} />
-        <Stat label="Interviews in progress" value={interviewing} sub="Assessment, first round or final" />
+      <div className="grid grid-cols-2 gap-x-8 gap-y-6 lg:grid-cols-4">
+        <Stat label="Active applications" value={active} sub={`${mine.length} tracked in total`} />
+        <Stat label="Interviewing" value={interviewing} sub="Assessment, first round or final" />
         <Stat label="Offers" value={offers} />
-        <Stat label="Coffee chats logged" value={myOutreach.length} />
+        <Stat label="Coffee chats logged" value={myOutreach.length} sub={`${myOutreach.filter((o) => o.chatted).length} completed`} />
       </div>
 
-      <p className="mt-6 border border-line bg-white px-5 py-3 text-sm text-slate">
-        Finished an interview? Add your questions and tips to{" "}
-        <Link href="/portal/companies" className="font-semibold text-accent hover:underline">
-          Companies
-        </Link>{" "}
-        so the next member is better prepared.
-      </p>
-
-      <div className="mt-8 mb-4 flex items-center justify-between">
-        <h2 className="font-serif text-2xl">Pipeline</h2>
-        <div className="flex border border-line bg-white">
-          {(["board", "table"] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setView(v)}
-              className={`px-3 py-1.5 text-sm font-medium ${view === v ? "bg-ink text-white" : "text-slate hover:bg-cloud"}`}
-            >
-              {v === "board" ? "By stage" : "Table"}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {mine.length === 0 ? (
-        <Card>
-          <Empty>No applications yet. Add the first one to start tracking your pipeline.</Empty>
-        </Card>
-      ) : view === "board" ? (
-        <div className="space-y-6">
-          {grouped.map((g) => (
-            <section key={g.stage}>
-              <div className="mb-2 flex items-center gap-2">
-                <Badge tone={stageTone(g.stage)}>{g.stage}</Badge>
-                <span className="text-xs text-slate">{g.items.length}</span>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {g.items.map((a) => (
-                  <Card key={a.id} className="flex flex-col p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="font-serif text-lg">{a.company}</h3>
-                        <p className="text-sm">{a.position}</p>
-                        {a.cycle && <p className="text-xs text-slate">{a.cycle}</p>}
-                      </div>
-                      <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => remove(a)} aria-label={`Delete ${a.company} application`}>
-                        Delete
-                      </Button>
-                    </div>
-                    {a.notes && <p className="mt-3 text-sm whitespace-pre-line text-slate">{a.notes}</p>}
-                    <div className="mt-auto pt-4">
-                      <Select
-                        aria-label="Stage"
-                        options={STAGES}
-                        value={a.stage}
-                        onChange={(e) => setStage(a.id, e.target.value as Stage)}
-                      />
-                      <p className="mt-2 text-xs text-slate">Updated {fmtDate(a.updatedAt)}</p>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      ) : (
-        <Card>
+      <Card title="Applications" className="mt-14">
+        {mine.length === 0 ? (
+          <Empty>No applications yet. Add the first one to start tracking your recruiting.</Empty>
+        ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
-              <thead className="border-b border-line bg-cloud">
+            <table className="w-full min-w-[820px] text-sm">
+              <thead className="border-b border-line">
                 <tr>
                   <Th>Company</Th>
                   <Th>Position</Th>
                   <Th>Cycle</Th>
                   <Th>Stage</Th>
                   <Th>Updated</Th>
-                  <Th>Notes</Th>
-                  <Th />
+                  <Th>
+                    <span className="sr-only">Actions</span>
+                  </Th>
                 </tr>
               </thead>
               <tbody>
-                {mine.map((a) => (
-                  <tr key={a.id} className="border-b border-line last:border-0">
-                    <Td className="font-medium">{a.company}</Td>
-                    <Td>{a.position}</Td>
-                    <Td className="text-slate">{a.cycle}</Td>
-                    <Td>
-                      <Select aria-label="Stage" options={STAGES} value={a.stage} onChange={(e) => setStage(a.id, e.target.value as Stage)} className="min-w-40" />
-                    </Td>
-                    <Td className="whitespace-nowrap text-slate">{fmtDate(a.updatedAt)}</Td>
-                    <Td className="max-w-xs text-slate">{a.notes}</Td>
-                    <Td>
-                      <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => remove(a)}>
-                        Delete
-                      </Button>
-                    </Td>
-                  </tr>
+                {grouped.map((g) => (
+                  <Fragment key={g.stage}>
+                    <tr>
+                      <td colSpan={6} className="pt-7 pb-2">
+                        <Badge tone={stageTone(g.stage)}>{g.stage}</Badge>
+                        <span className="ml-2 text-[0.8125rem] text-muted tabular-nums">{g.items.length}</span>
+                      </td>
+                    </tr>
+                    {g.items.map((a) => (
+                      <tr key={a.id} className="border-b border-line">
+                        <Td>
+                          <Link href={`/portal/companies/${companySlug(a.company)}`} className="display text-[1.25rem] leading-tight hover:underline">
+                            {a.company}
+                          </Link>
+                        </Td>
+                        <Td className="max-w-xs">
+                          <span className="block">{a.position}</span>
+                          {a.notes && <span className="mt-1 block whitespace-pre-line text-muted">{a.notes}</span>}
+                        </Td>
+                        <Td className="text-muted">{a.cycle}</Td>
+                        <Td>
+                          <select
+                            aria-label={`Stage for ${a.company}`}
+                            value={a.stage}
+                            onChange={(e) => setStage(a.id, e.target.value as Stage)}
+                            className="border border-line bg-paper py-1 pr-1 pl-2 text-[0.8125rem] text-ink hover:border-ink focus:border-ink focus:outline-none"
+                          >
+                            {STAGES.map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                        </Td>
+                        <Td className="whitespace-nowrap text-muted">{fmtDate(a.updatedAt)}</Td>
+                        <Td className="pr-0 text-right whitespace-nowrap">
+                          {confirming === a.id ? (
+                            <span className="inline-flex items-center gap-1 text-sm">
+                              <span className="text-muted">Remove?</span>
+                              <Button variant="danger" onClick={() => remove(a.id)}>
+                                Yes
+                              </Button>
+                              <span className="text-faint">/</span>
+                              <Button variant="ghost" onClick={() => setConfirming(null)}>
+                                No
+                              </Button>
+                            </span>
+                          ) : (
+                            <Button variant="ghost" onClick={() => setConfirming(a.id)} aria-label={`Remove ${a.company} application`}>
+                              Remove
+                            </Button>
+                          )}
+                        </Td>
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
           </div>
-        </Card>
-      )}
+        )}
+      </Card>
 
       <Card
-        className="mt-10"
-        title="My coffee chats"
+        title="Coffee chats"
+        className="mt-14"
         action={
-          <Link href="/portal/network" className="text-sm font-semibold text-accent hover:underline">
-            Open network
+          <Link href="/portal/network" className="link-u text-ink-2 hover:text-ink">
+            Open the network
           </Link>
         }
       >
         {myOutreach.length === 0 ? (
           <Empty>
-            No outreach logged yet. Find a contact in the <Link href="/portal/network" className="text-accent hover:underline">Network</Link> and log
-            your first message.
+            No outreach logged yet. Find someone in the{" "}
+            <Link href="/portal/network" className="link-u text-ink">
+              network
+            </Link>{" "}
+            and log your first message.
           </Empty>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-sm">
-              <thead className="border-b border-line bg-cloud">
+              <thead className="border-b border-line">
                 <tr>
-                  <Th>Contact</Th>
+                  <Th>Person</Th>
                   <Th>Company</Th>
                   <Th>Date</Th>
                   <Th>Channel</Th>
                   <Th>Response</Th>
                   <Th>Chatted</Th>
-                  <Th>Helpfulness</Th>
                 </tr>
               </thead>
               <tbody>
                 {myOutreach.map((o) => {
                   const c = data.contacts.find((x) => x.id === o.contactId);
                   return (
-                    <tr key={o.id} className="border-b border-line last:border-0">
-                      <Td className="font-medium">{c?.name ?? "Unknown contact"}</Td>
-                      <Td className="text-slate">{c?.company ?? ""}</Td>
-                      <Td className="whitespace-nowrap text-slate">{fmtDate(o.date)}</Td>
+                    <tr key={o.id} className="border-b border-line">
+                      <Td className="font-medium">
+                        {c ? (
+                          <Link href={`/portal/network/${c.id}`} className="hover:underline">
+                            {c.name}
+                          </Link>
+                        ) : (
+                          <span className="text-muted">Unknown contact</span>
+                        )}
+                      </Td>
+                      <Td>
+                        {c?.company ? (
+                          <Link href={`/portal/companies/${companySlug(c.company)}`} className="text-ink-2 hover:text-ink hover:underline">
+                            {c.company}
+                          </Link>
+                        ) : null}
+                      </Td>
+                      <Td className="whitespace-nowrap text-muted">{fmtDate(o.date)}</Td>
                       <Td>{o.channel}</Td>
-                      <Td>{o.responded ? <Badge tone="green">Responded</Badge> : <Badge>No response</Badge>}</Td>
+                      <Td>{o.responded ? <Badge tone="green">Responded</Badge> : <Badge>No reply</Badge>}</Td>
                       <Td>{o.chatted ? "Yes" : "No"}</Td>
-                      <Td>{o.helpfulness != null ? `${o.helpfulness}/5` : "Not rated"}</Td>
                     </tr>
                   );
                 })}
@@ -240,8 +236,12 @@ export default function RecruitingPage() {
         )}
       </Card>
 
+      <p className="mt-10 max-w-[65ch] text-sm text-muted">
+        After an interview, add what you learned to the company&apos;s page so the next member is better prepared.
+      </p>
+
       <Drawer open={adding} onClose={() => setAdding(false)} title="Add application">
-        <form onSubmit={save} className="space-y-4">
+        <form onSubmit={save} className="space-y-5">
           <Field label="Company">
             <Input required value={draft.company} onChange={(e) => setDraft({ ...draft, company: e.target.value })} placeholder="e.g. Bain & Company" />
           </Field>
@@ -255,7 +255,7 @@ export default function RecruitingPage() {
             <Select options={STAGES} value={draft.stage} onChange={(e) => setDraft({ ...draft, stage: e.target.value as Stage })} />
           </Field>
           <Field label="Notes">
-            <Textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} placeholder="Deadlines, contacts, prep to do" />
+            <Textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} placeholder="Deadlines, contacts, preparation" />
           </Field>
           <div className="flex gap-2 pt-2">
             <Button type="submit">Save application</Button>
