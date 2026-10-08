@@ -1,8 +1,16 @@
 "use client";
 
-import Link from "@/components/app-link";
-import { Figures, PageIntro, Photo, Section } from "../editorial";
-import { colleges, pillars } from "@/content/site";
+import {
+  GradTitle,
+  PeopleGrid,
+  PhotoHero,
+  PhotoPillars,
+  Pill,
+  Section,
+  StatBoxes,
+  TextImage,
+} from "../gg";
+import { pillars } from "@/content/site";
 import { useSiteContent } from "@/lib/use-site-content";
 
 export function AboutPageView() {
@@ -11,62 +19,114 @@ export function AboutPageView() {
 
   return (
     <>
-      <PageIntro
-        title="About Graphite"
-        intro="Established in 2018, Graphite Group is a Claremont-based consulting group dedicated to lasting outcomes for its clients, its members and the wider community."
+      <PhotoHero
+        image="/images/exec-stairs.jpg"
+        position="50% 35%"
+        align="center"
+        height="h-[460px] md:h-[560px]"
+        title="Liberal Arts in Action"
       />
-      <div className="wrap">
-        <Photo src="/images/campus.jpg" alt="The Claremont Colleges with the San Gabriel Mountains" caption="The Claremont Colleges." ratio="aspect-[16/9] md:aspect-[21/9]" priority />
-      </div>
 
-      <Section heading="Liberal arts in action">
-        <p className="display max-w-3xl text-display-m">
-          Clients get several perspectives on a single question. Members put their education to work on real problems.
-        </p>
-        <div className="mt-8 max-w-2xl space-y-5 leading-relaxed text-ink-2">
+      <Section>
+        <TextImage
+          title="Who We Are"
+          image="/images/exec-laugh.jpg"
+          position="50% 40%"
+          imageHeight="h-[380px] md:h-[440px]"
+        >
           <p>
-            Our members study across disciplines at {colleges.slice(0, -1).join(", ")} and {colleges.at(-1)}: economics,
-            computer science, data science, engineering, public policy and more.
+            Established in 2018, Graphite Group is a Claremont-based college
+            consulting club dedicated to lasting outcomes for its clients,
+            members and the wider community. We give driven students the chance
+            to engage deeply with business strategy, creating value for the
+            startups we work with while building collaborative, career-defining
+            experience.
           </p>
-          <p>Over the years we have built a national network of clients, experts and alumni, and it grows with every class.</p>
+          <p>
+            Over the years we have built a national network of clients, experts
+            and alumni, and it keeps growing.
+          </p>
+          <div className="pt-4">
+            <StatBoxes
+              items={[
+                {
+                  value: stats[0]?.value ?? "77",
+                  label: "Engagements since 2018",
+                },
+                {
+                  value: stats[3]?.value ?? "90+",
+                  label: "Members and alumni",
+                },
+                { value: "5", label: "Colleges" },
+              ]}
+            />
+          </div>
+        </TextImage>
+      </Section>
+
+      <PhotoPillars
+        image="/images/campus-snow.jpg"
+        title="Our mission"
+        sub="Our work at Graphite is guided by three core pillars."
+        items={pillars}
+      />
+
+      <Section>
+        <TextImage
+          title="Liberal Arts in Action"
+          image="/images/kravis-building.jpg"
+          position="50% 55%"
+          actions={
+            <Pill href="/contact" variant="outline">
+              Work with us
+            </Pill>
+          }
+        >
+          <p>
+            Graphite&apos;s mission and values are rooted in the liberal arts.
+            Through classes across many disciplines, our members are prepared to
+            address social, economic and cultural challenges from several
+            perspectives at once.
+          </p>
+          <p>
+            We offer clients that range of skills and worldviews, and give
+            members the chance to put their education and experience to work on
+            real problems.
+          </p>
+        </TextImage>
+      </Section>
+
+      <Section className="!pt-0">
+        <TextImage
+          title="The Randall Lewis Center for Innovation and Entrepreneurship"
+          image="/images/campus.jpg"
+          reverse
+        >
+          <p>
+            The RLCIE is the premier entrepreneurship institute of the Claremont
+            Colleges, named for businessman, visionary and philanthropist
+            Randall Lewis. It supports an innovative, entrepreneurial community
+            on campus through research, programming and resources for students
+            and faculty.
+          </p>
+          <p>
+            As the consulting arm of the institute, Graphite puts students on
+            real business problems for real clients, developing the
+            problem-solving and leadership skills the institute exists to build.
+          </p>
+        </TextImage>
+      </Section>
+
+      <Section className="!pt-0">
+        <GradTitle className="t-h2">Executive Board</GradTitle>
+        <div className="mt-12">
+          <PeopleGrid people={exec} five={exec.length === 5} />
         </div>
-      </Section>
-
-      <Section heading="What guides us" tone="stone">
-        <dl className="border-t border-ink">
-          {pillars.map((p) => (
-            <div key={p.title} className="grid gap-2 border-b border-line py-6 md:grid-cols-9 md:gap-6">
-              <dt className="display text-display-s md:col-span-3">{p.title}</dt>
-              <dd className="leading-relaxed text-ink-2 md:col-span-6">{p.body}</dd>
-            </div>
-          ))}
-        </dl>
-      </Section>
-
-      <Section heading="Institutional partner">
-        <p className="display max-w-3xl text-display-m">The consulting arm of the Randall Lewis Center for Innovation & Entrepreneurship.</p>
-        <p className="mt-6 max-w-2xl leading-relaxed text-ink-2">
-          The RLCIE is the premier entrepreneurship institute of the Claremont Colleges. Graphite carries its mission into the
-          field, putting students on real business problems for real clients.
-        </p>
-      </Section>
-
-      <Section heading="In numbers" tone="night">
-        <Figures items={stats} dark />
-      </Section>
-
-      <Section heading="Leadership">
-        <ul className="border-t border-ink">
-          {exec.map((m) => (
-            <li key={m.id} className="flex flex-wrap items-baseline justify-between gap-x-6 border-b border-line py-4">
-              <span className="display text-display-s">{m.name}</span>
-              <span className="text-muted">{m.role}</span>
-            </li>
-          ))}
-        </ul>
-        <Link href="/people" className="cta mt-10">
-          Everyone at Graphite
-        </Link>
+        <div className="mt-12">
+          <Pill href="/people" variant="outline">
+            Meet the full team
+          </Pill>
+        </div>
       </Section>
     </>
   );

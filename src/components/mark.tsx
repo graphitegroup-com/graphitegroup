@@ -27,8 +27,8 @@ export function Mark({ className, title }: { className?: string; title?: string 
 export function Logo({ className }: { className?: string }) {
   return (
     <span className={`flex items-center gap-2.5 ${className ?? ""}`}>
-      <Mark className="h-8 w-8" />
-      <span className="text-[0.82rem] leading-[1.05] font-bold tracking-[0.06em] uppercase">
+      <Mark className="h-[34px] w-[34px]" />
+      <span className="text-[0.9rem] leading-[1.02] font-bold tracking-normal uppercase">
         Graphite
         <br />
         Group

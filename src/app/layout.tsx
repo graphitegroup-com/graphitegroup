@@ -1,15 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Newsreader } from "next/font/google";
+import { Inter } from "next/font/google";
 import { site } from "@/content/site";
+import { VARIANT_BOOT } from "@/lib/variants";
 import "./globals.css";
 
-const sans = Geist({ variable: "--font-geist", subsets: ["latin"] });
-const display = Newsreader({
-  variable: "--font-newsreader",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  axes: ["opsz"],
-});
+const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -34,7 +29,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${sans.variable} ${display.variable}`}>
+    <html lang="en" data-variant="original" suppressHydrationWarning className={inter.variable}>
+      <head>
+        {/* Apply the saved design variant before first paint (see components/variant-switcher.tsx). */}
+        <script dangerouslySetInnerHTML={{ __html: VARIANT_BOOT }} />
+      </head>
       <body className="min-h-dvh">{children}</body>
     </html>
   );

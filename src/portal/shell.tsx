@@ -79,8 +79,8 @@ export function PortalShell({ children }: { children: ReactNode }) {
                       href={i.href}
                       onClick={() => setOpen(false)}
                       aria-current={active(i.href) ? "page" : undefined}
-                      className={`block px-3 py-1.5 text-[0.9375rem] transition-colors ${
-                        active(i.href) ? "bg-paper font-medium text-ink" : "text-ink-2 hover:text-ink"
+                      className={`block rounded-full px-3.5 py-1.5 text-[0.9375rem] transition-colors ${
+                        active(i.href) ? "bg-white font-medium text-ink shadow-[0_0_0_1px_rgba(7,56,99,0.08)]" : "text-ink-2 hover:text-ink"
                       }`}
                     >
                       {i.label}
@@ -121,8 +121,8 @@ export function PortalShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="min-h-dvh bg-paper">
-      <aside className="fixed inset-y-0 left-0 hidden w-60 lg:block">{sidebar}</aside>
+    <div className="min-h-dvh bg-[#fafbfd]">
+      <aside className="fixed inset-y-0 left-0 hidden w-60 border-r border-line lg:block">{sidebar}</aside>
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <button type="button" aria-label="Close menu" className="absolute inset-0 bg-ink/25" onClick={() => setOpen(false)} />
@@ -130,11 +130,11 @@ export function PortalShell({ children }: { children: ReactNode }) {
         </div>
       )}
       <div className="lg:pl-60">
-        <header className="flex h-[60px] items-center justify-between border-b border-line px-5 lg:hidden">
+        <header className="flex h-[64px] items-center justify-between border-b border-line bg-white px-5 lg:hidden">
           <Link href="/portal" className="text-ink">
             <Logo />
           </Link>
-          <button type="button" className="text-[0.9375rem]" onClick={() => setOpen(true)}>
+          <button type="button" className="pill pill-sm !py-2.5" onClick={() => setOpen(true)}>
             Menu
           </button>
         </header>

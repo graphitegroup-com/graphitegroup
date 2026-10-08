@@ -6,8 +6,8 @@ import { site } from "@/content/site";
 type Status = { kind: "idle" } | { kind: "sending" } | { kind: "sent" } | { kind: "error"; message: string };
 
 const field =
-  "mt-1 w-full border-0 border-b border-line bg-transparent px-0 py-2.5 text-lg text-ink placeholder:text-faint focus:border-ink focus:outline-none focus:ring-0";
-const labelCls = "block text-sm text-muted";
+  "mt-2 w-full rounded-[6px] border border-line bg-white px-4 py-3 text-[15px] text-ink placeholder:text-text/60 focus:border-sapphire focus:outline-none";
+const labelCls = "block text-sm font-medium";
 
 export function ContactForm() {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -34,9 +34,9 @@ export function ContactForm() {
 
   if (status.kind === "sent") {
     return (
-      <div className="border-t border-ink pt-8">
-        <h2 className="display text-display-m">Thank you.</h2>
-        <p className="mt-4 text-lg leading-relaxed text-ink-2">
+      <div>
+        <h2 className="grad-title t-h3">Thank you.</h2>
+        <p className="t-body mt-4">
           We have received your message and will be in touch within a few business days.
         </p>
       </div>
@@ -97,11 +97,11 @@ export function ContactForm() {
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
 
       <div className="flex flex-wrap items-center gap-5">
-        <button type="submit" disabled={status.kind === "sending"} className="btn-solid">
+        <button type="submit" disabled={status.kind === "sending"} className="pill">
           {status.kind === "sending" ? "Sending…" : "Send message"}
         </button>
         {status.kind === "error" && (
-          <p role="alert" className="text-sm text-ink-2">
+          <p role="alert" className="text-sm text-text">
             {status.message === "unavailable" ? (
               <>
                 Our form is temporarily unavailable. Please message us on{" "}

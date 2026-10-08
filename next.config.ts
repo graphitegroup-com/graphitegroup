@@ -22,8 +22,8 @@ const nextConfig: NextConfig = preview
           { source: "/our-team", destination: "/people", permanent: true },
           { source: "/team", destination: "/people", permanent: true },
           { source: "/services", destination: "/clients", permanent: true },
-          { source: "/our-work-strategy", destination: "/clients#strategy", permanent: true },
-          { source: "/our-work-digital", destination: "/clients#digital", permanent: true },
+          { source: "/our-work-strategy", destination: "/work/strategy", permanent: true },
+          { source: "/our-work-digital", destination: "/work/digital", permanent: true },
         ];
       },
     };

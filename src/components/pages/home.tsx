@@ -1,133 +1,112 @@
 "use client";
 
-import Link from "@/components/app-link";
-import { Figures, Photo, Quote, Section, WorkIndex } from "../editorial";
-import { clients, engagement, practices } from "@/content/site";
+import { Band, FocusItems, GradTitle, PhotoHero, Pill, PracticeCards, Section, StatsMap, Testimonials, TextImage } from "../gg";
 import { useSiteContent } from "@/lib/use-site-content";
 
 export function HomeView() {
-  const { stats, caseStudies, testimonials } = useSiteContent();
-  const [featured, ...more] = testimonials;
+  const { stats, testimonials } = useSiteContent();
 
   return (
     <>
-      <section className="wrap pt-14 pb-12 md:pt-24 md:pb-16">
-        <h1 className="display max-w-[16ch] text-display-xl">The student consulting firm of the Claremont Colleges.</h1>
-        <div className="mt-10 grid gap-8 md:grid-cols-12">
-          <p className="max-w-xl text-lg leading-relaxed text-ink-2 md:col-span-7 md:text-xl">
-            Since 2018, teams drawn from all five colleges have completed 77 strategy and digital engagements for startups,
-            institutions and Fortune 500 companies.
+      <PhotoHero
+        image="/images/group-lawn.jpg"
+        title={
+          <>
+            Graphite
+            <br />
+            Group
+          </>
+        }
+        sub="Small organization. Big impact."
+      />
+
+      <Section>
+        <TextImage
+          title="Graphite Group focuses on innovation, entrepreneurship, and transformation."
+          image="/images/group-stairs.jpg"
+          imageAlt="Graphite Group on the Kravis Center stairs"
+          position="50% 25%"
+          actions={
+            <>
+              <Pill href="/contact">Work with us</Pill>
+              <Pill href="/students" variant="outline">
+                For students
+              </Pill>
+            </>
+          }
+        >
+          <p>
+            Graphite Group is a student-run consulting group based at the Claremont Colleges. Since our founding, we have
+            completed 77 projects across nine sectors, helping businesses in fintech, healthcare, cloud computing and real
+            estate reach their strategic goals.
           </p>
-          <div className="flex flex-wrap items-end gap-x-8 gap-y-4 md:col-span-5 md:justify-end">
-            <Link href="/contact" className="cta text-lg">
-              Start a project
-            </Link>
-            <Link href="/work" className="link-u text-lg text-ink-2">
-              See our work
-            </Link>
-          </div>
-        </div>
-      </section>
+          <p>
+            Our consultants come from five liberal arts colleges, with expertise in economics, data science, engineering,
+            public policy and more.
+          </p>
+        </TextImage>
+      </Section>
 
-      <div className="wrap">
-        <Photo
-          src="/images/group-lawn.jpg"
-          alt="Members of Graphite Group"
-          caption="Graphite Group members, Claremont, California."
-          ratio="aspect-[16/9] md:aspect-[21/9]"
-          position="50% 42%"
-          priority
+      <Band>
+        <StatsMap
+          heading="Our objective is to provide our clients and the greater community with positive progress and long-lasting results."
+          stats={stats.slice(0, 3).map((s, i) => ({ value: s.value, label: ["Completed projects", "Different sectors", "Colleges spanned"][i] ?? s.label }))}
         />
-      </div>
+        <GradTitle onBand className="t-h2 mt-28 mb-16 text-center md:mt-[130px]">
+          Our Focus
+        </GradTitle>
+        <FocusItems
+          items={[
+            {
+              icon: "arrow",
+              title: "Startup focused",
+              body: "Entrepreneurship drives innovation and addresses critical societal challenges. We work with founders across industries to reach their strategic goals and accelerate their path to growth.",
+            },
+            {
+              icon: "lines",
+              title: "Student run",
+              body: "Every engagement is staffed by students from all five colleges and led by an experienced project lead. We value the outcome of a task more than the method used to reach it.",
+            },
+          ]}
+        />
+        <div className="mt-20 text-center">
+          <Pill href="/students" variant="band">
+            For students
+          </Pill>
+        </div>
+      </Band>
 
-      <Section heading="What we do">
-        <div className="grid gap-16 md:grid-cols-2 md:gap-12">
-          {practices.map((p) => (
-            <div key={p.slug}>
-              <h3 className="display text-display-m">{p.name}</h3>
-              <p className="mt-4 leading-relaxed text-ink-2">{p.summary}</p>
-              <ul className="mt-6 border-t border-line">
-                {p.services.map((s) => (
-                  <li key={s.title} className="border-b border-line py-3 text-[0.9375rem]">
-                    {s.title}
-                  </li>
-                ))}
-              </ul>
-              <Link href={`/clients#${p.slug}`} className="link-u mt-6 inline-block text-[0.9375rem]">
-                More about {p.name.split(" ")[1]}
-              </Link>
-            </div>
-          ))}
+      <Section>
+        <GradTitle className="t-h2">Our Areas of Practice</GradTitle>
+        <div className="mt-16">
+          <PracticeCards
+            items={[
+              {
+                title: "Graphite Strategy",
+                body: "Our strategy consulting practice, for businesses with needs in market entry and positioning, pricing and go-to-market, and cost optimization.",
+                href: "/work/strategy",
+                cta: "About Strategy",
+                image: "/images/practice-strategy.jpg",
+                position: "45% 35%",
+                icon: "target",
+              },
+              {
+                title: "Graphite Digital",
+                body: "Our digital consulting and implementation practice, for businesses with needs in software development, engineering, data analytics and product design.",
+                href: "/work/digital",
+                cta: "About Digital",
+                image: "/images/practice-digital.jpg",
+                position: "50% 30%",
+                icon: "arrows",
+              },
+            ]}
+          />
         </div>
       </Section>
 
-      <Section heading="Selected work" tone="stone">
-        <WorkIndex items={caseStudies.slice(0, 4)} />
-        <Link href="/work" className="cta mt-10">
-          All work
-        </Link>
+      <Section className="!pt-4">
+        <Testimonials items={testimonials} />
       </Section>
-
-      <Section heading="In numbers" tone="night">
-        <Figures items={stats} dark />
-      </Section>
-
-      <Section heading="How an engagement works">
-        <p className="display max-w-3xl text-display-m">
-          A semester-long project, staffed in July for the fall and December for the spring.
-        </p>
-        <ol className="mt-12 grid gap-10 md:grid-cols-4 md:gap-8">
-          {engagement.map((e, i) => (
-            <li key={e.step} className="border-t border-ink pt-5">
-              <span className="text-sm text-muted">Step {i + 1}</span>
-              <h3 className="mt-2 text-lg font-medium">{e.title}</h3>
-              <p className="mt-2 text-[0.9375rem] leading-relaxed text-ink-2">{e.body}</p>
-            </li>
-          ))}
-        </ol>
-      </Section>
-
-      <Section heading="Clients include" tone="stone">
-        <ul className="grid grid-cols-2 gap-x-8 gap-y-5 md:grid-cols-4">
-          {clients.map((c) => (
-            <li key={c} className="display text-[1.6rem] leading-tight text-ink-2">
-              {c}
-            </li>
-          ))}
-        </ul>
-      </Section>
-
-      <Section heading="What clients say">
-        <Quote {...featured} large />
-        <div className="mt-16 grid gap-12 border-t border-line pt-10 md:grid-cols-2">
-          {more.slice(0, 2).map((t) => (
-            <Quote key={t.org} {...t} />
-          ))}
-        </div>
-      </Section>
-
-      <section className="border-t border-line">
-        <div className="wrap grid gap-10 py-20 md:grid-cols-12 md:items-center md:py-28">
-          <div className="md:col-span-7">
-            <Photo src="/images/friends-stairs.jpg" alt="Graphite members on the Kravis Center stairs" ratio="aspect-[4/3]" position="50% 35%" sizes="(min-width:768px) 58vw, 100vw" />
-          </div>
-          <div className="md:col-span-4 md:col-start-9">
-            <h2 className="display text-display-m">For students</h2>
-            <p className="mt-5 leading-relaxed text-ink-2">
-              We recruit from all five colleges every fall and spring. New members train in our curriculum and join a client
-              team in their first semester.
-            </p>
-            <div className="mt-8 flex flex-col items-start gap-4">
-              <Link href="/students" className="cta">
-                Membership and recruiting
-              </Link>
-              <Link href="/life" className="link-u text-ink-2">
-                Life at Graphite
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
     </>
   );
 }

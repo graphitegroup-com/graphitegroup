@@ -4,8 +4,8 @@ import Link from "@/components/app-link";
 import { useEffect, type ReactNode } from "react";
 
 /*
-  Portal UI kit. Same language as the public site: white canvas, hairline rules
-  instead of boxes, serif page titles, quiet sans for everything else.
+  Portal UI kit. Same language as the public site: gradient titles, pill
+  buttons, white boxes with a soft glow, Inter throughout.
 */
 
 export function PageTitle({
@@ -28,7 +28,7 @@ export function PageTitle({
       )}
       <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
         <div className="min-w-0">
-          <h1 className="display text-[2.4rem] leading-[1.05] md:text-[2.75rem]">{title}</h1>
+          <h1 className="grad-title t-h2 pb-1">{title}</h1>
           {sub && <div className="mt-3 max-w-2xl leading-relaxed text-muted">{sub}</div>}
         </div>
         {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
@@ -37,7 +37,7 @@ export function PageTitle({
   );
 }
 
-/** A titled region separated by a rule. Not a box. */
+/** A white box with an optional title row. */
 export function Card({
   children,
   className = "",
@@ -50,10 +50,10 @@ export function Card({
   action?: ReactNode;
 }) {
   return (
-    <section className={`min-w-0 ${className}`}>
+    <section className={`card-glow min-w-0 rounded-[8px] bg-white px-6 py-5 ${className}`}>
       {title && (
-        <header className="flex items-baseline justify-between gap-4 border-b border-ink pb-3">
-          <h2 className="font-medium">{title}</h2>
+        <header className="flex items-baseline justify-between gap-4 border-b border-line pb-3">
+          <h2 className="text-[1.0625rem] font-semibold tracking-[-0.03em]">{title}</h2>
           {action && <div className="text-sm">{action}</div>}
         </header>
       )}
@@ -88,12 +88,12 @@ export function Button({
   ...rest
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" | "danger" }) {
   const v = {
-    primary: "bg-ink text-white hover:bg-ink-2",
-    secondary: "border border-line bg-paper text-ink hover:border-ink",
+    primary: "pill",
+    secondary: "rounded-full border border-pewter bg-white text-ink hover:bg-pewter",
     ghost: "text-muted hover:text-ink",
     danger: "text-[#b4423c] hover:underline",
   }[variant];
-  const pad = variant === "ghost" || variant === "danger" ? "px-1.5 py-1.5" : "px-4 py-2";
+  const pad = variant === "ghost" || variant === "danger" ? "px-1.5 py-1.5" : "!px-5 !py-2.5";
   return (
     <button
       type="button"
@@ -106,7 +106,7 @@ export function Button({
 }
 
 const fieldCls =
-  "w-full border border-line bg-paper px-3 py-2 text-[0.9375rem] text-ink placeholder:text-faint focus:border-ink focus:outline-none";
+  "w-full rounded-[6px] border border-[#dfe3ec] bg-white px-3 py-2 text-[0.9375rem] text-ink placeholder:text-faint focus:border-sapphire focus:outline-none";
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -141,9 +141,9 @@ export function Select({ options, ...props }: React.SelectHTMLAttributes<HTMLSel
 /** A figure with its label, no box. */
 export function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: string }) {
   return (
-    <div className="border-t border-line pt-4">
+    <div className="rounded-[8px] bg-gray px-5 py-4">
       <p className="text-sm text-muted">{label}</p>
-      <p className="display mt-1 text-[2.25rem] leading-none tabular-nums">{value}</p>
+      <p className="grad-title mt-1 pb-1 text-[2.25rem] leading-none font-semibold tracking-[-0.05em] tabular-nums">{value}</p>
       {sub && <p className="mt-2 text-xs text-muted">{sub}</p>}
     </div>
   );
@@ -166,7 +166,7 @@ export function Drawer({ open, onClose, title, children }: { open: boolean; onCl
       <button type="button" aria-label="Close" className="absolute inset-0 bg-ink/25" onClick={onClose} />
       <div className="relative flex h-full w-full max-w-lg flex-col bg-paper shadow-[0_0_60px_rgba(0,0,0,0.12)]">
         <header className="flex items-center justify-between px-7 pt-7 pb-4">
-          <h2 className="display text-[1.75rem] leading-tight">{title}</h2>
+          <h2 className="grad-title t-h3 pb-1">{title}</h2>
           <Button variant="ghost" onClick={onClose} aria-label="Close">
             Close
           </Button>
@@ -189,7 +189,7 @@ export function Avatar({ name, photo, size = 36 }: { name: string; photo?: strin
   ) : (
     <span
       aria-hidden
-      className="flex shrink-0 items-center justify-center rounded-full bg-stone font-medium text-muted"
+      className="flex shrink-0 items-center justify-center rounded-full bg-gray font-medium text-prussian"
       style={{ width: size, height: size, fontSize: Math.max(10, size * 0.34) }}
     >
       {initials}

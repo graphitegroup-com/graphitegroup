@@ -1,82 +1,101 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Graphite Group Preview</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Newsreader:opsz,wght@6..72,400&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" />
 <style>
-  /* Layout: one editorial column, the same type and palette as the site itself. */
+  /* Same system as the site: Inter, gradient titles, black pills, gray boxes. */
   :root {
     --bg: #ffffff;
-    --ink: #15171a;
-    --ink-2: #3b3f46;
-    --muted: #6c7079;
-    --line: #e3e2de;
-    --display: "Newsreader", Georgia, serif;
-    --sans: "Geist", system-ui, sans-serif;
+    --ink: #000000;
+    --text: #5e6774;
+    --line: #eef0f4;
+    --box: #e8ebf5;
+    --title: linear-gradient(160deg, #abd1e8 0%, #073863 55%, #000 100%);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #111315;
-      --ink: #f1f0ec;
-      --ink-2: #cfcfcb;
-      --muted: #9a9ea6;
-      --line: #2a2d31;
+      --bg: #000000;
+      --ink: #ffffff;
+      --text: #b8bfca;
+      --line: #22262c;
+      --box: #11151b;
+      --title: linear-gradient(90deg, #abd1e8, #fff);
       color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #111315;
-    --ink: #f1f0ec;
-    --ink-2: #cfcfcb;
-    --muted: #9a9ea6;
-    --line: #2a2d31;
+    --bg: #000000;
+    --ink: #ffffff;
+    --text: #b8bfca;
+    --line: #22262c;
+    --box: #11151b;
+    --title: linear-gradient(90deg, #abd1e8, #fff);
     color-scheme: dark;
   }
   body {
+    margin: 0;
     background: var(--bg);
     color: var(--ink);
-    font-family: var(--sans);
+    font-family: "Inter", system-ui, sans-serif;
     font-size: 16px;
     line-height: 1.6;
+    letter-spacing: -0.4px;
   }
   .wrap {
     max-width: 920px;
     margin: 0 auto;
-    padding-inline: 20px;
-    padding-block: 64px 80px;
+    padding: 64px 16px 80px;
   }
   .mark {
     width: 34px;
     height: 34px;
   }
   h1 {
-    font-family: var(--display);
-    font-weight: 400;
-    font-size: clamp(40px, 7vw, 72px);
-    line-height: 1;
-    letter-spacing: -0.02em;
+    font-weight: 600;
+    font-size: clamp(40px, 7vw, 68px);
+    line-height: 1.02;
+    letter-spacing: -0.05em;
     margin: 40px 0 20px;
     text-wrap: balance;
+    background-image: var(--title);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  h2 {
+    font-weight: 600;
+    font-size: 22px;
+    letter-spacing: -0.04em;
+    margin: 56px 0 16px;
   }
   .lede {
     max-width: 58ch;
-    color: var(--ink-2);
+    color: var(--text);
     font-size: 18px;
     margin: 0;
   }
   ul {
     list-style: none;
-    margin: 48px 0 0;
+    margin: 40px 0 0;
     padding: 0;
-    border-top: 1px solid var(--ink);
+    border-top: 1px solid var(--line);
   }
   li a {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 4px 24px;
-    padding: 24px 0;
+    gap: 2px 24px;
+    padding: 22px 0;
     border-bottom: 1px solid var(--line);
     color: inherit;
     text-decoration: none;
+  }
+  .name {
+    font-weight: 600;
+    font-size: 26px;
+    letter-spacing: -0.045em;
+    line-height: 1.15;
   }
   li a:hover .name {
     text-decoration: underline;
@@ -84,26 +103,60 @@
     text-underline-offset: 0.2em;
   }
   .name {
-    font-family: var(--display);
-    font-size: 32px;
-    line-height: 1.1;
+    grid-column: 1;
   }
   .desc {
     grid-column: 1;
-    color: var(--muted);
+    color: var(--text);
     max-width: 60ch;
   }
   .arrow {
+    grid-column: 2;
     grid-row: 1 / span 2;
     align-self: center;
     font-size: 22px;
-    color: var(--muted);
+    color: var(--text);
+  }
+  .variants {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+  }
+  .variants a {
+    display: block;
+    padding: 16px 18px;
+    border-radius: 8px;
+    background: var(--box);
+    color: inherit;
+    text-decoration: none;
+  }
+  .variants a:hover {
+    outline: 1px solid var(--ink);
+  }
+  .variants b {
+    display: block;
+    font-weight: 600;
+  }
+  .variants span {
+    font-size: 14px;
+    color: var(--text);
+  }
+  .sw {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 10px;
+  }
+  .sw i {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid rgba(127, 127, 127, 0.3);
   }
   .notes {
-    margin-top: 40px;
+    margin-top: 48px;
     display: grid;
     gap: 6px;
-    color: var(--muted);
+    color: var(--text);
     font-size: 14px;
   }
   button {
@@ -111,14 +164,14 @@
     border: 0;
     padding: 0;
     font: inherit;
-    color: var(--ink-2);
+    color: var(--ink);
     text-decoration: underline;
     text-underline-offset: 0.2em;
     cursor: pointer;
   }
   a:focus-visible,
   button:focus-visible {
-    outline: 2px solid var(--ink);
+    outline: 2px solid #4566df;
     outline-offset: 3px;
   }
 </style>
@@ -128,20 +181,13 @@
     <path d="M52.20 5.27 L89.84 27.00 L71.65 37.50 L52.20 26.27Z M57.86 52.00 L89.84 52.00 L89.84 70.46Z M87.64 74.27 L52.20 94.73 L52.20 73.73 L69.45 63.77Z M47.80 94.73 L12.36 74.27 L30.55 63.77 L47.80 73.73Z M10.16 70.46 L10.16 29.54 L28.35 40.04 L28.35 59.96Z M12.36 25.73 L47.80 5.27 L47.80 26.27 L30.55 36.23Z" />
   </svg>
   <h1>graphitegroup.co, before launch</h1>
-  <p class="lede">A working copy of the new Graphite Group website and member portal, for review before it moves to Vercel.</p>
+  <p class="lede">Every page rebuilt in the look of the original site, in the brand colors, plus the member portal. Review here before it moves to Vercel.</p>
 
   <ul>
     <li>
       <a href="home.html">
         <span class="name">Website</span>
-        <span class="desc">For clients, for students, our work, life at Graphite and people.</span>
-        <span class="arrow" aria-hidden="true">→</span>
-      </a>
-    </li>
-    <li>
-      <a href="life.html">
-        <span class="name">Life at Graphite</span>
-        <span class="desc">The new page on what the club is like socially.</span>
+        <span class="desc">Home, Our Work (Strategy, Digital, case studies), For Clients, For Students, Life at Graphite, About Us and Our Team.</span>
         <span class="arrow" aria-hidden="true">→</span>
       </a>
     </li>
@@ -154,6 +200,15 @@
     </li>
   </ul>
 
+  <h2>Variants</h2>
+  <p class="lede" style="font-size: 16px">Same layout, different color treatment. Pick one here, or switch any time with the Variant button in the corner of every page.</p>
+  <div class="variants" style="margin-top: 20px">
+    <a href="home.html?variant=original"><div class="sw"><i style="background:#000"></i><i style="background:#abd1e8"></i><i style="background:#073863"></i></div><b>Original</b><span>Black bands, pewter to prussian titles</span></a>
+    <a href="home.html?variant=prussian"><div class="sw"><i style="background:#073863"></i><i style="background:#4566df"></i><i style="background:#abd1e8"></i></div><b>Prussian</b><span>Bands and buttons in Prussian Blue</span></a>
+    <a href="home.html?variant=gradient"><div class="sw"><i style="background:#1b06dd"></i><i style="background:#7e18ff"></i><i style="background:#000"></i></div><b>Gradient</b><span>Phthalo to violet titles and buttons</span></a>
+    <a href="home.html?variant=light"><div class="sw"><i style="background:#e8ebf5"></i><i style="background:#073863"></i><i style="background:#000"></i></div><b>Light</b><span>Gray bands with dark text</span></a>
+  </div>
+
   <div class="notes">
     <span>The portal runs on sample data with fictional people. Changes are saved in your browser only.</span>
     <span>The contact form is inactive in this preview because it needs the live server.</span>
@@ -164,7 +219,7 @@
 <script>
   document.getElementById("reset").addEventListener("click", function () {
     try {
-      ["gg-portal-data", "gg-site-content", "gg-session"].forEach(function (k) {
+      ["gg-portal-data", "gg-site-content", "gg-session", "gg-variant"].forEach(function (k) {
         localStorage.removeItem(k);
       });
       document.getElementById("reset-status").textContent = "Done. Sample data restored.";

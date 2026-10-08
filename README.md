@@ -34,7 +34,11 @@ Copy `.env.example` to `.env.local` and set it in Vercel too.
 
 ## Design notes
 
-Editorial and typographic: Newsreader headlines, Geist for reading, ink on white with one deep graphite blue. Content is set as lists and hairline rules rather than cards, links are words rather than buttons (the only filled button is a form submit), and photography carries the warmth. Tokens and the few shared utilities (`display`, `link-u`, `cta`, `btn-solid`) live in `src/app/globals.css`; page building blocks are in `src/components/editorial.tsx`. The portal uses the same language through `src/portal/ui.tsx`.
+Rebuilt from the original graphitegroup.co in the brand palette: Inter with tight tracking, pewter-to-ink gradient titles, black pill buttons, dark feature bands with the dotted world map, glowing icon tiles, half-photo practice cards and faint column guides. Tokens and utilities (`grad-title`, `t-hero` to `t-h4`, `pill`, `band`, `lines-bg`, `card-glow`) live in `src/app/globals.css`; page building blocks are in `src/components/gg.tsx`. The portal uses the same system through `src/portal/ui.tsx`.
+
+### Variants
+
+Four color treatments share one layout: `original` (default), `prussian`, `gradient` and `light`. Each is a block of `--v-*` variables under `[data-variant]` in `globals.css`, so a variant never changes structure. Preview one with `?variant=prussian` or the Variant button in the corner (`src/components/variant-switcher.tsx`); the choice is remembered per browser. To ship one, make its values the `:root` defaults, then remove the switcher from both layouts and `VARIANT_BOOT` from `src/app/layout.tsx`.
 
 ## Preview without a server
 
