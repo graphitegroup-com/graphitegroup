@@ -31,13 +31,14 @@
   --color-band-line: var(--v-band-line);
   --color-pill: var(--v-pill-bg);
 
-  /* Portal working colors, drawn from the same palette. */
-  --color-muted: #5e6774;
-  --color-ink-2: #1f2a37;
-  --color-faint: #9aa3b2;
+  /* Portal: neutral working grays plus Prussian as the one accent. */
+  --color-muted: #5b6270;
+  --color-ink-2: #2b3038;
+  --color-faint: #8a909c;
   --color-paper: #ffffff;
-  --color-stone: #f3f5fa;
-  --color-accent: var(--color-sapphire);
+  --color-stone: #f6f7f9;
+  --color-edge: #e4e7ec;
+  --color-accent: var(--color-prussian);
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
@@ -268,26 +269,33 @@ h3 {
   }
 
   /* Dark feature band. */
-  /* Portal headings and primary action, same family as the site. */
-  .display {
-    font-weight: 600;
-    letter-spacing: -0.045em;
+  /* Portal: a working tool, so plain type at reading size and no effects. */
+  .portal {
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: -0.006em;
+    color: #111418;
+  }
+  .portal h1,
+  .portal h2,
+  .portal h3 {
+    letter-spacing: -0.012em;
   }
   .btn-solid {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border-radius: 56px;
-    padding: 0.85rem 1.5rem;
-    font-size: 0.9375rem;
-    line-height: 1;
-    background: var(--v-pill-bg);
-    color: var(--v-pill-fg);
-    transition: background 0.3s;
+    height: 2.25rem;
+    border-radius: 6px;
+    padding: 0 0.875rem;
+    font-size: 13.5px;
+    font-weight: 500;
+    background: var(--color-prussian);
+    color: #fff;
   }
   .btn-solid:hover {
-    background: var(--v-pill-hover);
+    background: #0a477c;
   }
 
   .band {

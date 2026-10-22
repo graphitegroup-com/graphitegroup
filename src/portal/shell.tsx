@@ -2,7 +2,7 @@
 
 import Link from "@/components/app-link";
 import { useEffect, useState, type ReactNode } from "react";
-import { Logo } from "@/components/mark";
+import { Mark } from "@/components/mark";
 import { useGo } from "@/lib/use-go";
 import { usePagePath } from "@/lib/use-page-path";
 import { STATIC_PREVIEW } from "@/lib/preview";
@@ -10,32 +10,55 @@ import { fullName, isExec } from "./logic";
 import { usePortal } from "./store";
 import { Avatar } from "./ui";
 
-type NavItem = { href: string; label: string; exec?: boolean };
+/** 16px line icons, drawn on a 24 grid. */
+const ICONS = {
+  home: "M3.5 10.5 12 3.5l8.5 7M5.5 9v11h13V9",
+  recruiting: "M3.5 8h17v11.5h-17zM8.5 8V5.5a1.5 1.5 0 0 1 1.5-1.5h4a1.5 1.5 0 0 1 1.5 1.5V8M3.5 13h17",
+  companies: "M5 20.5V4.5h9v16M14 9.5h5v11M3 20.5h18M8 8h3M8 11.5h3M8 15h3",
+  network: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20a6.5 6.5 0 0 1 13 0M16 4.3a3.5 3.5 0 0 1 0 6.4M18.5 14a6.5 6.5 0 0 1 3 6",
+  directory: "M5 3.5h14v17H5zM12 12a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5zM8 17.5a4 4 0 0 1 8 0",
+  projects: "M3.5 6.5a1.5 1.5 0 0 1 1.5-1.5h4l2 2h8a1.5 1.5 0 0 1 1.5 1.5v9.5a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z",
+  archive: "M3.5 4.5h17v4h-17zM5 8.5v11h14v-11M10 12.5h4",
+  members: "M12 3.5 4.5 6.5v5.5c0 4.2 3.2 7.6 7.5 8.5 4.3-.9 7.5-4.3 7.5-8.5V6.5z",
+  tasks: "M4.5 12a7.5 7.5 0 0 1 13-5.1L19.5 9M19.5 4v5h-5M19.5 12a7.5 7.5 0 0 1-13 5.1L4.5 15M4.5 20v-5h5",
+  website: "M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17zM3.5 12h17M12 3.5c2.3 2.3 3.5 5.2 3.5 8.5s-1.2 6.2-3.5 8.5c-2.3-2.3-3.5-5.2-3.5-8.5s1.2-6.2 3.5-8.5z",
+  menu: "M4 7h16M4 12h16M4 17h16",
+} as const;
+
+function Icon({ name, className = "h-4 w-4" }: { name: keyof typeof ICONS; className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d={ICONS[name]} />
+    </svg>
+  );
+}
+
+type NavItem = { href: string; label: string; icon: keyof typeof ICONS; exec?: boolean };
 
 const NAV: { section?: string; items: NavItem[] }[] = [
-  { items: [{ href: "/portal", label: "Home" }] },
+  { items: [{ href: "/portal", label: "Home", icon: "home" }] },
   {
     section: "Recruiting",
     items: [
-      { href: "/portal/recruiting", label: "My recruiting" },
-      { href: "/portal/companies", label: "Companies" },
-      { href: "/portal/network", label: "Network" },
+      { href: "/portal/recruiting", label: "My recruiting", icon: "recruiting" },
+      { href: "/portal/companies", label: "Companies", icon: "companies" },
+      { href: "/portal/network", label: "Network", icon: "network" },
     ],
   },
   {
     section: "Graphite",
     items: [
-      { href: "/portal/directory", label: "Directory" },
-      { href: "/portal/projects", label: "Projects" },
-      { href: "/portal/archive", label: "Archive" },
+      { href: "/portal/directory", label: "Directory", icon: "directory" },
+      { href: "/portal/projects", label: "Projects", icon: "projects" },
+      { href: "/portal/archive", label: "Archive", icon: "archive" },
     ],
   },
   {
     section: "Executive board",
     items: [
-      { href: "/portal/admin", label: "Members and roles", exec: true },
-      { href: "/portal/admin/tasks", label: "Recurring tasks", exec: true },
-      { href: "/portal/admin/website", label: "Website", exec: true },
+      { href: "/portal/admin", label: "Members and roles", icon: "members", exec: true },
+      { href: "/portal/admin/tasks", label: "Recurring tasks", icon: "tasks", exec: true },
+      { href: "/portal/admin/website", label: "Website", icon: "website", exec: true },
     ],
   },
 ];
@@ -51,7 +74,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
   }, [ready, me, go]);
 
   if (!ready || !me) {
-    return <div className="flex min-h-dvh items-center justify-center text-sm text-muted">Loading</div>;
+    return <div className="portal flex min-h-dvh items-center justify-center text-muted">Loading</div>;
   }
 
   const exec = isExec(me);
@@ -59,86 +82,94 @@ export function PortalShell({ children }: { children: ReactNode }) {
     href === "/portal" ? pathname === "/portal" : href === "/portal/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 
   const sidebar = (
-    <nav className="flex h-full flex-col bg-stone" aria-label="Portal">
-      <div className="flex h-[76px] items-center px-6">
-        <Link href="/portal" className="text-ink" aria-label="Portal home">
-          <Logo />
-        </Link>
-      </div>
-      <div className="flex-1 overflow-y-auto px-3 pb-6">
+    <nav className="flex h-full flex-col border-r border-edge bg-[#fafbfc]" aria-label="Portal">
+      <Link href="/portal" className="flex h-14 shrink-0 items-center gap-2 px-4" aria-label="Portal home">
+        <Mark className="h-5 w-5 text-ink" />
+        <span className="text-[14px] font-semibold">Graphite Group</span>
+      </Link>
+      <div className="flex-1 overflow-y-auto px-2 pb-4">
         {NAV.map((group, gi) => {
           const items = group.items.filter((i) => !i.exec || exec);
           if (!items.length) return null;
           return (
-            <div key={gi} className={gi ? "mt-7" : "mt-2"}>
-              {group.section && <p className="px-3 pb-1.5 text-[0.8125rem] text-muted">{group.section}</p>}
-              <ul>
-                {items.map((i) => (
-                  <li key={i.href}>
-                    <Link
-                      href={i.href}
-                      onClick={() => setOpen(false)}
-                      aria-current={active(i.href) ? "page" : undefined}
-                      className={`block rounded-full px-3.5 py-1.5 text-[0.9375rem] transition-colors ${
-                        active(i.href) ? "bg-white font-medium text-ink shadow-[0_0_0_1px_rgba(7,56,99,0.08)]" : "text-ink-2 hover:text-ink"
-                      }`}
-                    >
-                      {i.label}
-                    </Link>
-                  </li>
-                ))}
+            <div key={gi} className={gi ? "mt-4" : ""}>
+              {group.section && <p className="px-2 pb-1 text-[12px] font-medium text-faint">{group.section}</p>}
+              <ul className="space-y-px">
+                {items.map((i) => {
+                  const on = active(i.href);
+                  return (
+                    <li key={i.href}>
+                      <Link
+                        href={i.href}
+                        onClick={() => setOpen(false)}
+                        aria-current={on ? "page" : undefined}
+                        className={`flex h-8 items-center gap-2.5 rounded-md px-2 text-[13.5px] transition-colors ${
+                          on ? "bg-[#eceef2] font-medium text-ink" : "text-ink-2 hover:bg-[#f0f2f5]"
+                        }`}
+                      >
+                        <Icon name={i.icon} className={`h-4 w-4 ${on ? "text-ink" : "text-faint"}`} />
+                        {i.label}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           );
         })}
       </div>
-      <div className="border-t border-line px-6 py-5">
-        <Link href="/portal/profile" onClick={() => setOpen(false)} className="flex items-center gap-3">
-          <Avatar name={fullName(me)} photo={me.photo} size={34} />
-          <span className="min-w-0 text-sm leading-tight">
-            <span className="block truncate font-medium">{fullName(me)}</span>
-            <span className="block truncate text-muted">{me.execTitle ?? me.role}</span>
+      <div className="border-t border-edge p-2">
+        <Link
+          href="/portal/profile"
+          onClick={() => setOpen(false)}
+          aria-current={pathname === "/portal/profile" ? "page" : undefined}
+          className={`flex items-center gap-2.5 rounded-md px-2 py-1.5 ${pathname === "/portal/profile" ? "bg-[#eceef2]" : "hover:bg-[#f0f2f5]"}`}
+        >
+          <Avatar name={fullName(me)} photo={me.photo} size={28} />
+          <span className="min-w-0 leading-tight">
+            <span className="block truncate text-[13px] font-medium">{fullName(me)}</span>
+            <span className="block truncate text-[12px] text-muted">{me.execTitle ?? me.role}</span>
           </span>
         </Link>
-        <div className="mt-4 flex gap-4 text-sm text-muted">
-          <Link href="/" className="hover:text-ink">
-            Public site
-          </Link>
-          <button
-            type="button"
-            className="hover:text-ink"
-            onClick={() => {
-              signOut();
-              go("/login", { replace: true });
-            }}
-          >
-            Log out
-          </button>
-        </div>
-        {STATIC_PREVIEW && <p className="mt-4 text-xs leading-relaxed text-muted">Preview with sample data, saved in this browser only.</p>}
+        <button
+          type="button"
+          className="mt-1 flex h-8 w-full items-center rounded-md px-2 text-left text-[13px] text-muted hover:bg-[#f0f2f5] hover:text-ink"
+          onClick={() => {
+            signOut();
+            go("/login", { replace: true });
+          }}
+        >
+          Sign out
+        </button>
       </div>
     </nav>
   );
 
   return (
-    <div className="min-h-dvh bg-[#fafbfd]">
-      <aside className="fixed inset-y-0 left-0 hidden w-60 border-r border-line lg:block">{sidebar}</aside>
+    <div className="portal min-h-dvh bg-white">
+      <aside className="fixed inset-y-0 left-0 hidden w-[232px] lg:block">{sidebar}</aside>
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <button type="button" aria-label="Close menu" className="absolute inset-0 bg-ink/25" onClick={() => setOpen(false)} />
-          <div className="relative h-full w-64 shadow-xl">{sidebar}</div>
+          <button type="button" aria-label="Close menu" className="absolute inset-0 bg-black/20" onClick={() => setOpen(false)} />
+          <div className="relative h-full w-[260px]">{sidebar}</div>
         </div>
       )}
-      <div className="lg:pl-60">
-        <header className="flex h-[64px] items-center justify-between border-b border-line bg-white px-5 lg:hidden">
-          <Link href="/portal" className="text-ink">
-            <Logo />
+      <div className="lg:pl-[232px]">
+        <header className="sticky top-0 z-40 flex h-12 items-center justify-between border-b border-edge bg-white px-4 lg:hidden">
+          <Link href="/portal" className="flex items-center gap-2">
+            <Mark className="h-5 w-5" />
+            <span className="text-[14px] font-semibold">Graphite Group</span>
           </Link>
-          <button type="button" className="pill pill-sm !py-2.5" onClick={() => setOpen(true)}>
-            Menu
+          <button type="button" aria-label="Open menu" className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-stone" onClick={() => setOpen(true)}>
+            <Icon name="menu" className="h-5 w-5" />
           </button>
         </header>
-        <main className="mx-auto max-w-[72rem] px-5 py-10 md:px-10 md:py-14">{children}</main>
+        {STATIC_PREVIEW && (
+          <div className="border-b border-edge bg-stone px-4 py-1.5 text-center text-[12px] text-muted md:px-8">
+            Preview with sample data. Changes are saved in this browser only.
+          </div>
+        )}
+        <main className="mx-auto max-w-[1180px] px-4 py-6 md:px-8 md:py-8">{children}</main>
       </div>
     </div>
   );

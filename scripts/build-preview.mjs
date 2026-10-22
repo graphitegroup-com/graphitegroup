@@ -2,7 +2,8 @@
 // without Vercel (for example as a shared artifact). Every page becomes a
 // top-level .html file and all paths are relative, so it works from any folder.
 //
-//   npm run build:preview
+//   npm run build:preview            whole site plus portal, entry is the hub page
+//   npm run build:preview -- --portal portal only, entry goes straight to sign-in
 //
 // Differences from production: no contact-form endpoint, no redirects, and the
 // portal runs on sample data saved in the browser.
@@ -15,6 +16,7 @@ const api = path.join(root, "src/app/api");
 const apiOff = path.join(root, "src/app/_api_off");
 const out = path.join(root, ".next-preview"); // with distDir set, `output: "export"` writes here
 const dist = path.join(root, "preview-dist");
+const portalOnly = process.argv.includes("--portal");
 
 // API routes can't be statically exported; a leading underscore makes the folder private.
 if (fs.existsSync(api)) fs.renameSync(api, apiOff);
@@ -41,6 +43,7 @@ for (const file of walk(out)) {
     // portal/admin/website.html -> portal-admin-website.html; index.html -> home.html
     target = rel === "index.html" ? "home.html" : rel.replace(/\//g, "-");
     if (target === "404.html" || target === "_not-found.html") continue;
+    if (portalOnly && !/^(portal|login)/.test(target)) continue;
     let html = fs.readFileSync(file, "utf8");
     html = html.replace(/(["'(])\/(images|brand)\//g, "$1$2/").replace(/(["'])\/icon\.svg/g, "$1icon.svg");
     fs.writeFileSync(path.join(dist, target), html);
@@ -70,7 +73,14 @@ for (const file of walk(dist)) {
   if (text !== before) fs.writeFileSync(file, text);
 }
 
-// The hub page is the entry point (index.html).
-fs.copyFileSync(path.join(root, "scripts/preview-hub.html"), path.join(dist, "index.html"));
+// Entry point (index.html): the hub page, or a hop straight to sign-in.
+if (portalOnly) {
+  fs.writeFileSync(
+    path.join(dist, "index.html"),
+    `<meta charset="utf-8" /><title>Graphite Group Portal</title><script>location.replace("login.html")</script><a href="login.html">Open the member portal</a>\n`,
+  );
+} else {
+  fs.copyFileSync(path.join(root, "scripts/preview-hub.html"), path.join(dist, "index.html"));
+}
 
 console.log(`\nPreview written to ${path.relative(root, dist)}/ (${walk(dist).length} files)`);

@@ -3,7 +3,7 @@
 import Link from "@/components/app-link";
 import { useState } from "react";
 import { usePortal } from "@/portal/store";
-import { Button, Drawer, Empty, Input, PageTitle, Td, Th } from "@/portal/ui";
+import { Button, Drawer, Empty, Input, PageTitle, TableWrap, Td, Th, rowCls } from "@/portal/ui";
 import { ReportForm, companyRows } from "@/portal/views/company";
 
 export default function CompaniesPage() {
@@ -18,7 +18,7 @@ export default function CompaniesPage() {
   const filtered = q ? rows.filter((r) => r.name.toLowerCase().includes(q)) : rows;
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div>
       <PageTitle
         title="Companies"
         sub="Every firm Graphite members have recruited with: interview notes by year, outcomes and discussion."
@@ -29,16 +29,16 @@ export default function CompaniesPage() {
         }
       />
 
-      <div className="max-w-sm">
+      <div className="mb-4 max-w-xs">
         <Input type="search" placeholder="Search companies" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search companies" />
       </div>
 
-      <div className="mt-8 overflow-x-auto">
+      <TableWrap>
         {filtered.length === 0 ? (
           <Empty>{rows.length === 0 ? "No companies yet. Add notes from an interview to start the list." : "No companies match your search."}</Empty>
         ) : (
-          <table className="w-full min-w-[680px] text-sm">
-            <thead className="border-b border-ink">
+          <table className="w-full min-w-[680px]">
+            <thead>
               <tr>
                 <Th>Company</Th>
                 <Th>Interview reports</Th>
@@ -49,9 +49,9 @@ export default function CompaniesPage() {
             </thead>
             <tbody>
               {filtered.map((r) => (
-                <tr key={r.name} className="group relative border-b border-line">
+                <tr key={r.name} className={`group relative ${rowCls}`}>
                   <Td>
-                    <Link href={`/portal/companies/${r.slug}`} className="display text-[1.25rem] leading-tight after:absolute after:inset-0 group-hover:underline">
+                    <Link href={`/portal/companies/${r.slug}`} className="font-medium after:absolute after:inset-0 group-hover:underline">
                       {r.name}
                     </Link>
                   </Td>
@@ -64,7 +64,7 @@ export default function CompaniesPage() {
             </tbody>
           </table>
         )}
-      </div>
+      </TableWrap>
 
       <Drawer open={adding} onClose={() => setAdding(false)} title="Add interview report">
         {adding && <ReportForm onDone={() => setAdding(false)} />}

@@ -5,7 +5,7 @@ import { Fragment, useState } from "react";
 import { usePortal } from "@/portal/store";
 import { companySlug, fmtDate, uid } from "@/portal/logic";
 import { STAGES, type Application, type Stage } from "@/portal/types";
-import { Badge, Button, Card, Drawer, Empty, Field, Input, PageTitle, Select, Stat, Td, Textarea, Th } from "@/portal/ui";
+import { Badge, Button, Card, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, Td, Textarea, Th, rowCls } from "@/portal/ui";
 
 const INTERVIEW_STAGES: Stage[] = ["Online Assessment", "First Round", "Superday / Final"];
 const CLOSED_STAGES: Stage[] = ["Offer", "Rejected", "Withdrew"];
@@ -76,27 +76,27 @@ export default function RecruitingPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div>
       <PageTitle
         title="My recruiting"
         sub="Your applications and coffee chats. Only you and the executive board can see this page."
         actions={<Button onClick={openAdd}>Add application</Button>}
       />
 
-      <div className="grid grid-cols-2 gap-x-8 gap-y-6 lg:grid-cols-4">
+      <StatGroup>
         <Stat label="Active applications" value={active} sub={`${mine.length} tracked in total`} />
         <Stat label="Interviewing" value={interviewing} sub="Assessment, first round or final" />
         <Stat label="Offers" value={offers} />
         <Stat label="Coffee chats logged" value={myOutreach.length} sub={`${myOutreach.filter((o) => o.chatted).length} completed`} />
-      </div>
+      </StatGroup>
 
-      <Card title="Applications" className="mt-14">
+      <Card title="Applications" className="mt-6" flush>
         {mine.length === 0 ? (
           <Empty>No applications yet. Add the first one to start tracking your recruiting.</Empty>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-sm">
-              <thead className="border-b border-line">
+            <table className="w-full min-w-[820px]">
+              <thead>
                 <tr>
                   <Th>Company</Th>
                   <Th>Position</Th>
@@ -111,22 +111,22 @@ export default function RecruitingPage() {
               <tbody>
                 {grouped.map((g) => (
                   <Fragment key={g.stage}>
-                    <tr>
-                      <td colSpan={6} className="pt-7 pb-2">
+                    <tr className="border-b border-edge bg-[#fafbfc]">
+                      <td colSpan={6} className="px-4 py-1.5">
                         <Badge tone={stageTone(g.stage)}>{g.stage}</Badge>
-                        <span className="ml-2 text-[0.8125rem] text-muted tabular-nums">{g.items.length}</span>
+                        <span className="ml-2 text-[12px] text-faint tabular-nums">{g.items.length}</span>
                       </td>
                     </tr>
                     {g.items.map((a) => (
-                      <tr key={a.id} className="border-b border-line">
+                      <tr key={a.id} className={rowCls}>
                         <Td>
-                          <Link href={`/portal/companies/${companySlug(a.company)}`} className="display text-[1.25rem] leading-tight hover:underline">
+                          <Link href={`/portal/companies/${companySlug(a.company)}`} className="font-medium hover:underline">
                             {a.company}
                           </Link>
                         </Td>
-                        <Td className="max-w-xs">
+                        <Td className="max-w-xs py-2">
                           <span className="block">{a.position}</span>
-                          {a.notes && <span className="mt-1 block whitespace-pre-line text-muted">{a.notes}</span>}
+                          {a.notes && <span className="mt-0.5 block text-[12.5px] whitespace-pre-line text-muted">{a.notes}</span>}
                         </Td>
                         <Td className="text-muted">{a.cycle}</Td>
                         <Td>
@@ -134,7 +134,7 @@ export default function RecruitingPage() {
                             aria-label={`Stage for ${a.company}`}
                             value={a.stage}
                             onChange={(e) => setStage(a.id, e.target.value as Stage)}
-                            className="border border-line bg-paper py-1 pr-1 pl-2 text-[0.8125rem] text-ink hover:border-ink focus:border-ink focus:outline-none"
+                            className="h-7 rounded-md border border-edge bg-white pr-6 pl-2 text-[12.5px] text-ink hover:border-[#cfd4dc] focus:border-sapphire focus:outline-none"
                           >
                             {STAGES.map((s) => (
                               <option key={s} value={s}>
@@ -146,7 +146,7 @@ export default function RecruitingPage() {
                         <Td className="whitespace-nowrap text-muted">{fmtDate(a.updatedAt)}</Td>
                         <Td className="pr-0 text-right whitespace-nowrap">
                           {confirming === a.id ? (
-                            <span className="inline-flex items-center gap-1 text-sm">
+                            <span className="inline-flex items-center gap-1 text-[13px]">
                               <span className="text-muted">Remove?</span>
                               <Button variant="danger" onClick={() => remove(a.id)}>
                                 Yes
@@ -174,9 +174,10 @@ export default function RecruitingPage() {
 
       <Card
         title="Coffee chats"
-        className="mt-14"
+        className="mt-6"
+        flush
         action={
-          <Link href="/portal/network" className="link-u text-ink-2 hover:text-ink">
+          <Link href="/portal/network" className="hover:text-ink">
             Open the network
           </Link>
         }
@@ -191,8 +192,8 @@ export default function RecruitingPage() {
           </Empty>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
-              <thead className="border-b border-line">
+            <table className="w-full min-w-[720px]">
+              <thead>
                 <tr>
                   <Th>Person</Th>
                   <Th>Company</Th>
@@ -206,7 +207,7 @@ export default function RecruitingPage() {
                 {myOutreach.map((o) => {
                   const c = data.contacts.find((x) => x.id === o.contactId);
                   return (
-                    <tr key={o.id} className="border-b border-line">
+                    <tr key={o.id} className={rowCls}>
                       <Td className="font-medium">
                         {c ? (
                           <Link href={`/portal/network/${c.id}`} className="hover:underline">
@@ -218,7 +219,7 @@ export default function RecruitingPage() {
                       </Td>
                       <Td>
                         {c?.company ? (
-                          <Link href={`/portal/companies/${companySlug(c.company)}`} className="text-ink-2 hover:text-ink hover:underline">
+                          <Link href={`/portal/companies/${companySlug(c.company)}`} className="hover:underline">
                             {c.company}
                           </Link>
                         ) : null}
@@ -236,12 +237,12 @@ export default function RecruitingPage() {
         )}
       </Card>
 
-      <p className="mt-10 max-w-[65ch] text-sm text-muted">
+      <p className="mt-4 text-[13px] text-muted">
         After an interview, add what you learned to the company&apos;s page so the next member is better prepared.
       </p>
 
       <Drawer open={adding} onClose={() => setAdding(false)} title="Add application">
-        <form onSubmit={save} className="space-y-5">
+        <form onSubmit={save} className="space-y-4">
           <Field label="Company">
             <Input required value={draft.company} onChange={(e) => setDraft({ ...draft, company: e.target.value })} placeholder="e.g. Bain & Company" />
           </Field>
