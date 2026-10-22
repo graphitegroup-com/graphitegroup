@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePortal } from "@/portal/store";
 import { isExec } from "@/portal/logic";
-import { Button, Card, Field, Input, PageTitle, Textarea } from "@/portal/ui";
+import { Button, ButtonLink, Card, Field, Input, PageTitle, Textarea } from "@/portal/ui";
 
 export default function ArchivePage() {
   const { data, me, update } = usePortal();
@@ -42,49 +42,45 @@ export default function ArchivePage() {
           )
         }
       >
-        <div className="py-4">
+        <div className="py-3">
           {noteDraft === null ? (
-            <p className="text-sm text-muted">{archiveNote || "No description yet."}</p>
+            <p className="max-w-[70ch] leading-relaxed text-ink-2">{archiveNote || "No description yet."}</p>
           ) : (
             <div className="space-y-3">
               <Textarea aria-label="Archive note" value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} />
-              <div className="flex justify-end gap-2">
+              <div className="flex gap-2">
+                <Button onClick={saveNote}>Save note</Button>
                 <Button variant="secondary" onClick={() => setNoteDraft(null)}>
                   Cancel
                 </Button>
-                <Button onClick={saveNote}>Save note</Button>
               </div>
             </div>
           )}
         </div>
       </Card>
 
-      <Card>
-        <div className="flex flex-col items-center justify-center gap-5 px-6 py-16 text-center md:py-24">
-          <p className="text-sm text-muted">Graphite Group</p>
-          <h2 className="display text-3xl md:text-4xl">The Graphite archive</h2>
+      <Card title="Slide-deck archive">
+        <div className="py-3">
+          <p className="max-w-[70ch] text-[13.5px] text-muted">
+            The Graphite archive is a single slide deck covering the club&apos;s past members, projects and events. It opens in a new tab.
+          </p>
           {archiveDeckUrl && urlDraft === null ? (
-            <>
-              <a
-                href={archiveDeckUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-solid"
-              >
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <ButtonLink href={archiveDeckUrl} variant="primary">
                 Open the Graphite archive deck
-              </a>
+              </ButtonLink>
               {exec && (
-                <Button variant="ghost" onClick={() => setUrlDraft(archiveDeckUrl)}>
+                <Button variant="secondary" onClick={() => setUrlDraft(archiveDeckUrl)}>
                   Change link
                 </Button>
               )}
-            </>
+            </div>
           ) : (
-            <>
-              {!archiveDeckUrl && <p className="text-sm text-muted">No archive deck linked yet.</p>}
+            <div className="mt-3">
+              {!archiveDeckUrl && <p className="mb-3 text-[13px] text-muted">No archive deck linked yet.</p>}
               {exec ? (
                 <form
-                  className="flex w-full max-w-xl flex-col gap-3 text-left sm:flex-row sm:items-end"
+                  className="flex max-w-xl flex-col gap-2 sm:flex-row sm:items-end"
                   onSubmit={(e) => {
                     e.preventDefault();
                     saveUrl();
@@ -92,29 +88,24 @@ export default function ArchivePage() {
                 >
                   <div className="flex-1">
                     <Field label="Archive deck URL">
-                      <Input
-                        type="url"
-                        placeholder="https://"
-                        value={urlDraft ?? ""}
-                        onChange={(e) => setUrlDraft(e.target.value)}
-                      />
+                      <Input type="url" placeholder="https://" value={urlDraft ?? ""} onChange={(e) => setUrlDraft(e.target.value)} />
                     </Field>
                   </div>
                   <div className="flex gap-2">
+                    <Button type="submit" disabled={!(urlDraft ?? "").trim() && !archiveDeckUrl}>
+                      Save link
+                    </Button>
                     {urlDraft !== null && archiveDeckUrl && (
                       <Button variant="secondary" onClick={() => setUrlDraft(null)}>
                         Cancel
                       </Button>
                     )}
-                    <Button type="submit" disabled={!(urlDraft ?? "").trim() && !archiveDeckUrl}>
-                      Save link
-                    </Button>
                   </div>
                 </form>
               ) : (
-                <p className="text-xs text-muted">The executive board will add the link soon.</p>
+                <p className="text-[13px] text-muted">The executive board will add the link soon.</p>
               )}
-            </>
+            </div>
           )}
         </div>
       </Card>

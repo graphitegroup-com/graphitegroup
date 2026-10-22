@@ -185,7 +185,7 @@ export default function RecruitingPage() {
         {myOutreach.length === 0 ? (
           <Empty>
             No outreach logged yet. Find someone in the{" "}
-            <Link href="/portal/network" className="link-u text-ink">
+            <Link href="/portal/network" className="font-medium hover:underline">
               network
             </Link>{" "}
             and log your first message.

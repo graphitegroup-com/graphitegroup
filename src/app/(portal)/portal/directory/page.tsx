@@ -4,7 +4,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { usePortal } from "@/portal/store";
 import { classStanding, fullName, isAlum, isExec, semestersCompleted } from "@/portal/logic";
 import { ROLES, SCHOOLS, type Member, type Term } from "@/portal/types";
-import { Avatar, Badge, Card, Drawer, Empty, Input, PageTitle, Select, Th, Td } from "@/portal/ui";
+import { Avatar, Badge, Drawer, Empty, Input, PageTitle, Select, TableWrap, Tabs, Td, Th, rowCls } from "@/portal/ui";
 
 type View = "current" | "alumni" | "everyone";
 const VIEWS: { key: View; label: string }[] = [
@@ -26,7 +26,7 @@ function StandingBadge({ gradYear }: { gradYear: number }) {
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="grid grid-cols-[140px_1fr] gap-3 border-b border-line py-2.5 text-sm last:border-b-0">
+    <div className="grid grid-cols-[120px_1fr] gap-3 border-b border-edge py-2 text-[13.5px] last:border-b-0">
       <dt className="text-muted">{label}</dt>
       <dd className="min-w-0 break-words">{children}</dd>
     </div>
@@ -87,24 +87,11 @@ export default function DirectoryPage() {
     <div>
       <PageTitle title="Directory" sub="Every Graphite member and alum across the five Claremont Colleges." />
 
-      <div className="mb-6 flex flex-wrap gap-6 text-[0.9375rem]" role="tablist">
-        {VIEWS.map((v) => (
-          <button
-            key={v.key}
-            type="button"
-            role="tab"
-            aria-selected={view === v.key}
-            onClick={() => setView(v.key)}
-            className={view === v.key ? "text-ink underline decoration-1 underline-offset-[0.45em]" : "text-muted hover:text-ink"}
-          >
-            {v.label}
-          </button>
-        ))}
-      </div>
+      <Tabs value={view} options={VIEWS.map((v) => ({ value: v.key, label: v.label }))} onChange={setView} />
 
-      <div className="mb-8 flex flex-wrap items-baseline gap-x-5 gap-y-2 text-sm">
-        <span>
-          <span className="font-medium">{activeCount}</span> <span className="text-muted">active members:</span>
+      <div className="mb-4 flex flex-wrap items-center gap-1 text-[13px]">
+        <span className="mr-2">
+          <span className="font-medium tabular-nums">{activeCount}</span> <span className="text-muted">active members</span>
         </span>
         {bySchool.map((s) => (
           <button
@@ -112,15 +99,17 @@ export default function DirectoryPage() {
             type="button"
             onClick={() => setSchool(school === s.school ? ALL : s.school)}
             aria-pressed={school === s.school}
-            className={school === s.school ? "text-ink underline decoration-1 underline-offset-[0.45em]" : "text-ink-2 hover:text-ink"}
+            className={`h-7 rounded-md px-2 transition-colors ${
+              school === s.school ? "bg-stone font-medium text-ink shadow-[inset_0_0_0_1px_var(--color-edge)]" : "text-ink-2 hover:bg-stone hover:text-ink"
+            }`}
           >
-            {s.school} <span className="text-muted">{s.count}</span>
+            {s.school} <span className="text-faint tabular-nums">{s.count}</span>
           </button>
         ))}
       </div>
 
-      <Card>
-        <div className="grid gap-3 border-b border-ink pb-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="w-full max-w-xs">
           <Input
             type="search"
             placeholder="Search name or email"
@@ -128,83 +117,77 @@ export default function DirectoryPage() {
             onChange={(e) => setQ(e.target.value)}
             aria-label="Search name or email"
           />
-          <Select aria-label="School" value={school} onChange={(e) => setSchool(e.target.value)} options={[ALL, ...SCHOOLS]} />
-          <Select aria-label="Role" value={role} onChange={(e) => setRole(e.target.value)} options={[ALL, ...ROLES]} />
-          <Select
-            aria-label="Practice"
-            value={practice}
-            onChange={(e) => setPractice(e.target.value)}
-            options={[ALL, "Strategy", "Digital"]}
-          />
-          <Select aria-label="Class year" value={year} onChange={(e) => setYear(e.target.value)} options={[ALL, ...years]} />
         </div>
+        <div className="w-36">
+          <Select aria-label="School" value={school} onChange={(e) => setSchool(e.target.value)} options={[{ value: ALL, label: "All schools" }, ...SCHOOLS]} />
+        </div>
+        <div className="w-48">
+          <Select aria-label="Role" value={role} onChange={(e) => setRole(e.target.value)} options={[{ value: ALL, label: "All roles" }, ...ROLES]} />
+        </div>
+        <div className="w-36">
+          <Select aria-label="Practice" value={practice} onChange={(e) => setPractice(e.target.value)} options={[{ value: ALL, label: "Both practices" }, "Strategy", "Digital"]} />
+        </div>
+        <div className="w-28">
+          <Select aria-label="Class year" value={year} onChange={(e) => setYear(e.target.value)} options={[{ value: ALL, label: "All years" }, ...years]} />
+        </div>
+      </div>
 
+      <TableWrap>
         {rows.length === 0 ? (
           <Empty>No members match these filters.</Empty>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-sm">
-              <thead className="border-b border-line">
-                <tr>
-                  <Th>Name</Th>
-                  <Th>School</Th>
-                  <Th>Class</Th>
-                  <Th>Practice</Th>
-                  <Th>Role</Th>
-                  <Th>School email</Th>
+          <table className="w-full min-w-[860px]">
+            <thead>
+              <tr>
+                <Th>Name</Th>
+                <Th>Role</Th>
+                <Th>School</Th>
+                <Th>Class</Th>
+                <Th>Practice</Th>
+                <Th>School email</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((m) => (
+                <tr key={m.id} onClick={() => setOpenId(m.id)} className={`cursor-pointer ${rowCls}`}>
+                  <Td>
+                    <span className="flex items-center gap-2.5">
+                      <Avatar name={fullName(m)} photo={m.photo} size={24} />
+                      <span className="font-medium whitespace-nowrap">{fullName(m)}</span>
+                    </span>
+                  </Td>
+                  <Td>
+                    <span className="block whitespace-nowrap">{m.execTitle ?? m.role}</span>
+                    {m.execTitle && <span className="block text-[12.5px] text-muted">{m.role}</span>}
+                  </Td>
+                  <Td className="whitespace-nowrap">{m.school}</Td>
+                  <Td>
+                    <span className="whitespace-nowrap tabular-nums">{m.gradYear}</span>
+                    <span className="ml-2 text-[12.5px] text-muted">{classStanding(m.gradYear)}</span>
+                  </Td>
+                  <Td className="text-ink-2">{m.practice}</Td>
+                  <Td>
+                    <a href={`mailto:${m.schoolEmail}`} onClick={(e) => e.stopPropagation()} className="text-ink-2 hover:underline">
+                      {m.schoolEmail}
+                    </a>
+                  </Td>
                 </tr>
-              </thead>
-              <tbody>
-                {rows.map((m) => (
-                  <tr
-                    key={m.id}
-                    onClick={() => setOpenId(m.id)}
-                    className="cursor-pointer border-b border-line hover:bg-stone/60"
-                  >
-                    <Td>
-                      <span className="flex items-center gap-3">
-                        <Avatar name={fullName(m)} photo={m.photo} size={30} />
-                        <span className="font-medium">{fullName(m)}</span>
-                      </span>
-                    </Td>
-                    <Td>{m.school}</Td>
-                    <Td>
-                      <span className="flex items-center gap-2">
-                        {m.gradYear} <StandingBadge gradYear={m.gradYear} />
-                      </span>
-                    </Td>
-                    <Td>{m.practice}</Td>
-                    <Td>
-                      {m.role}
-                      {m.execTitle && <span className="block text-xs text-muted">{m.execTitle}</span>}
-                    </Td>
-                    <Td>
-                      <a
-                        href={`mailto:${m.schoolEmail}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="link-u text-ink-2"
-                      >
-                        {m.schoolEmail}
-                      </a>
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         )}
-      </Card>
-      <p className="mt-3 text-xs text-muted">Class standing and alumni status update automatically from graduation year.</p>
+      </TableWrap>
+      <p className="mt-2 text-[12px] text-muted">Class standing and alumni status update automatically from graduation year.</p>
 
       <Drawer open={!!selected} onClose={() => setOpenId(null)} title={selected ? fullName(selected) : "Profile"}>
         {selected && (
           <div>
-            <div className="mb-6 flex items-center gap-4">
-              <Avatar name={fullName(selected)} photo={selected.photo} size={72} />
-              <div>
-                <p className="display text-2xl">{fullName(selected)}</p>
-                <p className="text-sm text-muted">
-                  {selected.execTitle ?? selected.role} · {selected.practice}
+            <div className="mb-5 flex items-center gap-3">
+              <Avatar name={fullName(selected)} photo={selected.photo} size={48} />
+              <div className="min-w-0">
+                <p className="font-semibold">{fullName(selected)}</p>
+                <p className="text-[13px] text-muted">
+                  {selected.execTitle ?? selected.role}, {selected.practice}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   <StandingBadge gradYear={selected.gradYear} />
@@ -219,12 +202,12 @@ export default function DirectoryPage() {
               <Row label="Role">{selected.role}</Row>
               {selected.execTitle && <Row label="Exec title">{selected.execTitle}</Row>}
               <Row label="School email">
-                <a href={`mailto:${selected.schoolEmail}`} className="text-accent hover:underline">
+                <a href={`mailto:${selected.schoolEmail}`} className="text-prussian hover:underline">
                   {selected.schoolEmail}
                 </a>
               </Row>
               <Row label="Personal email">
-                <a href={`mailto:${selected.personalEmail}`} className="text-accent hover:underline">
+                <a href={`mailto:${selected.personalEmail}`} className="text-prussian hover:underline">
                   {selected.personalEmail}
                 </a>
               </Row>
@@ -240,7 +223,7 @@ export default function DirectoryPage() {
               </Row>
               <Row label="LinkedIn">
                 {selected.linkedin ? (
-                  <a href={selected.linkedin} target="_blank" rel="noreferrer" className="text-accent hover:underline">
+                  <a href={selected.linkedin} target="_blank" rel="noreferrer" className="text-prussian hover:underline">
                     {selected.linkedin}
                   </a>
                 ) : (
@@ -248,7 +231,7 @@ export default function DirectoryPage() {
                 )}
               </Row>
               <Row label="Membership">
-                Joined {termLabel(selected.joinedTerm)} · {semestersCompleted(selected.joinedTerm)} semester
+                Joined {termLabel(selected.joinedTerm)}, {semestersCompleted(selected.joinedTerm)} semester
                 {semestersCompleted(selected.joinedTerm) === 1 ? "" : "s"} completed
               </Row>
               <Row label="Public website">{selected.showOnWebsite ? "Shown" : "Hidden"}</Row>

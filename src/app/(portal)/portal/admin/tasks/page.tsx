@@ -5,7 +5,7 @@ import { academicYear, academicYearLabel, audienceLabel, isAlum, matchesAudience
 import { ExecOnly } from "@/portal/exec-only";
 import { usePortal } from "@/portal/store";
 import { EXEC_TITLES, ROLES, type Audience, type ExecTitle, type Role, type TaskTemplate } from "@/portal/types";
-import { Badge, Button, Card, Drawer, Empty, Field, Input, PageTitle, Select, Td, Textarea, Th } from "@/portal/ui";
+import { Badge, Button, Card, Drawer, Empty, Field, Input, PageTitle, Select, Td, Textarea, Th, rowCls } from "@/portal/ui";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 // Academic-year order: July first.
@@ -36,7 +36,7 @@ function TasksAdmin() {
   const remove = (id: string) => update((d) => ({ ...d, taskTemplates: d.taskTemplates.filter((t) => t.id !== id) }));
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div>
       <PageTitle
         title="Recurring tasks"
         sub="Set a task once and it appears on the right people's home page every academic year. Tasks aimed at a title follow whoever holds it, so they hand over automatically when exec changes."
@@ -51,13 +51,13 @@ function TasksAdmin() {
         }
       />
 
-      <Card title={`Calendar for ${academicYearLabel(year)}`}>
+      <Card title={`Calendar for ${academicYearLabel(year)}`} flush>
         {templates.length === 0 ? (
           <Empty>No recurring tasks yet.</Empty>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
-              <thead className="border-b border-line">
+            <table className="w-full min-w-[760px]">
+              <thead>
                 <tr>
                   <Th>Due</Th>
                   <Th>Task</Th>
@@ -66,31 +66,31 @@ function TasksAdmin() {
                   <Th />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-line">
+              <tbody>
                 {templates.map((t) => {
                   const assignees = active.filter((m) => matchesAudience(t.audience, m));
                   const done = assignees.filter((m) => data.taskDone[`${t.id}:${year}:${m.id}`]).length;
                   return (
-                    <tr key={t.id}>
-                      <Td className="whitespace-nowrap font-medium">
+                    <tr key={t.id} className={rowCls}>
+                      <Td className="whitespace-nowrap text-ink-2 tabular-nums">
                         {MONTHS[t.month - 1]} {t.day}
                       </Td>
                       <Td>
                         <span className="block font-medium">{t.title}</span>
-                        <span className="text-muted">{t.body}</span>
+                        <span className="mt-0.5 block text-[13px] text-muted">{t.body}</span>
                       </Td>
                       <Td>
                         <Badge tone={t.audience.kind === "title" ? "dark" : "gray"}>{audienceLabel(t.audience)}</Badge>
-                        <span className="mt-1 block text-xs text-muted">
+                        <span className="mt-1 block text-[12px] text-muted">
                           {assignees.length} {assignees.length === 1 ? "person" : "people"}
                         </span>
                       </Td>
                       <Td>
-                        <span className="font-medium">
+                        <span className="text-[13px] tabular-nums">
                           {done}/{assignees.length}
                         </span>
-                        <span className="mt-1.5 block h-1 w-24 bg-stone">
-                          <span className="block h-1 bg-accent" style={{ width: `${assignees.length ? (done / assignees.length) * 100 : 0}%` }} />
+                        <span className="mt-1.5 block h-1 w-24 overflow-hidden rounded-sm bg-edge">
+                          <span className="block h-1 bg-prussian" style={{ width: `${assignees.length ? (done / assignees.length) * 100 : 0}%` }} />
                         </span>
                       </Td>
                       <Td className="text-right whitespace-nowrap">
@@ -159,7 +159,7 @@ function TaskDrawer({
         <Field label="Details">
           <Textarea value={t.body} onChange={(e) => setT({ ...t, body: e.target.value })} />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Due month">
             <Select options={MONTHS} value={MONTHS[t.month - 1]} onChange={(e) => setT({ ...t, month: MONTHS.indexOf(e.target.value) + 1 })} />
           </Field>
@@ -192,10 +192,13 @@ function TaskDrawer({
             <Select options={EXEC_TITLES} value={t.audience.title} onChange={(e) => setAudience({ kind: "title", title: e.target.value as ExecTitle })} />
           </Field>
         )}
-        <div className="flex justify-between pt-2">
+        <div className="flex gap-2 pt-2">
           <Button type="submit">{isNew ? "Create task" : "Save changes"}</Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
           {!isNew && (
-            <Button variant="danger" onClick={() => onDelete(t.id)}>
+            <Button variant="danger" className="ml-auto self-center" onClick={() => onDelete(t.id)}>
               Delete
             </Button>
           )}

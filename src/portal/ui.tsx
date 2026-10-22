@@ -137,7 +137,7 @@ export function ButtonLink({
 }
 
 export const fieldCls =
-  "w-full rounded-md border border-edge bg-white px-2.5 text-[13.5px] text-ink placeholder:text-faint focus:border-sapphire focus:ring-2 focus:ring-sapphire/15 focus:outline-none read-only:bg-stone read-only:text-muted";
+  "w-full rounded-md border border-edge bg-white px-2.5 text-[13.5px] text-ink placeholder:text-faint focus:border-sapphire focus:ring-2 focus:ring-sapphire/15 focus:outline-none disabled:bg-stone disabled:text-muted";
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -150,21 +150,26 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
 }
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={`${fieldCls} h-8 ${props.className ?? ""}`} />;
+  return <input {...props} className={`${fieldCls} h-8 read-only:bg-stone read-only:text-muted ${props.className ?? ""}`} />;
 }
 
 export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea rows={3} {...props} className={`${fieldCls} resize-y py-1.5 leading-relaxed ${props.className ?? ""}`} />;
+  return <textarea rows={3} {...props} className={`${fieldCls} resize-y py-1.5 leading-relaxed read-only:bg-stone read-only:text-muted ${props.className ?? ""}`} />;
 }
 
-export function Select({ options, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { options: readonly string[] }) {
+type Option = string | { value: string; label: string };
+
+export function Select({ options, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { options: readonly Option[] }) {
   return (
     <select {...props} className={`${fieldCls} h-8 pr-7 ${props.className ?? ""}`}>
-      {options.map((o) => (
-        <option key={o} value={o}>
-          {o}
-        </option>
-      ))}
+      {options.map((o) => {
+        const { value, label } = typeof o === "string" ? { value: o, label: o } : o;
+        return (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        );
+      })}
     </select>
   );
 }

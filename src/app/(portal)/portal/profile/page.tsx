@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { usePortal } from "@/portal/store";
 import { classStanding, fullName, isAlum, isExec, semestersCompleted } from "@/portal/logic";
 import { EXEC_TITLES, ROLES, SCHOOLS, type ExecTitle, type Member, type Practice, type Role, type School } from "@/portal/types";
-import { Avatar, Badge, Button, Card, Field, Input, PageTitle, Select, Stat } from "@/portal/ui";
+import { Avatar, Badge, Button, Card, Field, Input, PageTitle, Select } from "@/portal/ui";
 
 const MAX_SIDE = 480;
 const JPEG_QUALITY = 0.82;
@@ -94,33 +94,35 @@ function ProfileForm({ me, exec, onSave }: { me: Member; exec: boolean; onSave: 
   const sem = semestersCompleted(me.joinedTerm);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-      <Card title="Profile details">
-        <form
-          className="space-y-6 p-5"
-          onSubmit={(e) => {
-            e.preventDefault();
-            save();
-          }}
-        >
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <Avatar name={name} photo={form.photo} size={96} />
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Headshot</p>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                onChange={onPhoto}
-                className="block text-sm text-muted file:mr-3 file:border file:border-line file:bg-paper file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ink hover:file:bg-stone"
-              />
-              {form.photo && (
-                <Button variant="secondary" onClick={removePhoto}>
-                  Remove photo
-                </Button>
-              )}
-              {photoError && <p className="text-xs text-[#9b2c2c]">{photoError}</p>}
-              <p className="text-xs text-muted">Resized to 480px before saving.</p>
+    <form
+      className="max-w-3xl space-y-6"
+      onSubmit={(e) => {
+        e.preventDefault();
+        save();
+      }}
+    >
+      <Card title="Personal">
+        <div className="space-y-4 py-4">
+          <div className="flex items-center gap-4">
+            <Avatar name={name} photo={form.photo} size={56} />
+            <div className="min-w-0 space-y-1.5">
+              <p className="text-[13px] font-medium text-ink-2">Headshot</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={onPhoto}
+                  className="block text-[13px] text-muted file:mr-3 file:h-8 file:rounded-md file:border file:border-edge file:bg-white file:px-3 file:text-[13px] file:font-medium file:text-ink hover:file:bg-stone"
+                />
+                {form.photo && (
+                  <Button variant="ghost" onClick={removePhoto}>
+                    Remove photo
+                  </Button>
+                )}
+              </div>
+              {photoError && <p className="text-[12px] text-[#a8261b]">{photoError}</p>}
+              <p className="text-[12px] text-muted">Resized to 480px before saving.</p>
             </div>
           </div>
 
@@ -143,18 +145,50 @@ function ProfileForm({ me, exec, onSave }: { me: Member; exec: boolean; onSave: 
             <Field label="Student ID">
               <Input value={form.studentId} onChange={(e) => set("studentId", e.target.value)} />
             </Field>
-            <Field label="School">
-              <Select value={form.school} onChange={(e) => set("school", e.target.value as School)} options={SCHOOLS} />
-            </Field>
-            <Field label="Graduation year">
-              <Input
-                type="number"
-                min={2000}
-                max={2100}
-                value={form.gradYear}
-                onChange={(e) => set("gradYear", Number(e.target.value))}
-              />
-            </Field>
+            <div className="sm:col-span-2">
+              <Field label="LinkedIn URL">
+                <Input
+                  type="url"
+                  placeholder="https://www.linkedin.com/in/"
+                  value={form.linkedin ?? ""}
+                  onChange={(e) => set("linkedin", e.target.value)}
+                />
+              </Field>
+            </div>
+          </div>
+
+          <p className="text-[12.5px] text-muted">
+            Phone and student ID are visible only to you and the executive board. They are used for payroll.
+          </p>
+        </div>
+      </Card>
+
+      <Card title="School">
+        <div className="grid gap-4 py-4 sm:grid-cols-2">
+          <Field label="School">
+            <Select value={form.school} onChange={(e) => set("school", e.target.value as School)} options={SCHOOLS} />
+          </Field>
+          <Field label="Graduation year">
+            <Input
+              type="number"
+              min={2000}
+              max={2100}
+              value={form.gradYear}
+              onChange={(e) => set("gradYear", Number(e.target.value))}
+            />
+          </Field>
+          <ReadOnly label="Class standing" hint={`Class of ${me.gradYear}`}>
+            {classStanding(me.gradYear)}
+          </ReadOnly>
+          <ReadOnly label="Status" hint="Updates automatically from graduation year">
+            {isAlum(me) ? <Badge>Alumni</Badge> : <Badge tone="green">Active</Badge>}
+          </ReadOnly>
+        </div>
+      </Card>
+
+      <Card title="Graphite">
+        <div className="space-y-4 py-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Practice">
               <Select
                 value={form.practice}
@@ -180,52 +214,41 @@ function ProfileForm({ me, exec, onSave }: { me: Member; exec: boolean; onSave: 
                 />
               </Field>
             )}
-            <div className="sm:col-span-2">
-              <Field label="LinkedIn URL">
-                <Input
-                  type="url"
-                  placeholder="https://www.linkedin.com/in/"
-                  value={form.linkedin ?? ""}
-                  onChange={(e) => set("linkedin", e.target.value)}
-                />
-              </Field>
-            </div>
+            <ReadOnly label="Semesters completed" hint={`Joined ${me.joinedTerm[0] === "F" ? "Fall" : "Spring"} ${me.joinedTerm.slice(1)}`}>
+              <span className="tabular-nums">{sem}</span>
+            </ReadOnly>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2">
             <input
               type="checkbox"
               checked={form.showOnWebsite}
               onChange={(e) => set("showOnWebsite", e.target.checked)}
-              className="h-4 w-4 accent-accent"
+              className="h-4 w-4 accent-[var(--color-prussian)]"
             />
             Show me on the public website
           </label>
-
-          <p className="border-l-2 border-accent bg-stone px-4 py-3 text-sm text-muted">
-            Phone and student ID are visible only to you and the executive board. They are used for payroll.
-          </p>
-
-          <div className="flex items-center justify-end gap-3 border-t border-line pt-5">
-            {saved && (
-              <span role="status" className="text-sm font-medium text-[#1d6b3f]">
-                Saved
-              </span>
-            )}
-            <Button type="submit">Save profile</Button>
-          </div>
-        </form>
+        </div>
       </Card>
 
-      <div className="space-y-4">
-        <Stat label="Class standing" value={classStanding(me.gradYear)} sub={`Class of ${me.gradYear}`} />
-        <Stat
-          label="Status"
-          value={isAlum(me) ? <Badge>Alumni</Badge> : <Badge tone="green">Active</Badge>}
-          sub="Updates automatically from graduation year"
-        />
-        <Stat label="Semesters completed" value={sem} sub={`Joined ${me.joinedTerm[0] === "F" ? "Fall" : "Spring"} ${me.joinedTerm.slice(1)}`} />
+      <div className="flex items-center justify-end gap-2">
+        {saved && (
+          <span role="status" className="text-[13px] font-medium text-[#1d6b37]">
+            Saved
+          </span>
+        )}
+        <Button type="submit">Save profile</Button>
       </div>
+    </form>
+  );
+}
+
+function ReadOnly({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <div>
+      <p className="mb-1 text-[13px] font-medium text-ink-2">{label}</p>
+      <div className="flex h-8 items-center text-[13.5px]">{children}</div>
+      {hint && <p className="mt-1 text-[12px] text-muted">{hint}</p>}
     </div>
   );
 }

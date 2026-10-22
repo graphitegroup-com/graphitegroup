@@ -5,7 +5,7 @@ import Link from "@/components/app-link";
 import { usePortal } from "@/portal/store";
 import { fullName, isExec, uid } from "@/portal/logic";
 import type { Practice, Project, Template } from "@/portal/types";
-import { Button, Drawer, Empty, Field, Input, PageTitle, Select, Textarea } from "@/portal/ui";
+import { Button, Card, Drawer, Empty, Field, Input, PageTitle, Segmented, Select, Tabs, TableWrap, Td, Textarea, Th, fieldCls, rowCls } from "@/portal/ui";
 
 type Tab = "archive" | "templates";
 const ALL_CATEGORIES = "All categories";
@@ -27,23 +27,7 @@ const emptyProject = () => ({
 
 const emptyTemplate = () => ({ title: "", category: "", description: "", sourceProjectId: "", url: "" });
 
-const fieldCls = "w-full border border-line bg-paper px-3 py-2 text-[0.9375rem] text-ink focus:border-ink focus:outline-none";
-
-/** Plain text tab, underlined when active. Same treatment as the public site's filters. */
-function TextTab({ active, onClick, children, role = "tab" }: { active: boolean; onClick: () => void; children: React.ReactNode; role?: string }) {
-  return (
-    <button
-      type="button"
-      role={role}
-      aria-selected={role === "tab" ? active : undefined}
-      aria-pressed={role === "tab" ? undefined : active}
-      onClick={onClick}
-      className={`transition-colors ${active ? "text-ink underline decoration-1 underline-offset-[0.45em]" : "text-muted hover:text-ink"}`}
-    >
-      {children}
-    </button>
-  );
-}
+const PRACTICE_OPTIONS = PRACTICES.map((p) => ({ value: p, label: p }));
 
 export default function ProjectsPage() {
   const { data, me, update } = usePortal();
@@ -146,83 +130,96 @@ export default function ProjectsPage() {
         }
       />
 
-      <div className="flex gap-7 border-b border-line pb-4 text-[1.0625rem]" role="tablist" aria-label="Projects view">
-        <TextTab active={tab === "archive"} onClick={() => setTab("archive")}>
-          Archive
-        </TextTab>
-        <TextTab active={tab === "templates"} onClick={() => setTab("templates")}>
-          Templates
-        </TextTab>
-      </div>
+      <Tabs
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "archive", label: "Archive", count: data.projects.length },
+          { value: "templates", label: "Templates", count: data.templates.length },
+        ]}
+      />
 
       {tab === "archive" && (
         <>
-          <div className="mt-8 flex flex-col gap-4 lg:flex-row lg:items-center">
-            <Input type="search" placeholder="Search client, summary, sector or category" aria-label="Search projects" value={q} onChange={(e) => setQ(e.target.value)} className="lg:max-w-sm" />
-            <div className="flex gap-5 text-sm" aria-label="Practice">
-              {PRACTICES.map((p) => (
-                <TextTab key={p} role="button" active={practice === p} onClick={() => setPractice(p)}>
-                  {p}
-                </TextTab>
-              ))}
-            </div>
-            <div className="flex gap-3 lg:ml-auto">
-              <Select aria-label="Category" value={category} onChange={(e) => setCategory(e.target.value)} options={[ALL_CATEGORIES, ...categories]} className="lg:w-56" />
-              <Select aria-label="Year" value={year} onChange={(e) => setYear(e.target.value)} options={[ALL_YEARS, ...years]} className="lg:w-36" />
-            </div>
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <Input
+              type="search"
+              placeholder="Search client, summary, sector or category"
+              aria-label="Search projects"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="max-w-xs"
+            />
+            <Segmented label="Practice" value={practice} options={PRACTICE_OPTIONS} onChange={setPractice} />
+            <Select aria-label="Category" value={category} onChange={(e) => setCategory(e.target.value)} options={[ALL_CATEGORIES, ...categories]} className="w-auto!" />
+            <Select aria-label="Year" value={year} onChange={(e) => setYear(e.target.value)} options={[ALL_YEARS, ...years]} className="w-auto!" />
+            <span className="ml-auto text-[13px] text-muted tabular-nums">
+              {results.length} {results.length === 1 ? "engagement" : "engagements"}
+            </span>
           </div>
 
-          <p className="mt-8 text-sm text-muted">
-            {results.length} {results.length === 1 ? "engagement" : "engagements"}
-          </p>
-          <div className="mt-3 border-t border-ink">
+          <TableWrap>
             {results.length === 0 ? (
               <Empty>No projects match these filters.</Empty>
             ) : (
-              <ul>
-                {results.map((p) => (
-                  <li key={p.id} className="grid gap-x-10 gap-y-2 border-b border-line py-7 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-                    <div className="min-w-0">
-                      <Link href={`/portal/projects/${p.id}`} className="display text-[1.5rem] leading-tight hover:underline hover:decoration-1 hover:underline-offset-4">
-                        {p.client}
-                      </Link>
-                      <p className="mt-1.5 text-sm text-muted">
-                        {p.term} {p.year} · {p.practice}
-                        {p.sector && ` · ${p.sector}`}
-                      </p>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="line-clamp-1 leading-relaxed text-ink-2">{p.summary}</p>
-                      {p.categories.length > 0 && <p className="mt-1.5 text-sm text-muted">{p.categories.join(", ")}</p>}
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <table className="w-full min-w-[820px] table-fixed">
+                <thead>
+                  <tr>
+                    <Th className="w-[42%]">Client</Th>
+                    <Th className="w-[12%]">Term</Th>
+                    <Th className="w-[11%]">Practice</Th>
+                    <Th className="w-[15%]">Sector</Th>
+                    <Th>Tags</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.map((p) => (
+                    <tr key={p.id} className={`group relative ${rowCls}`}>
+                      <Td className="py-2">
+                        <Link href={`/portal/projects/${p.id}`} className="block truncate font-medium after:absolute after:inset-0 group-hover:underline">
+                          {p.client}
+                        </Link>
+                        {p.summary && <span className="mt-0.5 block truncate text-[12.5px] text-muted">{p.summary}</span>}
+                      </Td>
+                      <Td className="whitespace-nowrap text-ink-2 tabular-nums">
+                        {p.term} {p.year}
+                      </Td>
+                      <Td>
+                        {p.practice}
+                      </Td>
+                      <Td className="truncate text-ink-2">{p.sector}</Td>
+                      <Td className="truncate text-[13px] text-muted">{p.categories.join(", ")}</Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
-          </div>
+          </TableWrap>
         </>
       )}
 
       {tab === "templates" && (
-        <div className="mt-10 space-y-14">
+        <Card title="Templates" flush>
           {templateGroups.length === 0 && <Empty>No templates yet.</Empty>}
           {templateGroups.map(([cat, list]) => (
-            <section key={cat}>
-              <h2 className="display border-b border-ink pb-3 text-[1.5rem] leading-tight">{cat}</h2>
-              <ul>
+            <div key={cat}>
+              <p className="border-b border-edge bg-stone px-4 py-1.5 text-[12px] font-medium text-muted">
+                {cat} <span className="ml-1 text-faint tabular-nums">{list.length}</span>
+              </p>
+              <ul className="divide-y divide-edge border-b border-edge last:border-0">
                 {list.map((t) => {
                   const src = projectById(t.sourceProjectId);
                   return (
-                    <li key={t.id} className="grid gap-x-10 gap-y-1.5 border-b border-line py-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]">
-                      <a href={t.url} target="_blank" rel="noreferrer" className="link-u font-medium">
+                    <li key={t.id} className="grid gap-x-6 gap-y-0.5 px-4 py-2.5 hover:bg-[#fafbfc] md:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_auto] md:items-baseline">
+                      <a href={t.url} target="_blank" rel="noreferrer" className="truncate font-medium hover:underline">
                         {t.title}
                       </a>
-                      <p className="text-ink-2">{t.description}</p>
-                      <p className="text-sm text-muted md:text-right">
+                      <p className="text-[13px] text-ink-2">{t.description}</p>
+                      <p className="text-[12.5px] whitespace-nowrap text-muted md:text-right">
                         {src && (
                           <>
                             From{" "}
-                            <Link href={`/portal/projects/${src.id}`} className="link-u text-ink-2">
+                            <Link href={`/portal/projects/${src.id}`} className="text-ink-2 hover:underline">
                               {src.client}
                             </Link>
                           </>
@@ -232,9 +229,9 @@ export default function ProjectsPage() {
                   );
                 })}
               </ul>
-            </section>
+            </div>
           ))}
-        </div>
+        </Card>
       )}
 
       <Drawer open={addingProject} onClose={() => setAddingProject(false)} title="Add project">
@@ -279,7 +276,7 @@ export default function ProjectsPage() {
             </Field>
           </div>
           <Field label="Team lead">
-            <select value={projectForm.lead || me.id} onChange={(e) => setProjectForm({ ...projectForm, lead: e.target.value })} className={fieldCls}>
+            <select value={projectForm.lead || me.id} onChange={(e) => setProjectForm({ ...projectForm, lead: e.target.value })} className={`${fieldCls} h-8 pr-7`}>
               {memberOptions.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.label}
@@ -321,7 +318,7 @@ export default function ProjectsPage() {
             <Textarea value={templateForm.description} onChange={(e) => setTemplateForm({ ...templateForm, description: e.target.value })} />
           </Field>
           <Field label="Source project" hint="Optional">
-            <select value={templateForm.sourceProjectId} onChange={(e) => setTemplateForm({ ...templateForm, sourceProjectId: e.target.value })} className={fieldCls}>
+            <select value={templateForm.sourceProjectId} onChange={(e) => setTemplateForm({ ...templateForm, sourceProjectId: e.target.value })} className={`${fieldCls} h-8 pr-7`}>
               <option value="">None</option>
               {projectOptions.map((o) => (
                 <option key={o.id} value={o.id}>

@@ -5,15 +5,19 @@ import { useState, type ReactNode } from "react";
 import type { CaseStudy } from "@/content/site";
 import type { PublicMember, SiteContent } from "@/lib/site-content";
 import { resetSiteContent, saveSiteContent, useSiteContent } from "@/lib/use-site-content";
+import { STATIC_PREVIEW } from "@/lib/preview";
 import { ExecOnly } from "@/portal/exec-only";
 import { resizeImage } from "@/portal/image";
 import { fmtDate, fullName, isAlum, uid } from "@/portal/logic";
 import { usePortal } from "@/portal/store";
 import type { Member } from "@/portal/types";
-import { Avatar, Badge, Button, Card, Field, Input, PageTitle, Select, Textarea } from "@/portal/ui";
+import { Avatar, Badge, Button, Card, Field, Input, PageTitle, Select, Tabs, Textarea } from "@/portal/ui";
 
 const TABS = ["Numbers", "People", "Case studies", "Recruiting", "Testimonials"] as const;
 type Tab = (typeof TABS)[number];
+const TAB_OPTIONS = TABS.map((t) => ({ value: t, label: t }));
+
+const ghostCls = "inline-flex h-7 cursor-pointer items-center rounded-md px-2 text-[12.5px] font-medium text-muted hover:bg-stone hover:text-ink";
 
 export default function WebsiteAdminPage() {
   const content = useSiteContent();
@@ -58,15 +62,18 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
   };
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div>
       <PageTitle
         title="Website"
         sub="Edit what the public site shows. Changes go live when you publish; no code changes needed."
         actions={
           <>
-            <Link href="/" target="_blank" className="link-u px-2 text-sm text-ink-2">
-              View site ↗
-            </Link>
+            {!STATIC_PREVIEW && (
+              <Link href="/" target="_blank" className="inline-flex h-8 items-center rounded-md px-2 text-[13px] font-medium text-muted hover:bg-stone hover:text-ink">
+                View site
+              </Link>
+            )}
+            {dirty && <Badge tone="amber">Unpublished changes</Badge>}
             <Button variant="secondary" disabled={!dirty} onClick={() => setC(initial)}>
               Discard
             </Button>
@@ -78,32 +85,21 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
       />
 
       {msg && (
-        <div className={`mb-6 border px-4 py-3 text-sm ${msg.tone === "green" ? "border-[#b7dcc5] bg-[#e6f4ec] text-[#1d6b3f]" : "border-[#e7b4b4] bg-[#fbe9e9] text-[#9b2c2c]"}`}>
+        <div
+          role="status"
+          className={`mb-5 rounded-md border px-3 py-2 text-[13px] ${msg.tone === "green" ? "border-[#c4e3cd] bg-[#e5f3e9] text-[#1d6b37]" : "border-[#f0c9c5] bg-[#fbe9e8] text-[#a8261b]"}`}
+        >
           {msg.text}
         </div>
       )}
 
-      <div className="mb-6 flex gap-6 overflow-x-auto border-b border-line" role="tablist">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            type="button"
-            role="tab"
-            aria-selected={tab === t}
-            onClick={() => setTab(t)}
-            className={`relative pb-3 text-[0.9375rem] whitespace-nowrap ${tab === t ? "text-ink" : "text-muted hover:text-ink"}`}
-          >
-            {t}
-            {tab === t && <span className="absolute inset-x-0 -bottom-px h-px bg-ink" />}
-          </button>
-        ))}
-      </div>
+      <Tabs value={tab} onChange={setTab} options={TAB_OPTIONS} />
 
       {tab === "Numbers" && (
-        <Card title="By the numbers" action={<span className="text-xs text-muted">Shown on Home and About</span>}>
-          <div className="grid gap-5 py-5 md:grid-cols-2">
+        <Card title="By the numbers" action="Shown on Home and About">
+          <div className="grid gap-x-6 gap-y-4 py-4 md:grid-cols-2">
             {c.stats.map((s, i) => (
-              <div key={i} className="grid grid-cols-3 gap-3 border-t border-line pt-4">
+              <div key={i} className="grid grid-cols-3 gap-3">
                 <Field label="Value">
                   <Input value={s.value} onChange={(e) => setC({ ...c, stats: c.stats.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)) })} />
                 </Field>
@@ -115,7 +111,7 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
               </div>
             ))}
           </div>
-          <p className="border-t border-line py-3 text-xs text-muted">
+          <p className="-mx-4 -mb-1 border-t border-edge bg-stone px-4 py-2 text-[12.5px] text-muted">
             For reference: {data.projects.length} projects are in the portal archive and {data.members.filter((m) => !isAlum(m)).length} members are active.
           </p>
         </Card>
@@ -125,8 +121,8 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
       {tab === "Case studies" && <CasesEditor c={c} setC={setC} />}
 
       {tab === "Recruiting" && (
-        <Card title="Recruiting status" action={<span className="text-xs text-muted">Shown on Join Us</span>}>
-          <div className="grid gap-5 py-5 md:grid-cols-2">
+        <Card title="Recruiting status" action="Shown on Join Us">
+          <div className="grid gap-4 py-4 md:grid-cols-2">
             <Field label="Applications">
               <Select
                 options={["Open", "Closed"]}
@@ -155,15 +151,16 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
       {tab === "Testimonials" && (
         <Card
           title="Client testimonials"
+          flush
           action={
             <Button variant="secondary" onClick={() => setC({ ...c, testimonials: [...c.testimonials, { quote: "", name: "", org: "" }] })}>
               Add testimonial
             </Button>
           }
         >
-          <ul className="divide-y divide-line">
+          <ul className="divide-y divide-edge">
             {c.testimonials.map((t, i) => (
-              <li key={i} className="grid gap-3 py-5 md:grid-cols-12">
+              <li key={i} className="grid gap-3 px-4 py-4 md:grid-cols-12">
                 <div className="md:col-span-7">
                   <Field label={i === 0 ? "Quote (featured on Home)" : "Quote"}>
                     <Textarea value={t.quote} onChange={(e) => setC({ ...c, testimonials: c.testimonials.map((x, j) => (j === i ? { ...x, quote: e.target.value } : x)) })} />
@@ -178,8 +175,8 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
                   </Field>
                 </div>
                 <div className="flex items-start justify-end md:col-span-1">
-                  <Button variant="ghost" aria-label="Remove testimonial" onClick={() => setC({ ...c, testimonials: c.testimonials.filter((_, j) => j !== i) })}>
-                    ✕
+                  <Button variant="danger" aria-label="Remove testimonial" onClick={() => setC({ ...c, testimonials: c.testimonials.filter((_, j) => j !== i) })}>
+                    Remove
                   </Button>
                 </div>
               </li>
@@ -188,11 +185,10 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
         </Card>
       )}
 
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-5 text-xs text-muted">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-[12.5px] text-muted">
         <span>{initial.updatedAt ? `Last published ${fmtDate(initial.updatedAt)}` : "Showing the default content."}</span>
-        <button
-          type="button"
-          className="underline hover:text-ink"
+        <Button
+          variant="danger"
           onClick={() => {
             if (confirm("Reset the public site to the default content?")) {
               resetSiteContent();
@@ -201,7 +197,7 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
           }}
         >
           Reset to defaults
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -215,6 +211,7 @@ function PeopleEditor({ c, setC, onSync }: { c: SiteContent; setC: (c: SiteConte
     <div className="space-y-6">
       <Card
         title="Our People page"
+        flush
         action={
           <span className="flex gap-2">
             <Button variant="secondary" onClick={onSync} title="Replace this list with current members marked 'Show on website'">
@@ -229,21 +226,26 @@ function PeopleEditor({ c, setC, onSync }: { c: SiteContent; setC: (c: SiteConte
           </span>
         }
       >
-        <p className="border-b border-line py-3 text-xs text-muted">
+        <p className="border-b border-edge px-4 py-2.5 text-[12.5px] text-muted">
           Sync pulls everyone active in the directory with their role and headshot, so new members and promotions reach the site in one step.
         </p>
-        {error && <p className="px-5 pt-3 text-sm text-[#9b2c2c]">{error}</p>}
+        {error && <p className="border-b border-edge bg-[#fbe9e8] px-4 py-2 text-[13px] text-[#a8261b]">{error}</p>}
         {c.groups.map((g) => {
           const people = c.roster.filter((m) => m.group === g);
           return (
-            <Section key={g} title={`${g} (${people.length})`}>
-              {people.length === 0 && <p className="text-sm text-muted">Nobody in this group.</p>}
-              <ul className="grid gap-3 md:grid-cols-2">
+            <Section key={g} title={g} count={people.length}>
+              {people.length === 0 && <p className="px-4 py-3 text-[13px] text-muted">Nobody in this group.</p>}
+              <ul className="divide-y divide-edge">
                 {people.map((m) => (
-                  <li key={m.id} className="flex gap-4 border-t border-line pt-4">
-                    <div className="shrink-0 text-center">
-                      <Avatar name={m.name} photo={m.photo} size={72} />
-                      <label className="link-u mt-2 block cursor-pointer text-xs text-ink-2">
+                  <li key={m.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5 md:flex-nowrap">
+                    <Avatar name={m.name} photo={m.photo} size={40} />
+                    <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-3">
+                      <Input aria-label="Name" value={m.name} onChange={(e) => setMember(m.id, { name: e.target.value })} />
+                      <Input aria-label="Title" value={m.role} onChange={(e) => setMember(m.id, { role: e.target.value })} />
+                      <Select aria-label="Group" options={c.groups} value={m.group} onChange={(e) => setMember(m.id, { group: e.target.value })} />
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <label className={ghostCls}>
                         {m.photo ? "Replace" : "Add photo"}
                         <input
                           type="file"
@@ -262,20 +264,13 @@ function PeopleEditor({ c, setC, onSync }: { c: SiteContent; setC: (c: SiteConte
                         />
                       </label>
                       {m.photo && (
-                        <button type="button" className="text-xs text-muted hover:text-ink" onClick={() => setMember(m.id, { photo: undefined })}>
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    <div className="grid flex-1 gap-2">
-                      <Input aria-label="Name" value={m.name} onChange={(e) => setMember(m.id, { name: e.target.value })} />
-                      <Input aria-label="Title" value={m.role} onChange={(e) => setMember(m.id, { role: e.target.value })} />
-                      <div className="flex gap-2">
-                        <Select aria-label="Group" options={c.groups} value={m.group} onChange={(e) => setMember(m.id, { group: e.target.value })} />
-                        <Button variant="ghost" aria-label={`Remove ${m.name}`} onClick={() => setC({ ...c, roster: c.roster.filter((x) => x.id !== m.id) })}>
-                          ✕
+                        <Button variant="ghost" onClick={() => setMember(m.id, { photo: undefined })}>
+                          Remove photo
                         </Button>
-                      </div>
+                      )}
+                      <Button variant="danger" aria-label={`Remove ${m.name}`} onClick={() => setC({ ...c, roster: c.roster.filter((x) => x.id !== m.id) })}>
+                        Remove
+                      </Button>
                     </div>
                   </li>
                 ))}
@@ -300,6 +295,7 @@ function CasesEditor({ c, setC }: { c: SiteContent; setC: (c: SiteContent) => vo
   return (
     <Card
       title="Case studies"
+      flush
       action={
         <Button
           variant="secondary"
@@ -314,13 +310,13 @@ function CasesEditor({ c, setC }: { c: SiteContent; setC: (c: SiteContent) => vo
         </Button>
       }
     >
-      <p className="border-b border-line py-3 text-xs text-muted">The first three are featured on the homepage. All appear on Our Work.</p>
-      <ul className="divide-y divide-line">
+      <p className="border-b border-edge px-4 py-2.5 text-[12.5px] text-muted">The first three are featured on the homepage. All appear on Our Work.</p>
+      <ul>
         {c.caseStudies.map((cs, i) => (
-          <li key={i} className="p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <strong>{cs.client || "Untitled"}</strong>
+          <li key={i} className="border-b border-edge last:border-0">
+            <div className="flex items-center justify-between gap-3 border-b border-edge bg-stone px-4 py-1.5">
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="truncate text-[13px] font-semibold">{cs.client || "Untitled"}</span>
                 {i < 3 && <Badge tone="blue">Featured</Badge>}
               </span>
               <span className="flex gap-1">
@@ -330,12 +326,12 @@ function CasesEditor({ c, setC }: { c: SiteContent; setC: (c: SiteContent) => vo
                 <Button variant="ghost" aria-label="Move down" onClick={() => move(i, 1)} disabled={i === c.caseStudies.length - 1}>
                   ↓
                 </Button>
-                <Button variant="ghost" aria-label="Remove" onClick={() => setC({ ...c, caseStudies: c.caseStudies.filter((_, j) => j !== i) })}>
-                  ✕
+                <Button variant="danger" aria-label="Remove case study" onClick={() => setC({ ...c, caseStudies: c.caseStudies.filter((_, j) => j !== i) })}>
+                  Remove
                 </Button>
               </span>
             </div>
-            <div className="grid gap-3 md:grid-cols-4">
+            <div className="grid gap-3 px-4 py-4 md:grid-cols-4">
               <Field label="Client">
                 <Input value={cs.client} onChange={(e) => setCase(i, { client: e.target.value })} />
               </Field>
@@ -366,10 +362,12 @@ function CasesEditor({ c, setC }: { c: SiteContent; setC: (c: SiteContent) => vo
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({ title, count, children }: { title: string; count: number; children: ReactNode }) {
   return (
-    <div className="border-t border-line py-5 first-of-type:border-t-0">
-      <h3 className="mb-3 text-sm text-muted">{title}</h3>
+    <div className="border-b border-edge last:border-0">
+      <p className="border-b border-edge bg-stone px-4 py-1.5 text-[12px] font-medium text-muted">
+        {title} <span className="ml-1 text-faint tabular-nums">{count}</span>
+      </p>
       {children}
     </div>
   );

@@ -5,7 +5,7 @@ import { classStanding, currentTerm, fmtDate, fullName, isAlum, promotionSuggest
 import { ExecOnly } from "@/portal/exec-only";
 import { usePortal } from "@/portal/store";
 import { EXEC_TITLES, ROLES, SCHOOLS, type ExecTitle, type Member, type Role, type School } from "@/portal/types";
-import { Avatar, Badge, Button, Card, Drawer, Empty, Field, Input, PageTitle, Select, Stat, Td, Th } from "@/portal/ui";
+import { Avatar, Button, Card, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, Td, Th, rowCls } from "@/portal/ui";
 
 export default function AdminMembersPage() {
   return (
@@ -44,37 +44,38 @@ function AdminMembers() {
   const approveAll = () => promos.forEach((p) => changeRole(p.member, p.to));
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div>
       <PageTitle
         title="Members & roles"
         sub="Class standing and alumni status update automatically from graduation year. Promotions are proposed each term and take effect when you approve them."
         actions={<Button onClick={() => setInviteOpen(true)}>Add member</Button>}
       />
 
-      <div className="grid gap-4 sm:grid-cols-4">
+      <StatGroup>
         <Stat label="Active members" value={active.length} />
         <Stat label="Seniors" value={seniors.length} sub="Move to alumni on June 1" />
         <Stat label="Alumni in system" value={alumni.length} />
         <Stat label="Pending promotions" value={promos.length} />
-      </div>
+      </StatGroup>
 
       <Card
         className="mt-6"
         title="Proposed promotions"
         action={promos.length > 1 ? <Button variant="secondary" onClick={approveAll}>Approve all</Button> : undefined}
+        flush
       >
         {promos.length === 0 ? (
           <Empty>No promotions to review this term.</Empty>
         ) : (
-          <ul className="divide-y divide-line">
+          <ul className="divide-y divide-edge">
             {promos.map((p) => (
-              <li key={p.member.id} className="flex flex-wrap items-center justify-between gap-4 py-3.5">
+              <li key={p.member.id} className="flex flex-wrap items-center justify-between gap-4 px-4 py-2.5">
                 <span className="flex items-center gap-3">
-                  <Avatar name={fullName(p.member)} photo={p.member.photo} />
+                  <Avatar name={fullName(p.member)} photo={p.member.photo} size={24} />
                   <span>
                     <span className="block font-medium">{fullName(p.member)}</span>
-                    <span className="text-sm text-muted">
-                      {p.member.role} → <strong className="text-ink">{p.to}</strong> · {p.reason}
+                    <span className="text-[12.5px] text-muted">
+                      {p.member.role} to <span className="font-medium text-ink">{p.to}</span>, {p.reason}
                     </span>
                   </span>
                 </span>
@@ -82,7 +83,7 @@ function AdminMembers() {
                   <Button variant="ghost" onClick={() => setSkipped((s) => [...s, p.member.id])}>
                     Not now
                   </Button>
-                  <Button onClick={() => changeRole(p.member, p.to)}>Approve</Button>
+                  <Button variant="secondary" onClick={() => changeRole(p.member, p.to)}>Approve</Button>
                 </span>
               </li>
             ))}
@@ -94,15 +95,16 @@ function AdminMembers() {
         className="mt-6"
         title="Roster"
         action={
-          <label className="flex items-center gap-2 text-xs text-muted">
-            <input type="checkbox" checked={showAlumni} onChange={(e) => setShowAlumni(e.target.checked)} />
+          <label className="flex items-center gap-2 text-[12.5px] text-muted">
+            <input type="checkbox" className="h-4 w-4 accent-[var(--color-prussian)]" checked={showAlumni} onChange={(e) => setShowAlumni(e.target.checked)} />
             Include alumni
           </label>
         }
+        flush
       >
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-sm">
-            <thead className="border-b border-line">
+          <table className="w-full min-w-[860px]">
+            <thead>
               <tr>
                 <Th>Member</Th>
                 <Th>School</Th>
@@ -112,23 +114,25 @@ function AdminMembers() {
                 <Th>On website</Th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-line">
+            <tbody>
               {roster.map((m) => {
                 const standing = classStanding(m.gradYear, now);
                 return (
-                  <tr key={m.id} className={standing === "Alumni" ? "bg-stone" : ""}>
+                  <tr key={m.id} className={`${rowCls} ${standing === "Alumni" ? "text-muted" : ""}`}>
                     <Td>
-                      <span className="flex items-center gap-3">
-                        <Avatar name={fullName(m)} photo={m.photo} size={30} />
+                      <span className="flex items-center gap-2.5">
+                        <Avatar name={fullName(m)} photo={m.photo} size={24} />
                         <span>
                           <span className="block font-medium">{fullName(m)}</span>
-                          <span className="text-xs text-muted">{m.schoolEmail}</span>
+                          <span className="block text-[12.5px] text-muted">{m.schoolEmail}</span>
                         </span>
                       </span>
                     </Td>
-                    <Td>{m.school}</Td>
+                    <Td className="whitespace-nowrap">{m.school}</Td>
                     <Td>
-                      {m.gradYear} <Badge tone={standing === "Alumni" ? "gray" : "blue"}>{standing}</Badge>
+                      <span className="flex items-center gap-2 tabular-nums">
+                        {m.gradYear} <span className="text-[12.5px] text-muted">{standing}</span>
+                      </span>
                     </Td>
                     <Td>
                       <Select
@@ -137,7 +141,7 @@ function AdminMembers() {
                         value={m.role}
                         disabled={standing === "Alumni"}
                         onChange={(e) => changeRole(m, e.target.value as Role)}
-                        className="!w-48"
+                        className="!h-7 !w-48 text-[13px]"
                       />
                     </Td>
                     <Td>
@@ -147,10 +151,10 @@ function AdminMembers() {
                           options={EXEC_TITLES}
                           value={m.execTitle ?? EXEC_TITLES[0]}
                           onChange={(e) => setMember(m.id, { execTitle: e.target.value as ExecTitle })}
-                          className="!w-64"
+                          className="!h-7 !w-64 text-[13px]"
                         />
                       ) : (
-                        <span className="text-muted">-</span>
+                        <span className="text-faint">-</span>
                       )}
                     </Td>
                     <Td>
@@ -160,6 +164,7 @@ function AdminMembers() {
                         checked={m.showOnWebsite && standing !== "Alumni"}
                         disabled={standing === "Alumni"}
                         onChange={(e) => setMember(m.id, { showOnWebsite: e.target.checked })}
+                        className="h-4 w-4 accent-[var(--color-prussian)]"
                       />
                     </Td>
                   </tr>
@@ -170,18 +175,18 @@ function AdminMembers() {
         </div>
       </Card>
 
-      <Card className="mt-6" title="Role history">
+      <Card className="mt-6" title="Role history" flush>
         {data.roleChanges.length === 0 ? (
           <Empty>Role changes you approve are recorded here, so every member&apos;s path is kept.</Empty>
         ) : (
-          <ul className="divide-y divide-line text-sm">
+          <ul className="divide-y divide-edge">
             {data.roleChanges.slice(0, 20).map((c) => {
               const m = data.members.find((x) => x.id === c.memberId);
               const by = data.members.find((x) => x.id === c.approvedBy);
               return (
-                <li key={c.id} className="py-3">
-                  <strong>{m ? fullName(m) : "Member"}</strong>: {c.from} → {c.to}{" "}
-                  <span className="text-muted">
+                <li key={c.id} className="px-4 py-2.5">
+                  <span className="font-medium">{m ? fullName(m) : "Member"}</span>: {c.from} to {c.to}{" "}
+                  <span className="text-[13px] text-muted">
                     ({c.term[0] === "F" ? "Fall" : "Spring"} {c.term.slice(1)}, approved by {by ? fullName(by) : "exec"})
                   </span>
                 </li>
@@ -196,7 +201,7 @@ function AdminMembers() {
         onClose={() => setInviteOpen(false)}
         onAdd={(m) => update((d) => ({ ...d, members: [...d.members, m] }))}
       />
-      <p className="mt-6 text-xs text-muted">Last checked {fmtDate(now)}.</p>
+      <p className="mt-4 text-[12px] text-muted">Last checked {fmtDate(now)}.</p>
     </div>
   );
 }
@@ -225,8 +230,8 @@ function InviteDrawer({ open, onClose, onAdd }: { open: boolean; onClose: () => 
           onClose();
         }}
       >
-        <p className="text-sm text-muted">They&apos;ll be asked to complete the rest of their profile at first login.</p>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <p className="text-[13px] text-muted">They&apos;ll be asked to complete the rest of their profile at first login.</p>
+        <div className="grid grid-cols-2 gap-3">
           <Field label="First name">
             <Input value={f.firstName} onChange={(e) => setF({ ...f, firstName: e.target.value })} required />
           </Field>
@@ -237,7 +242,7 @@ function InviteDrawer({ open, onClose, onAdd }: { open: boolean; onClose: () => 
         <Field label="School email">
           <Input type="email" value={f.schoolEmail} onChange={(e) => setF({ ...f, schoolEmail: e.target.value })} required />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3">
           <Field label="School">
             <Select options={SCHOOLS} value={f.school} onChange={(e) => setF({ ...f, school: e.target.value as School })} />
           </Field>
@@ -251,9 +256,14 @@ function InviteDrawer({ open, onClose, onAdd }: { open: boolean; onClose: () => 
             <Select options={ROLES} value={f.role} onChange={(e) => setF({ ...f, role: e.target.value as Role })} />
           </Field>
         </div>
-        <Button type="submit" disabled={!valid}>
-          Add member
-        </Button>
+        <div className="flex gap-2 pt-2">
+          <Button type="submit" disabled={!valid}>
+            Add member
+          </Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
       </form>
     </Drawer>
   );
