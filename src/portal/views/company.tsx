@@ -5,7 +5,7 @@ import { useState } from "react";
 import { usePortal } from "@/portal/store";
 import { companySlug, fmtDate, fullName, pct, responseStats, uid } from "@/portal/logic";
 import type { Comment, InterviewReport, PortalData, Stage } from "@/portal/types";
-import { Avatar, Badge, Button, Card, Drawer, Empty, Field, Input, PageTitle, Select, Stat, Td, Textarea, Th } from "@/portal/ui";
+import { Avatar, Badge, Button, Card, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, Td, Textarea, Th, rowCls } from "@/portal/ui";
 import { useRouteParam } from "@/lib/use-route-param";
 
 type Outcome = InterviewReport["outcome"];
@@ -108,7 +108,7 @@ export function ReportForm({ company, onDone }: { company?: string; onDone: () =
   };
 
   return (
-    <form onSubmit={save} className="space-y-5">
+    <form onSubmit={save} className="space-y-4">
       <Field label="Company">
         {company ? (
           <Input value={company} readOnly />
@@ -116,7 +116,7 @@ export function ReportForm({ company, onDone }: { company?: string; onDone: () =
           <Input required value={draft.company} onChange={(e) => set({ company: e.target.value })} placeholder="e.g. Bain & Company" />
         )}
       </Field>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3">
         <Field label="Year">
           <Input type="number" min={2000} max={2100} value={draft.year} onChange={(e) => set({ year: e.target.value })} />
         </Field>
@@ -136,7 +136,7 @@ export function ReportForm({ company, onDone }: { company?: string; onDone: () =
       <Field label="Advice">
         <Textarea rows={3} value={draft.tips} onChange={(e) => set({ tips: e.target.value })} />
       </Field>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3">
         <Field label="Difficulty" hint="1 is easy, 5 is very hard">
           <Select options={DIFFICULTIES} value={draft.difficulty} onChange={(e) => set({ difficulty: e.target.value })} />
         </Field>
@@ -166,11 +166,11 @@ export default function CompanyView() {
 
   if (!name) {
     return (
-      <div className="mx-auto max-w-6xl">
+      <div>
         <PageTitle title="Company not found" back={{ href: "/portal/companies", label: "Companies" }} />
-        <p className="max-w-[65ch] text-muted">
+        <p className="text-[13.5px] text-muted">
           No member has recorded anything about this company yet.{" "}
-          <Link href="/portal/companies" className="link-u text-ink">
+          <Link href="/portal/companies" className="text-ink hover:underline">
             Return to the company list
           </Link>
           .
@@ -205,57 +205,58 @@ export default function CompanyView() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <PageTitle
-        title={name}
-        back={{ href: "/portal/companies", label: "Companies" }}
-      />
+    <div>
+      <PageTitle title={name} back={{ href: "/portal/companies", label: "Companies" }} />
 
-      <div className="grid grid-cols-2 gap-x-8 gap-y-6 lg:grid-cols-4">
+      <StatGroup>
         <Stat label="Interview reports" value={reports.length} />
         <Stat label="Members applied" value={applicants} />
         <Stat label="Offers" value={offers} />
         <Stat label="Average difficulty" value={avgDifficulty != null ? avgDifficulty.toFixed(1) : "None"} sub={avgDifficulty != null ? "Out of 5" : undefined} />
-      </div>
+      </StatGroup>
 
-      <div className="mt-14 grid gap-x-16 gap-y-14 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="space-y-14">
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
           <Card
             title="Interview reports"
+            flush
             action={
-              <button type="button" onClick={() => setAdding(true)} className="link-u text-ink-2 hover:text-ink">
+              <Button variant="ghost" onClick={() => setAdding(true)}>
                 Add a report
-              </button>
+              </Button>
             }
           >
             {reports.length === 0 ? (
               <Empty>No interview reports yet. If you interviewed here, add one so the next member is better prepared.</Empty>
             ) : (
               years.map((y) => (
-                <div key={y} className="grid gap-x-8 border-b border-line py-6 last:border-0 md:grid-cols-[5rem_minmax(0,1fr)]">
-                  <h3 className="display mb-3 text-[1.5rem] leading-none tabular-nums md:mb-0">{y}</h3>
-                  <div className="divide-y divide-line">
+                <div key={y} className="border-b border-edge last:border-0">
+                  <h3 className="border-b border-edge bg-stone px-4 py-1.5 text-[12px] font-medium text-muted tabular-nums">{y}</h3>
+                  <div className="divide-y divide-edge">
                     {reports
                       .filter((r) => r.year === y)
                       .map((r) => (
-                        <article key={r.id} className="max-w-[65ch] py-5 first:pt-0 last:pb-0">
-                          <p className="font-medium">{[r.position, r.round].filter(Boolean).join(", ")}</p>
-                          {r.format && <p className="mt-0.5 text-sm text-muted">{r.format}</p>}
-                          <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
-                            <span>{memberName(r.memberId)}</span>
+                        <article key={r.id} className="px-4 py-3">
+                          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                            <p className="font-medium">{[r.position, r.round].filter(Boolean).join(", ")}</p>
                             <Badge tone={outcomeTone(r.outcome)}>{r.outcome}</Badge>
-                            <span>Difficulty {r.difficulty} of 5</span>
+                          </div>
+                          {r.format && <p className="mt-0.5 text-[13px] text-ink-2">{r.format}</p>}
+                          <p className="mt-0.5 text-[12.5px] text-muted">
+                            {memberName(r.memberId)}
+                            <span className="mx-1.5 text-faint">/</span>
+                            Difficulty {r.difficulty} of 5
                           </p>
                           {r.questions && (
-                            <div className="mt-4">
-                              <p className="text-sm text-muted">Questions</p>
-                              <p className="mt-1 leading-relaxed whitespace-pre-line">{r.questions}</p>
+                            <div className="mt-3">
+                              <p className="text-[12px] font-medium text-muted">Questions</p>
+                              <p className="mt-0.5 text-[13.5px] leading-relaxed whitespace-pre-line text-ink-2">{r.questions}</p>
                             </div>
                           )}
                           {r.tips && (
-                            <div className="mt-4">
-                              <p className="text-sm text-muted">Advice</p>
-                              <p className="mt-1 leading-relaxed whitespace-pre-line">{r.tips}</p>
+                            <div className="mt-3">
+                              <p className="text-[12px] font-medium text-muted">Advice</p>
+                              <p className="mt-0.5 text-[13.5px] leading-relaxed whitespace-pre-line text-ink-2">{r.tips}</p>
                             </div>
                           )}
                         </article>
@@ -266,13 +267,13 @@ export default function CompanyView() {
             )}
           </Card>
 
-          <Card title="Graphite applications">
+          <Card title="Graphite applications" flush>
             {apps.length === 0 ? (
               <Empty>No members have tracked an application here yet.</Empty>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[620px] text-sm">
-                  <thead className="border-b border-line">
+                <table className="w-full min-w-[620px]">
+                  <thead>
                     <tr>
                       <Th>Member</Th>
                       <Th>Position</Th>
@@ -283,7 +284,7 @@ export default function CompanyView() {
                   </thead>
                   <tbody>
                     {apps.map((a) => (
-                      <tr key={a.id} className="border-b border-line">
+                      <tr key={a.id} className={rowCls}>
                         <Td className="font-medium">{memberName(a.memberId)}</Td>
                         <Td>{a.position}</Td>
                         <Td className="text-muted">{a.cycle}</Td>
@@ -298,71 +299,69 @@ export default function CompanyView() {
               </div>
             )}
           </Card>
-        </div>
 
-        <aside className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
-          <Card title="People to talk to">
-            {contacts.length === 0 ? (
-              <Empty>
-                No contacts here yet. Add one in the{" "}
-                <Link href="/portal/network" className="link-u text-ink">
-                  network
-                </Link>
-                .
-              </Empty>
+          <Card title="Discussion" flush>
+            {comments.length === 0 ? (
+              <Empty>No discussion yet. Share what you know about timelines, networking or preparation.</Empty>
             ) : (
-              <ul className="divide-y divide-line">
-                {contacts.map((c) => {
-                  const s = responseStats(data.outreach.filter((o) => o.contactId === c.id));
+              <ul className="divide-y divide-edge">
+                {comments.map((c) => {
+                  const m = member(c.memberId);
+                  const who = m ? fullName(m) : "Former member";
                   return (
-                    <li key={c.id} className="py-4">
-                      <Link href={`/portal/network/${c.id}`} className="font-medium hover:underline">
-                        {c.name}
-                      </Link>
-                      <p className="mt-0.5 text-sm text-ink-2">{c.title}</p>
-                      <p className="mt-1 text-sm text-muted">
-                        {c.isAlum && <span>Graphite alum{c.alumClass ? `, ${c.alumClass}` : ""}. </span>}
-                        {s.total ? `Responded to ${pct(s.rate)} of ${s.total} message${s.total === 1 ? "" : "s"}` : "No outreach logged yet"}
-                      </p>
+                    <li key={c.id} className="flex gap-3 px-4 py-3">
+                      <Avatar name={who} photo={m?.photo} size={24} />
+                      <div className="min-w-0">
+                        <p className="flex items-baseline gap-2">
+                          <span className="text-[13px] font-medium">{who}</span>
+                          <span className="text-[12px] text-faint">{fmtDate(c.createdAt)}</span>
+                        </p>
+                        <p className="mt-0.5 text-[13.5px] leading-relaxed whitespace-pre-line text-ink-2">{c.body}</p>
+                      </div>
                     </li>
                   );
                 })}
               </ul>
             )}
+            <form onSubmit={post} className="border-t border-edge bg-stone px-4 py-3">
+              <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={`Add a note about ${name}`} aria-label="New comment" />
+              <div className="mt-2 flex justify-end">
+                <Button type="submit" disabled={!comment.trim()}>
+                  Post
+                </Button>
+              </div>
+            </form>
           </Card>
-        </aside>
+        </div>
 
-        <Card title="Discussion" className="lg:col-start-1">
-          {comments.length === 0 ? (
-            <Empty>No discussion yet. Share what you know about timelines, networking or preparation.</Empty>
+        <Card title="People to talk to" flush>
+          {contacts.length === 0 ? (
+            <Empty>
+              No contacts here yet. Add one in the{" "}
+              <Link href="/portal/network" className="text-ink hover:underline">
+                network
+              </Link>
+              .
+            </Empty>
           ) : (
-            <ul className="divide-y divide-line">
-              {comments.map((c) => {
-                const m = member(c.memberId);
-                const who = m ? fullName(m) : "Former member";
+            <ul className="divide-y divide-edge">
+              {contacts.map((c) => {
+                const s = responseStats(data.outreach.filter((o) => o.contactId === c.id));
                 return (
-                  <li key={c.id} className="flex max-w-[65ch] gap-3 py-5">
-                    <Avatar name={who} photo={m?.photo} size={28} />
-                    <div className="min-w-0">
-                      <p className="text-sm">
-                        <span className="font-medium">{who}</span>
-                        <span className="ml-2 text-muted">{fmtDate(c.createdAt)}</span>
-                      </p>
-                      <p className="mt-1 leading-relaxed whitespace-pre-line">{c.body}</p>
-                    </div>
+                  <li key={c.id} className="px-4 py-2.5">
+                    <Link href={`/portal/network/${c.id}`} className="font-medium hover:underline">
+                      {c.name}
+                    </Link>
+                    <p className="mt-0.5 text-[13px] text-ink-2">{c.title}</p>
+                    <p className="mt-0.5 text-[12.5px] text-muted">
+                      {c.isAlum && <span>Graphite alum{c.alumClass ? `, ${c.alumClass}` : ""}. </span>}
+                      {s.total ? `Responded to ${pct(s.rate)} of ${s.total} message${s.total === 1 ? "" : "s"}` : "No outreach logged yet"}
+                    </p>
                   </li>
                 );
               })}
             </ul>
           )}
-          <form onSubmit={post} className="max-w-[65ch] border-t border-line pt-5">
-            <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={`Add a note about ${name}`} aria-label="New comment" />
-            <div className="mt-3 flex justify-end">
-              <Button type="submit" disabled={!comment.trim()}>
-                Post
-              </Button>
-            </div>
-          </form>
         </Card>
       </div>
 

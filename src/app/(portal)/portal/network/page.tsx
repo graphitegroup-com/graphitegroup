@@ -5,7 +5,7 @@ import Link from "@/components/app-link";
 import { usePortal } from "@/portal/store";
 import { companySlug, pct, responseStats, uid } from "@/portal/logic";
 import type { Contact } from "@/portal/types";
-import { Button, Drawer, Empty, Field, Input, PageTitle, Select, Stat, Td, Textarea, Th } from "@/portal/ui";
+import { Button, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, TableWrap, Td, Textarea, Th, rowCls } from "@/portal/ui";
 
 const ALL = "All companies";
 
@@ -17,8 +17,8 @@ const none = <span className="text-faint">None</span>;
 
 function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="flex items-center gap-2 text-sm whitespace-nowrap text-ink-2">
-      <input type="checkbox" className="h-4 w-4 accent-[var(--color-ink)]" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+    <label className="flex items-center gap-2 text-[13px] whitespace-nowrap text-ink-2">
+      <input type="checkbox" className="h-4 w-4 accent-[var(--color-prussian)]" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       {label}
     </label>
   );
@@ -76,78 +76,78 @@ export default function NetworkPage() {
         actions={<Button onClick={() => setAdding(true)}>Add contact</Button>}
       />
 
-      <div className="grid grid-cols-2 gap-x-8 gap-y-6 lg:grid-cols-4">
+      <StatGroup>
         <Stat label="Outreach logged" value={org.total} sub={`Across ${data.contacts.length} contacts`} />
         <Stat label="Response rate" value={pct(org.rate)} sub={`${org.responded} of ${org.total} replied`} />
         <Stat label="Median reply time" value={org.medianDays ?? "None"} sub="Days" />
         <Stat label="Referrals" value={org.referrals} />
-      </div>
+      </StatGroup>
 
-      <div className="mt-14 flex flex-col gap-3 md:flex-row md:items-center">
-        <Input type="search" placeholder="Search name, company or title" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search contacts" className="md:max-w-sm" />
-        <Select options={[ALL, ...companies]} value={company} onChange={(e) => setCompany(e.target.value)} aria-label="Filter by company" className="md:max-w-xs" />
+      <div className="mt-6 mb-4 flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="w-full md:max-w-xs">
+          <Input type="search" placeholder="Search name, company or title" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search contacts" />
+        </div>
+        <div className="w-full md:max-w-[14rem]">
+          <Select options={[ALL, ...companies]} value={company} onChange={(e) => setCompany(e.target.value)} aria-label="Filter by company" />
+        </div>
         <Check label="Graphite alumni only" checked={alumOnly} onChange={setAlumOnly} />
-        <p className="text-sm text-muted md:ml-auto">
+        <p className="text-[13px] text-muted tabular-nums md:ml-auto">
           {rows.length} {rows.length === 1 ? "contact" : "contacts"}
         </p>
       </div>
 
-      <div className="mt-6 border-t border-ink">
+      <TableWrap>
         {rows.length === 0 ? (
           <Empty>No contacts match these filters.</Empty>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[920px] text-sm">
-              <thead className="border-b border-line">
-                <tr>
-                  <Th>Name</Th>
-                  <Th>Company</Th>
-                  <Th>Title</Th>
-                  <Th className="text-right">Outreach</Th>
-                  <Th className="text-right">Response rate</Th>
-                  <Th className="text-right">Median reply</Th>
-                  <Th className="text-right">Helpfulness</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(({ contact: c, stats: s }) => (
-                  <tr key={c.id} className="border-b border-line">
-                    <Td>
-                      <Link href={`/portal/network/${c.id}`} className="display text-[1.2rem] leading-snug hover:underline hover:decoration-1 hover:underline-offset-4">
-                        {c.name}
+          <table className="w-full min-w-[920px]">
+            <thead>
+              <tr>
+                <Th>Name</Th>
+                <Th>Company</Th>
+                <Th>Title</Th>
+                <Th className="text-right">Outreach</Th>
+                <Th className="text-right">Response rate</Th>
+                <Th className="text-right">Median reply</Th>
+                <Th className="text-right">Helpfulness</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(({ contact: c, stats: s }) => (
+                <tr key={c.id} className={rowCls}>
+                  <Td className="whitespace-nowrap">
+                    <Link href={`/portal/network/${c.id}`} className="font-medium hover:underline">
+                      {c.name}
+                    </Link>
+                    {c.isAlum && <span className="ml-2 text-[12.5px] text-muted">{alumShort(c)}</span>}
+                  </Td>
+                  <Td>
+                    {c.company ? (
+                      <Link href={`/portal/companies/${companySlug(c.company)}`} className="hover:underline">
+                        {c.company}
                       </Link>
-                      {c.isAlum && <span className="ml-2 text-[0.8125rem] whitespace-nowrap text-muted">{alumShort(c)}</span>}
-                    </Td>
-                    <Td className="pt-[1.05rem]">
-                      {c.company ? (
-                        <Link href={`/portal/companies/${companySlug(c.company)}`} className="link-u">
-                          {c.company}
-                        </Link>
-                      ) : (
-                        none
-                      )}
-                    </Td>
-                    <Td className="pt-[1.05rem] text-muted">{c.title}</Td>
-                    <Td className="pt-[1.05rem] text-right tabular-nums">{s.total}</Td>
-                    <Td className="pt-[1.05rem] text-right tabular-nums">{s.total ? pct(s.rate) : none}</Td>
-                    <Td className="pt-[1.05rem] text-right tabular-nums">
-                      {s.medianDays != null ? `${s.medianDays} ${s.medianDays === 1 ? "day" : "days"}` : none}
-                    </Td>
-                    <Td className="pt-[1.05rem] text-right tabular-nums">{s.avgHelpfulness != null ? `${s.avgHelpfulness.toFixed(1)} of 5` : none}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    ) : (
+                      none
+                    )}
+                  </Td>
+                  <Td className="text-muted">{c.title}</Td>
+                  <Td className="text-right tabular-nums">{s.total}</Td>
+                  <Td className="text-right tabular-nums">{s.total ? pct(s.rate) : none}</Td>
+                  <Td className="text-right tabular-nums">{s.medianDays != null ? `${s.medianDays} ${s.medianDays === 1 ? "day" : "days"}` : none}</Td>
+                  <Td className="text-right tabular-nums">{s.avgHelpfulness != null ? `${s.avgHelpfulness.toFixed(1)} of 5` : none}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
-      </div>
+      </TableWrap>
 
       <Drawer open={adding} onClose={() => setAdding(false)} title="Add contact">
         <form onSubmit={saveContact} className="space-y-4">
           <Field label="Name">
             <Input required value={contactDraft.name} onChange={(e) => setContactDraft({ ...contactDraft, name: e.target.value })} />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3">
             <Field label="Company">
               <Input value={contactDraft.company} onChange={(e) => setContactDraft({ ...contactDraft, company: e.target.value })} />
             </Field>
