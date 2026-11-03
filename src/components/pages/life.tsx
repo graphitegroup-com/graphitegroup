@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Band, FocusItems, GradTitle, PhotoHero, Pill, Section, Testimonials } from "../gg";
+import { Closing, Eyebrow, PageHeader, Pill, Section, Testimonials } from "../gg";
 
 const semester = [
   { when: "Weeks 1 to 4", title: "Recruiting", body: "Club fairs, info sessions and coffee chats across the five colleges. Current members run every event and interview." },
@@ -17,60 +17,70 @@ const photos = [
   { src: "/images/campus.jpg", alt: "The Claremont Colleges with the San Gabriel Mountains", caption: "Claremont", className: "md:col-span-7 aspect-[7/4]", position: "50% 50%" },
 ];
 
+const community = [
+  { title: "Buddies", body: "Every first-year is paired with an upperclass member who helps with classes, recruiting and everything in between." },
+  { title: "Socials and service", body: "Dinners, trips and community service bring together members who might never otherwise share a class." },
+  { title: "Recruiting together", body: "Interview notes, mock cases and alumni introductions are shared across the group. Nobody recruits alone." },
+  { title: "Alumni", body: "Once a member of Graphite, always a member. Alumni stay involved through coffee chats, referrals and mentorship." },
+];
+
 export function LifeView() {
   return (
     <>
-      <PhotoHero image="/images/friends-stairs.jpg" position="50% 35%" align="center" height="h-[460px] md:h-[560px]" title="Life at Graphite" />
+      <PageHeader
+        title={
+          <>
+            Life at <em>Graphite</em>
+          </>
+        }
+        sub="Graphite is where many members find their closest friends at Claremont. We work hard on real client projects, and we spend just as much time together outside of them: dinners, trips, service and a lot of late-night work sessions."
+      />
 
-      <Section>
-        <div className="mx-auto max-w-3xl text-center">
-          <GradTitle className="t-h2">More than a consulting club</GradTitle>
-          <p className="t-body mt-6">
-            Graphite is where many members find their closest friends at Claremont. We work hard on real client projects, and
-            we spend just as much time together outside of them: dinners, trips, service and a lot of late-night work
-            sessions.
-          </p>
-        </div>
-        <div className="mt-16 grid gap-4 md:grid-cols-12 md:gap-5">
+      <div className="container-gg pb-16 md:pb-24">
+        <div className="grid gap-x-5 gap-y-8 md:grid-cols-12">
           {photos.map((p) => (
             <figure key={p.src} className={p.className.split(" ")[0]}>
-              <div className={`relative overflow-hidden rounded-[6px] ${p.className.split(" ").slice(1).join(" ")}`}>
+              <div className={`photo relative overflow-hidden ${p.className.split(" ").slice(1).join(" ")}`}>
                 <Image src={p.src} alt={p.alt} fill sizes="(min-width:768px) 60vw, 100vw" className="object-cover" style={{ objectPosition: p.position }} />
               </div>
-              <figcaption className="mt-2 text-sm text-text">{p.caption}</figcaption>
+              <figcaption className="mt-3 text-center font-serif text-[16px] text-coal italic">{p.caption}</figcaption>
             </figure>
+          ))}
+        </div>
+      </div>
+
+      <Section className="!pt-0">
+        <div className="mb-12 text-center">
+          <Eyebrow>Our community</Eyebrow>
+          <h2 className="t-h2 mt-4">More than a consulting club</h2>
+        </div>
+        <div className="mx-auto grid max-w-4xl gap-x-14 gap-y-10 md:grid-cols-2">
+          {community.map((c) => (
+            <div key={c.title}>
+              <h3 className="t-h3">{c.title}</h3>
+              <p className="t-body mt-3">{c.body}</p>
+            </div>
           ))}
         </div>
       </Section>
 
-      <Band>
-        <h2 className="t-h2 text-center">Our Community</h2>
-        <div className="mt-16">
-          <FocusItems
-            items={[
-              { icon: "people", title: "Buddies", body: "Every first-year is paired with an upperclass member who helps with classes, recruiting and everything in between." },
-              { icon: "spark", title: "Socials and service", body: "Dinners, trips and community service bring together members who might never otherwise share a class." },
-              { icon: "book", title: "Recruiting together", body: "Interview notes, mock cases and alumni introductions are shared across the group. Nobody recruits alone." },
-              { icon: "arrow", title: "Alumni", body: "Once a member of Graphite, always a member. Alumni stay involved through coffee chats, referrals and mentorship." },
-            ]}
-          />
-        </div>
-      </Band>
-
       <Section>
-        <GradTitle className="t-h2">A Semester at Graphite</GradTitle>
-        <ol className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-12 text-center">
+          <Eyebrow>The rhythm</Eyebrow>
+          <h2 className="t-h2 mt-4">A semester at Graphite</h2>
+        </div>
+        <ol className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {semester.map((s) => (
-            <li key={s.title} className="card-glow rounded-[6px] bg-white p-7">
-              <span className="text-sm text-text">{s.when}</span>
-              <h3 className="t-h4 mt-2">{s.title}</h3>
-              <p className="t-body mt-3 text-[15px]">{s.body}</p>
+            <li key={s.title} className="card p-6">
+              <p className="eyebrow text-text">{s.when}</p>
+              <h3 className="t-h3 mt-3">{s.title}</h3>
+              <p className="mt-3 text-[16px] leading-relaxed">{s.body}</p>
             </li>
           ))}
         </ol>
       </Section>
 
-      <Section className="!pt-0">
+      <Section>
         <Testimonials
           title="In their words"
           items={[
@@ -86,12 +96,15 @@ export function LifeView() {
             },
           ]}
         />
-        <div className="mt-14 flex justify-center gap-3">
+      </Section>
+
+      <Section className="!pt-0">
+        <Closing title={<>Come <em>meet us</em></>} body="We recruit at the start of every fall and spring semester.">
           <Pill href="/students#recruiting">Recruiting dates</Pill>
           <Pill href="/people" variant="outline">
             Meet the team
           </Pill>
-        </div>
+        </Closing>
       </Section>
     </>
   );

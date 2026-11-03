@@ -1,6 +1,6 @@
 "use client";
 
-import { GradTitle, PeopleGrid, Pill, Section } from "../gg";
+import { Closing, PageHeader, PersonRows, Pill, Section } from "../gg";
 import { useSiteContent } from "@/lib/use-site-content";
 
 export function PeopleView() {
@@ -9,27 +9,33 @@ export function PeopleView() {
 
   return (
     <>
-      <Section className="!pb-6 text-center">
-        <GradTitle as="h1" className="t-h1 inline-block">
-          Meet the team
-        </GradTitle>
-        <p className="t-body mx-auto mt-5 max-w-xl">
-          A dynamic group of students from across the Claremont Colleges, passionate about innovation and real-world impact.
-        </p>
-      </Section>
+      <PageHeader title="Our Team" sub="Students from across the Claremont Colleges, passionate about innovation and real-world impact." />
 
-      {sections.map(({ group, members }) => (
-        <Section key={group} className="!py-12 md:!py-16">
-          <h2 className="mb-10 text-center text-[clamp(1.6rem,2.6vw,2.1rem)] font-semibold tracking-[-0.05em]">{group}</h2>
-          <PeopleGrid people={members} />
-        </Section>
-      ))}
+      <div className="container-gg container-narrow space-y-16 pb-8 md:space-y-20">
+        {sections.map(({ group, members }) => {
+          const id = `group-${group.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+          return (
+          <section key={group} aria-labelledby={id}>
+            <h2 id={id} className="t-sub mb-8">
+              {group}
+            </h2>
+            <PersonRows people={members} />
+          </section>
+          );
+        })}
+      </div>
 
-      <Section className="!pt-6 text-center">
-        <GradTitle className="t-h2 inline-block">Join the next class</GradTitle>
-        <div className="mt-8">
+      <Section>
+        <Closing
+          title={
+            <>
+              Join the <em>next class</em>
+            </>
+          }
+          body="We recruit across all five Claremont Colleges at the start of each fall and spring semester."
+        >
           <Pill href="/students">For students</Pill>
-        </div>
+        </Closing>
       </Section>
     </>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { AccordionGrid, Band, GradTitle, PhotoHero, Pill, Section, Testimonials } from "../gg";
+import { Accordion, Chip, Closing, Eyebrow, PageHeader, Pill, Section, Testimonials } from "../gg";
 import { recruiting as recruitingDefaults } from "@/content/recruiting";
 import { useSiteContent } from "@/lib/use-site-content";
 
@@ -84,15 +84,29 @@ export function StudentsPageView() {
 
   return (
     <>
-      <PhotoHero image="/images/joshua-tree.jpg" position="50% 45%" align="center" height="h-[460px] md:h-[560px]" title="Elevate Your Impact" />
+      <PageHeader
+        title={
+          <>
+            Elevate your <em>impact</em>
+          </>
+        }
+        sub="Client consulting, structured training and a community across all five Claremont Colleges. First-years and second-years are strongly encouraged to apply."
+      />
 
-      <Section id="recruiting">
-        <div className="mx-auto max-w-3xl text-center">
-          <GradTitle className="t-h2">{open ? `${recruiting.cycle} Applications Open` : `${recruiting.next} Recruiting`}</GradTitle>
-          <p className="t-body mt-5">
-            {open ? `${recruiting.cycle} recruiting is in progress.` : recruiting.closedMessage} Questions? Email{" "}
-            {recruiting.contact.name}, {recruiting.contact.title}, at{" "}
-            <a href={`mailto:${recruiting.contact.email}`} className="link-u text-ink">
+      <Section id="recruiting" className="!pt-2">
+        <div className="card mx-auto max-w-4xl px-6 py-10 text-center md:px-12">
+          <div className="flex items-center justify-center gap-3">
+            <Eyebrow>Recruiting</Eyebrow>
+            <Chip>
+              <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${open ? "bg-[#1d8a4a]" : "bg-text"}`} />
+              {open ? "Open" : "Closed"}
+            </Chip>
+          </div>
+          <h2 className="t-h2 mt-5">{open ? `${recruiting.cycle} applications are open` : `${recruiting.next} recruiting`}</h2>
+          <p className="t-body mx-auto mt-5 max-w-2xl">
+            {open ? `${recruiting.cycle} recruiting is in progress.` : recruiting.closedMessage} Questions? Email {recruiting.contact.name},{" "}
+            {recruiting.contact.title}, at{" "}
+            <a href={`mailto:${recruiting.contact.email}`} className="link-u text-coal [overflow-wrap:anywhere]">
               {recruiting.contact.email}
             </a>
             .
@@ -110,14 +124,14 @@ export function StudentsPageView() {
           </div>
         </div>
 
-        <div className="mx-auto mt-16 grid max-w-5xl gap-5 md:grid-cols-3">
+        <div className="mx-auto mt-6 grid max-w-4xl gap-5 md:grid-cols-3">
           {recruiting.calendar.map((phase) => (
-            <div key={phase.phase} className="card-glow rounded-[6px] bg-white p-7">
-              <h3 className="t-h4">{phase.phase}</h3>
-              <ul className="mt-4 space-y-3 text-[15px]">
+            <div key={phase.phase} className="card p-6">
+              <h3 className="t-h3 !text-[1.25rem]">{phase.phase}</h3>
+              <ul className="mt-4 text-[15px]">
                 {phase.items.map((it) => (
-                  <li key={it.what} className="border-t border-line pt-3">
-                    <span className="block font-medium">{it.what}</span>
+                  <li key={it.what} className="border-t border-rule py-2.5">
+                    <span className="block font-normal text-coal">{it.what}</span>
                     <span className="text-text">
                       {it.when}
                       {"where" in it && it.where ? ` · ${it.where}` : ""}
@@ -128,69 +142,78 @@ export function StudentsPageView() {
             </div>
           ))}
         </div>
-        <p className="mt-6 text-center text-[15px] font-semibold">Decisions are released {recruiting.decisions}.</p>
+        <p className="mt-6 text-center text-[16px]">
+          Decisions are released <span className="font-medium">{recruiting.decisions}</span>.
+        </p>
       </Section>
 
-      <Band>
-        <div className="grid gap-14 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
+      <Section>
+        <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.2fr] lg:gap-20">
           <figure>
-            <blockquote className="text-[1.35rem] leading-snug text-band-muted italic">“{alumni[0].quote}”</blockquote>
-            <figcaption className="mt-6">
-              <span className="block font-semibold">{alumni[0].name}</span>
-              <span className="text-band-muted">{alumni[0].org}</span>
+            <blockquote className="font-serif text-[clamp(1.4rem,2.4vw,1.9rem)] leading-[1.4] text-coal italic">“{alumni[0].quote}”</blockquote>
+            <figcaption className="mt-6 text-[16px]">
+              <span className="block font-medium text-coal">{alumni[0].name}</span>
+              <span className="text-text">{alumni[0].org}</span>
             </figcaption>
           </figure>
           <div>
-            <h2 className="t-h2">Student-run. Community-built.</h2>
-            <p className="mt-6 text-lg text-band-muted">
-              Graphite is a student-run consulting club that provides strategic and operational advice to clients across
-              industries. We recruit across all five Claremont Colleges at the start of each fall and spring semester.
-              First-years and second-years are strongly encouraged to apply.
+            <Eyebrow>Who we are</Eyebrow>
+            <h2 className="t-h2 mt-4">
+              Student-run. <em>Community-built.</em>
+            </h2>
+            <p className="t-body mt-6">
+              Graphite is a student-run consulting club that provides strategic and operational advice to clients across industries. We recruit
+              across all five Claremont Colleges at the start of each fall and spring semester. First-years and second-years are strongly
+              encouraged to apply.
             </p>
           </div>
         </div>
-
-        <h2 className="grad-title-band t-h2 mt-28 mb-12 text-center">Why join Graphite?</h2>
-        <AccordionGrid items={whyJoin} />
-      </Band>
+      </Section>
 
       <Section>
-        <p className="mx-auto max-w-4xl text-center text-[clamp(1.3rem,2.2vw,1.75rem)] leading-snug font-medium tracking-[-0.03em]">
-          Consulting is a challenging, rewarding career for people who are driven, analytical and passionate about solving
-          problems.
+        <h2 className="t-h2 mb-10 text-center">Why join Graphite?</h2>
+        <div className="mx-auto max-w-5xl">
+          <Accordion items={whyJoin} />
+        </div>
+      </Section>
+
+      <Section>
+        <p className="mx-auto max-w-3xl text-center font-serif text-[clamp(1.4rem,2.4vw,1.9rem)] leading-[1.4] text-coal">
+          Consulting is a challenging, rewarding career for people who are <em>driven, analytical and passionate</em> about solving problems.
         </p>
-        <div className="mx-auto mt-14 grid max-w-5xl gap-5 md:grid-cols-2">
+        <div className="mx-auto mt-12 grid max-w-5xl gap-5 md:grid-cols-2">
           {whyConsulting.map((w) => (
-            <div key={w.title} className="card-glow rounded-[6px] bg-white p-8">
-              <h3 className="t-h4">{w.title}</h3>
-              <p className="t-body mt-3 text-[15px]">{w.body}</p>
+            <div key={w.title} className="card p-7">
+              <h3 className="t-h3 !text-[1.3rem]">{w.title}</h3>
+              <p className="mt-3 text-[16px] leading-relaxed">{w.body}</p>
             </div>
           ))}
         </div>
       </Section>
 
-      <Section className="!pt-0">
-        <GradTitle className="t-h1 text-center">Becoming a Graphite Member</GradTitle>
-        <p className="t-body mx-auto mt-6 max-w-3xl text-center">
-          Graphite is more than a pre-professional club. It is a collaborative, fun and supportive community across the
-          Claremont Consortium, where you will sharpen your consulting skills and grow personally and professionally.
-        </p>
-        <div className="mt-14 grid gap-6 lg:grid-cols-2">
-          {member.map((m, i) => (
-            <article key={m.title} className={`card-glow grid overflow-hidden rounded-[6px] bg-white sm:grid-cols-2 ${i === 2 ? "lg:col-span-2" : ""}`}>
-              <div className="p-8">
-                <GradTitle as="h3" className="t-h3">
-                  {m.title}
-                </GradTitle>
-                <p className="t-body mt-5 text-[15px]">{m.body}</p>
+      <Section>
+        <div className="mx-auto max-w-3xl text-center">
+          <Eyebrow>Membership</Eyebrow>
+          <h2 className="t-h2 mt-4">Becoming a Graphite member</h2>
+          <p className="t-body mt-6">
+            Graphite is more than a pre-professional club. It is a collaborative, fun and supportive community across the Claremont Consortium, where
+            you will sharpen your consulting skills and grow personally and professionally.
+          </p>
+        </div>
+        <div className="mt-12 grid gap-6 lg:grid-cols-3">
+          {member.map((m) => (
+            <article key={m.title} className="card overflow-hidden">
+              <div className="relative aspect-[16/10]">
+                <Image src={m.image} alt="" fill sizes="(min-width:1024px) 24rem, 100vw" className="object-cover" style={{ objectPosition: m.position }} />
               </div>
-              <div className="relative min-h-[260px]">
-                <Image src={m.image} alt="" fill sizes="(min-width:1024px) 30vw, 100vw" className="object-cover" style={{ objectPosition: m.position }} />
+              <div className="p-6">
+                <h3 className="t-h3">{m.title}</h3>
+                <p className="mt-3 text-[16px] leading-relaxed">{m.body}</p>
               </div>
             </article>
           ))}
         </div>
-        <div className="mt-12 flex justify-center gap-3">
+        <div className="mt-12 flex flex-wrap justify-center gap-3">
           <Pill href="/life">Life at Graphite</Pill>
           <Pill href="/people" variant="outline">
             Meet the team
@@ -198,8 +221,16 @@ export function StudentsPageView() {
         </div>
       </Section>
 
-      <Section className="!pt-0">
+      <Section>
         <Testimonials items={alumni.slice(1)} title="From our alumni" />
+      </Section>
+
+      <Section className="!pt-0">
+        <Closing title={<>Questions about <em>recruiting?</em></>} body={`Email ${recruiting.contact.name}, ${recruiting.contact.title}.`}>
+          <Pill href={`mailto:${recruiting.contact.email}`} variant="outline">
+            Email {recruiting.contact.name.split(" ")[0]}
+          </Pill>
+        </Closing>
       </Section>
     </>
   );

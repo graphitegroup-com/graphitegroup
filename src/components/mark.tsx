@@ -23,16 +23,21 @@ export function Mark({ className, title }: { className?: string; title?: string 
   );
 }
 
-/** Logo lockup matching the original: mark plus two-line uppercase wordmark. */
-export function Logo({ className }: { className?: string }) {
+/**
+ * The mark reversed out of a solid Prussian square. Plays the part YC's orange
+ * square plays on its sites, in Graphite's own color. Used by the site header,
+ * footer and the portal.
+ */
+export function MarkTile({ size = 40, className = "", title }: { size?: number; className?: string; title?: string }) {
   return (
-    <span className={`flex items-center gap-2.5 ${className ?? ""}`}>
-      <Mark className="h-[34px] w-[34px]" />
-      <span className="text-[0.9rem] leading-[1.02] font-bold tracking-normal uppercase">
-        Graphite
-        <br />
-        Group
-      </span>
+    <span
+      className={`inline-flex shrink-0 items-center justify-center bg-prussian text-white ${className}`}
+      style={{ width: size, height: size }}
+      role={title ? "img" : undefined}
+      aria-label={title}
+      aria-hidden={title ? undefined : true}
+    >
+      <Mark className="h-[62%] w-[62%]" />
     </span>
   );
 }

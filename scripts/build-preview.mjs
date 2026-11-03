@@ -18,6 +18,10 @@ const out = path.join(root, ".next-preview"); // with distDir set, `output: "exp
 const dist = path.join(root, "preview-dist");
 const portalOnly = process.argv.includes("--portal");
 
+// Route types left by `next dev` still name the API route hidden below and fail the
+// build's type check. They are regenerated the next time the dev server starts.
+fs.rmSync(path.join(root, ".next/dev/types"), { recursive: true, force: true });
+
 // API routes can't be statically exported; a leading underscore makes the folder private.
 if (fs.existsSync(api)) fs.renameSync(api, apiOff);
 try {

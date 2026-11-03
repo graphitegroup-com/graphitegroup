@@ -5,9 +5,8 @@ import { site } from "@/content/site";
 
 type Status = { kind: "idle" } | { kind: "sending" } | { kind: "sent" } | { kind: "error"; message: string };
 
-const field =
-  "mt-2 w-full rounded-[6px] border border-line bg-white px-4 py-3 text-[15px] text-ink placeholder:text-text/60 focus:border-sapphire focus:outline-none";
-const labelCls = "block text-sm font-medium";
+const field = "field mt-2";
+const labelCls = "block text-[15px] font-normal text-coal";
 
 export function ContactForm() {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -35,7 +34,9 @@ export function ContactForm() {
   if (status.kind === "sent") {
     return (
       <div>
-        <h2 className="grad-title t-h3">Thank you.</h2>
+        <h2 className="t-h2">
+          Thank <em>you.</em>
+        </h2>
         <p className="t-body mt-4">
           We have received your message and will be in touch within a few business days.
         </p>
@@ -44,8 +45,8 @@ export function ContactForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-8">
-      <div className="grid gap-8 sm:grid-cols-2">
+    <form onSubmit={onSubmit} className="space-y-6">
+      <div className="grid gap-6 sm:grid-cols-2">
         <label className={labelCls}>
           First name
           <input name="firstName" required autoComplete="given-name" className={field} />
@@ -55,7 +56,7 @@ export function ContactForm() {
           <input name="lastName" required autoComplete="family-name" className={field} />
         </label>
       </div>
-      <div className="grid gap-8 sm:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-2">
         <label className={labelCls}>
           Work email
           <input name="email" type="email" required autoComplete="email" className={field} />
@@ -65,7 +66,7 @@ export function ContactForm() {
           <input name="organization" autoComplete="organization" className={field} />
         </label>
       </div>
-      <div className="grid gap-8 sm:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-2">
         <label className={labelCls}>
           Area of interest
           <select name="practice" className={field} defaultValue="Not sure yet">
@@ -101,7 +102,7 @@ export function ContactForm() {
           {status.kind === "sending" ? "Sending…" : "Send message"}
         </button>
         {status.kind === "error" && (
-          <p role="alert" className="text-sm text-text">
+          <p role="alert" className="text-[15px] text-text">
             {status.message === "unavailable" ? (
               <>
                 Our form is temporarily unavailable. Please message us on{" "}

@@ -1,120 +1,45 @@
 @import "tailwindcss";
 
 /*
-  Graphite Group design system, rebuilt from the original graphitegroup.co.
-  Inter with tight tracking, pewter-to-ink gradient titles, black pill buttons,
-  dark feature bands, faint column lines, soft blue glows.
-
-  Variants change color and band treatment only, never layout. They are set by
-  data-variant on <html> (see components/variant-switcher.tsx):
-    original  black bands, pewter to prussian titles (default)
-    prussian  bands and buttons in Prussian Blue
-    gradient  brand Phthalo to Violet gradient on titles, buttons and glows
-    light     gray bands with dark text instead of black
+  Graphite Group public site, modeled on ycombinator.com: a warm cream page,
+  Source Serif 4 display type with italic emphasis, light Outfit body copy,
+  hairline cards, uppercase eyebrows and chips, and black pill buttons with
+  italic serif labels. Graphite's Prussian square stands where YC's orange
+  square would. Site styles are scoped to .site so the portal keeps its own.
 */
 
 @theme inline {
   --color-ink: #000000;
-  --color-text: #5e6774;
-  --color-line: #eef0f4;
-  --color-gray: #e8ebf5;
+  --color-coal: #16140f;
+  --color-text: #5f5d55;
+  --color-line: #e2e1d6;
+  --color-rule: #d2d1c6;
+  --color-gray: #e8e7dc;
+  --color-cream: #f5f5ee;
+  --color-card: #fdfdf8;
+  --color-cobalt: #3a56c8;
   --color-pewter: #abd1e8;
   --color-prussian: #073863;
   --color-sapphire: #4566df;
-  --color-phthalo: #1b06dd;
-  --color-violet: #7e18ff;
-  --color-coral: #f87575;
 
-  --color-band: var(--v-band-bg);
-  --color-band-fg: var(--v-band-fg);
-  --color-band-muted: var(--v-band-muted);
-  --color-band-line: var(--v-band-line);
-  --color-pill: var(--v-pill-bg);
-
-  /* Portal: neutral working grays plus Prussian as the one accent. */
-  --color-muted: #5b6270;
-  --color-ink-2: #2b3038;
-  --color-faint: #8a909c;
+  /*
+    Portal: modeled on Bookface. Warm beige page, white panels, warm grays and
+    one blue for actions and links. Bookface's own #268bd2 is darkened just
+    enough to pass WCAG AA with white text. Owned by src/portal/portal.css.
+  */
+  --color-muted: #62625a;
+  --color-ink-2: #2a2a25;
+  --color-faint: #8a8a80;
   --color-paper: #ffffff;
-  --color-stone: #f6f7f9;
-  --color-edge: #e4e7ec;
-  --color-accent: var(--color-prussian);
+  --color-stone: #f6f6ef;
+  --color-edge: #e3e3d8;
+  --color-accent: #1f78bd;
+  --color-accent-hover: #1b6fb0;
+  --color-link: #1b6fb0;
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-}
-
-:root,
-[data-variant="original"] {
-  --v-title: linear-gradient(160deg, #abd1e8 0%, #073863 55%, #000 100%);
-  --v-title-on-band: linear-gradient(90deg, #abd1e8, #fff);
-  --v-band-bg: #000000;
-  --v-band-fg: #ffffff;
-  --v-band-muted: #d7dbe2;
-  --v-band-line: #262a30;
-  --v-pill-bg: #000000;
-  --v-pill-hover: #073863;
-  --v-pill-fg: #ffffff;
-  --v-pill-on-band-border: #abd1e8;
-  --v-pill-on-band-fg: #ffffff;
-  --v-glow: rgba(171, 209, 232, 0.32);
-  --v-card-glow: rgba(69, 102, 223, 0.26);
-  --v-map-dark: block;
-  --v-map-light: none;
-}
-
-[data-variant="prussian"] {
-  --v-title: linear-gradient(160deg, #abd1e8 0%, #4566df 40%, #073863 100%);
-  --v-title-on-band: linear-gradient(90deg, #abd1e8, #fff);
-  --v-band-bg: #073863;
-  --v-band-fg: #ffffff;
-  --v-band-muted: #cddbe8;
-  --v-band-line: #1d4d78;
-  --v-pill-bg: #073863;
-  --v-pill-hover: #4566df;
-  --v-pill-fg: #ffffff;
-  --v-pill-on-band-border: #abd1e8;
-  --v-pill-on-band-fg: #ffffff;
-  --v-glow: rgba(171, 209, 232, 0.4);
-  --v-card-glow: rgba(7, 56, 99, 0.22);
-  --v-map-dark: block;
-  --v-map-light: none;
-}
-
-[data-variant="gradient"] {
-  --v-title: linear-gradient(120deg, #4566df 0%, #1b06dd 45%, #7e18ff 100%);
-  --v-title-on-band: linear-gradient(90deg, #abd1e8, #b48cff);
-  --v-band-bg: #000000;
-  --v-band-fg: #ffffff;
-  --v-band-muted: #d7dbe2;
-  --v-band-line: #262a30;
-  --v-pill-bg: linear-gradient(100deg, #1b06dd, #7e18ff);
-  --v-pill-hover: linear-gradient(100deg, #1503b0, #6a0fe0);
-  --v-pill-fg: #ffffff;
-  --v-pill-on-band-border: #7e18ff;
-  --v-pill-on-band-fg: #ffffff;
-  --v-glow: rgba(126, 24, 255, 0.38);
-  --v-card-glow: rgba(27, 6, 221, 0.24);
-  --v-map-dark: block;
-  --v-map-light: none;
-}
-
-[data-variant="light"] {
-  --v-title: linear-gradient(160deg, #abd1e8 0%, #073863 55%, #000 100%);
-  --v-title-on-band: linear-gradient(160deg, #4566df, #073863);
-  --v-band-bg: #e8ebf5;
-  --v-band-fg: #073863;
-  --v-band-muted: #3d4553;
-  --v-band-line: #d3d8e6;
-  --v-pill-bg: #000000;
-  --v-pill-hover: #073863;
-  --v-pill-fg: #ffffff;
-  --v-pill-on-band-border: #073863;
-  --v-pill-on-band-fg: #073863;
-  --v-glow: rgba(69, 102, 223, 0.18);
-  --v-card-glow: rgba(69, 102, 223, 0.22);
-  --v-map-dark: none;
-  --v-map-light: block;
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-serif-4), ui-serif, Georgia, serif;
+  --font-display: var(--font-serif-4), ui-serif, Georgia, serif;
 }
 
 :root {
@@ -127,12 +52,11 @@ html {
 }
 
 body {
-  background: #fff;
+  background: var(--color-cream);
   color: #000;
   font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.6;
-  letter-spacing: -0.8px;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -148,127 +72,224 @@ h3 {
 }
 
 @layer components {
+  /* ---------------------------------------------------------------- public site */
+  .site {
+    font-weight: 300;
+    font-size: 17px;
+    line-height: 1.75;
+  }
+  .site strong,
+  .site b {
+    font-weight: 500;
+  }
+
   .container-gg {
     width: 100%;
-    max-width: 80rem;
+    max-width: 72rem;
     margin-inline: auto;
-    padding-inline: 1.25rem;
+    padding-inline: 1rem;
     position: relative;
   }
   @media (min-width: 768px) {
     .container-gg {
-      padding-inline: 3rem;
+      padding-inline: 2rem;
     }
   }
-
-  /* Gradient title, the signature of the original site. */
-  .grad-title {
-    background-image: var(--v-title);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-  .grad-title-band {
-    background-image: var(--v-title-on-band);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+  .container-narrow {
+    max-width: 58rem;
   }
 
+  /* Display type: Source Serif 4, weight 500, tight tracking. */
+  .t-hero,
+  .t-display,
+  .t-h2,
+  .t-h3,
+  .t-num {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    color: var(--color-coal);
+  }
   .t-hero {
-    font-weight: 600;
-    font-size: clamp(4rem, 11vw, 9.5rem);
-    letter-spacing: -0.05em;
-    line-height: 0.86;
+    font-weight: 400;
+    font-size: clamp(3.1rem, 8.4vw, 6.6rem);
+    letter-spacing: -0.03em;
+    line-height: 1.08;
   }
-  .t-h1 {
-    font-weight: 600;
-    font-size: clamp(2.75rem, 6vw, 4.5rem);
-    letter-spacing: -0.045em;
-    line-height: 1;
+  .t-display {
+    font-size: clamp(2.6rem, 5.6vw, 3.75rem);
+    letter-spacing: -0.025em;
+    line-height: 1.1;
   }
   .t-h2 {
-    font-weight: 600;
-    font-size: clamp(2.1rem, 4vw, 3.5rem);
-    letter-spacing: -0.05em;
-    line-height: 1.1;
+    font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+    letter-spacing: -0.02em;
+    line-height: 1.15;
   }
+  /* Italic serif subhead, as on YC's About page. */
   .t-h3 {
-    font-weight: 600;
-    font-size: clamp(1.75rem, 2.6vw, 2.25rem);
-    letter-spacing: -0.055em;
-    line-height: 1.1;
+    font-style: italic;
+    font-size: 1.4rem;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+  }
+  /* Light sans section heading, as on YC's People page. */
+  .t-sub {
+    font-weight: 300;
+    font-size: clamp(1.35rem, 2vw, 1.5rem);
+    line-height: 1.3;
+    color: var(--color-coal);
   }
   .t-h4 {
-    font-weight: 600;
-    font-size: 1.375rem;
-    letter-spacing: -0.045em;
-    line-height: 1.25;
+    font-weight: 500;
+    font-size: 1.125rem;
+    line-height: 1.35;
+    color: var(--color-coal);
+  }
+  .t-num {
+    font-weight: 400;
+    font-size: clamp(3.25rem, 6vw, 4.75rem);
+    letter-spacing: -0.03em;
+    line-height: 1;
   }
   .t-body {
-    color: var(--color-text);
     font-size: 1.0625rem;
+    line-height: 1.8;
+  }
+  .t-lede {
+    font-size: clamp(1.0625rem, 1.5vw, 1.1875rem);
+    line-height: 1.8;
+    text-wrap: pretty;
   }
 
-  /* Pills, as on the original site. */
+  .eyebrow {
+    font-size: 0.7rem;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    line-height: 1.4;
+    text-transform: uppercase;
+    color: var(--color-coal);
+  }
+
+  /* Uppercase tags, as on YC company pages. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 2px;
+    background: var(--color-gray);
+    padding: 0.2rem 0.45rem;
+    font-size: 0.6875rem;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+    text-transform: uppercase;
+    color: #3d3b35;
+    white-space: nowrap;
+  }
+
+  .card {
+    border: 1px solid var(--color-rule);
+    border-radius: 8px;
+    background: var(--color-card);
+  }
+
+  /* Black pill with an italic serif label, as on YC's Apply button. */
   .pill {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border-radius: 56px;
-    padding: 1rem 1.875rem;
-    font-size: 1rem;
-    line-height: 1;
-    letter-spacing: -0.8px;
+    min-height: 2.5rem;
+    border-radius: 999px;
+    border: 1px solid #000;
+    padding: 0.45rem 1.35rem;
+    background: #000;
+    color: #fff;
+    font-family: var(--font-serif);
+    font-size: 1.0625rem;
+    font-style: italic;
+    font-weight: 400;
+    line-height: 1.2;
     white-space: nowrap;
-    background: var(--v-pill-bg);
-    color: var(--v-pill-fg);
-    border: 0;
     transition:
-      background 0.3s,
-      color 0.3s,
-      box-shadow 0.3s,
-      opacity 0.3s;
+      background 0.2s,
+      color 0.2s,
+      border-color 0.2s;
   }
   .pill:hover {
-    background: var(--v-pill-hover);
+    background: var(--color-prussian);
+    border-color: var(--color-prussian);
   }
   .pill-sm {
-    padding: 0.8rem 1.4rem;
-    font-size: 0.9375rem;
+    min-height: 2.25rem;
+    padding: 0.35rem 1.1rem;
+    font-size: 1rem;
   }
   .pill-outline {
     background: transparent;
     color: #000;
-    border: 1px solid var(--color-pewter);
   }
   .pill-outline:hover {
-    background: var(--color-pewter);
+    background: #000;
+    border-color: #000;
+    color: #fff;
   }
   .pill-light {
     background: #fff;
+    border-color: #fff;
     color: #000;
   }
   .pill-light:hover {
-    background: var(--color-pewter);
-  }
-  .pill-band {
-    background: transparent;
-    color: var(--v-pill-on-band-fg);
-    border: 1px solid var(--v-pill-on-band-border);
-    box-shadow: 0 0 30px var(--v-glow);
-  }
-  .pill-band:hover {
-    background: transparent;
-    box-shadow: 0 0 44px var(--v-glow);
+    background: var(--color-cream);
+    border-color: var(--color-cream);
   }
   .pill:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
 
-  /* Dark feature band. */
+  .link-u {
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+    text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  }
+  .link-u:hover {
+    text-decoration-color: currentColor;
+  }
+  .link-c {
+    color: var(--color-cobalt);
+  }
+  .link-c:hover {
+    text-decoration-line: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .photo {
+    border-radius: 8px;
+    box-shadow: 0 18px 40px -22px rgba(22, 20, 15, 0.45);
+  }
+
+  /* Form fields on the contact page and search boxes. */
+  .field {
+    width: 100%;
+    border: 1px solid var(--color-rule);
+    border-radius: 4px;
+    background: #fff;
+    padding: 0.7rem 0.85rem;
+    font-size: 1rem;
+    font-weight: 300;
+    color: #000;
+  }
+  .field::placeholder {
+    color: #8a887e;
+  }
+  .field:focus {
+    border-color: var(--color-cobalt);
+    box-shadow: 0 0 0 1px var(--color-cobalt);
+    outline: none;
+  }
+
   /* Portal: a working tool, so plain type at reading size and no effects. */
   .portal {
     font-size: 14px;
@@ -296,66 +317,6 @@ h3 {
   }
   .btn-solid:hover {
     background: #0a477c;
-  }
-
-  .band {
-    background: var(--v-band-bg);
-    color: var(--v-band-fg);
-  }
-
-  /* Faint column guides behind white sections. */
-  .lines-bg {
-    position: relative;
-    isolation: isolate;
-  }
-  .lines-bg::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background-image: linear-gradient(to right, var(--color-line) 1px, transparent 1px);
-    background-size: calc((min(100vw, 80rem) - 6rem) / 3) 100%;
-    background-position: calc(50% - (min(100vw, 80rem) - 6rem) / 2) 0;
-  }
-  @media (max-width: 767px) {
-    .lines-bg::before {
-      display: none;
-    }
-  }
-
-  .icon-tile {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 3.5rem;
-    height: 3.5rem;
-    border-radius: 8px;
-    border: 1px solid var(--v-band-line);
-    box-shadow: 0 0 34px var(--v-glow);
-  }
-
-  .card-glow {
-    box-shadow:
-      0 0 0 1px rgba(7, 56, 99, 0.06),
-      0 24px 60px -20px var(--v-card-glow);
-  }
-
-  .map-dark {
-    display: var(--v-map-dark);
-  }
-  .map-light {
-    display: var(--v-map-light);
-  }
-
-  .link-u {
-    text-decoration-line: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.25em;
-    text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
-  }
-  .link-u:hover {
-    text-decoration-color: currentColor;
   }
 }
 

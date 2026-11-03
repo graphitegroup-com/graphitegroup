@@ -3,115 +3,155 @@
 import Link from "@/components/app-link";
 import { useEffect, useRef, useState } from "react";
 import { usePagePath } from "@/lib/use-page-path";
-import { Logo } from "./mark";
+import { MarkTile } from "./mark";
 import { nav } from "@/content/site";
+
+type NavItem = (typeof nav)[number];
 
 const mobileLinks: { href: string; label: string }[] = [
   { href: "/", label: "Home" },
   ...nav.flatMap((n): { href: string; label: string }[] => ("children" in n ? [...n.children] : [{ href: n.href, label: n.label }])),
 ];
 
+// Links split evenly around the mark, as on ycombinator.com.
+const half = Math.ceil(nav.length / 2);
+const leftNav = nav.slice(0, half);
+const rightNav = nav.slice(half);
+
+const linkCls = "whitespace-nowrap text-[15px] font-normal transition-colors";
+
 export function SiteHeader() {
   const pathname = usePagePath();
   const [open, setOpen] = useState(false);
-  const [workOpen, setWorkOpen] = useState(false);
-  const workRef = useRef<HTMLDivElement>(null);
+  const [menu, setMenu] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menus on navigation (render-time reset, no effect needed).
   const [lastPath, setLastPath] = useState(pathname);
   if (pathname !== lastPath) {
     setLastPath(pathname);
     setOpen(false);
-    setWorkOpen(false);
+    setMenu(null);
   }
 
   useEffect(() => {
     document.documentElement.style.overflow = open ? "hidden" : "";
+    return () => {
+      document.documentElement.style.overflow = "";
+    };
   }, [open]);
 
   useEffect(() => {
-    if (!workOpen) return;
+    if (!menu) return;
     const onDown = (e: MouseEvent) => {
-      if (workRef.current && !workRef.current.contains(e.target as Node)) setWorkOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenu(null);
     };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenu(null);
     document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [workOpen]);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menu]);
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const tone = (href: string) => (isActive(href) ? "text-prussian" : "text-coal hover:text-prussian");
+
+  const item = (n: NavItem) =>
+    "children" in n ? (
+      <div key={n.label} ref={menuRef} className="relative" onMouseLeave={() => setMenu(null)}>
+        <button
+          type="button"
+          aria-expanded={menu === n.label}
+          onClick={() => setMenu((m) => (m === n.label ? null : n.label))}
+          onMouseEnter={() => setMenu(n.label)}
+          className={`flex items-center gap-1 ${linkCls} ${tone(n.href)}`}
+        >
+          {n.label}
+          <svg viewBox="0 0 12 12" className={`h-2.5 w-2.5 transition-transform ${menu === n.label ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
+            <path d="M2.5 4.5 6 8l3.5-3.5" />
+          </svg>
+        </button>
+        {menu === n.label && (
+          <div className="absolute top-full left-1/2 z-10 w-56 -translate-x-1/2 pt-3">
+            <ul className="card p-1.5">
+              {n.children.map((c) => (
+                <li key={c.href}>
+                  <Link href={c.href} className="block rounded-[4px] px-3.5 py-2 text-[15px] font-normal text-coal hover:bg-gray">
+                    {c.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    ) : (
+      <Link key={n.href} href={n.href} aria-current={isActive(n.href) ? "page" : undefined} className={`${linkCls} ${tone(n.href)}`}>
+        {n.label}
+      </Link>
+    );
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[#edf0f4] bg-white">
-      <div className="container-gg flex h-[88px] items-center justify-between gap-6">
-        <Link href="/" aria-label="Graphite Group home" className="text-ink">
-          <Logo />
-        </Link>
-
-        <nav className="hidden items-center gap-7 text-[15px] xl:flex" aria-label="Primary">
-          {nav.map((item) =>
-            "children" in item ? (
-              <div key={item.label} ref={workRef} className="relative" onMouseLeave={() => setWorkOpen(false)}>
-                <button
-                  type="button"
-                  aria-expanded={workOpen}
-                  onClick={() => setWorkOpen((o) => !o)}
-                  onMouseEnter={() => setWorkOpen(true)}
-                  className={`flex items-center gap-1.5 ${isActive(item.href) ? "text-ink" : "text-ink/80 hover:text-ink"}`}
-                >
-                  {item.label}
-                  <svg viewBox="0 0 12 12" className={`h-3 w-3 transition-transform ${workOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
-                    <path d="M2.5 4.5 6 8l3.5-3.5" />
-                  </svg>
-                </button>
-                {workOpen && (
-                  <div className="absolute top-full left-1/2 w-56 -translate-x-1/2 pt-4">
-                    <ul className="rounded-2xl border border-[#edf0f4] bg-white p-2 shadow-[0_18px_50px_-12px_rgba(7,56,99,0.25)]">
-                      {item.children.map((c) => (
-                        <li key={c.href}>
-                          <Link href={c.href} className="block rounded-xl px-4 py-2.5 hover:bg-gray">
-                            {c.label}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Link key={item.href} href={item.href} className={isActive(item.href) ? "text-ink" : "text-ink/80 hover:text-ink"}>
-                {item.label}
-              </Link>
-            ),
-          )}
-          <Link href="/login" className="pill pill-sm">
-            Log in
+    <header className="sticky top-0 z-50 bg-cream">
+      <div className="relative flex h-16 items-center justify-center px-4 md:px-5">
+        {/* Desktop: links split around the mark, sign-in and the pill at the right edge. */}
+        <nav className="hidden items-center gap-9 min-[1240px]:flex 2xl:gap-12" aria-label="Primary">
+          {leftNav.map(item)}
+          <Link href="/" aria-label="Graphite Group home" className="mx-1">
+            <MarkTile size={40} />
           </Link>
+          {rightNav.map(item)}
         </nav>
-
-        <div className="flex items-center gap-3 xl:hidden">
-          <Link href="/login" className="pill pill-sm hidden sm:inline-flex">
+        <div className="absolute top-1/2 right-5 hidden -translate-y-1/2 items-center gap-5 min-[1240px]:flex">
+          <Link href="/login" className={`${linkCls} text-coal hover:text-prussian`}>
             Log in
           </Link>
-          <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="mobile-menu" className="flex h-11 w-11 items-center justify-center rounded-full border border-[#edf0f4]">
-            <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
-            <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
-              {open ? <path d="M5 5l10 10M15 5 5 15" /> : <path d="M3 6h14M3 10h14M3 14h14" />}
-            </svg>
-          </button>
+          <Link href="/contact" className="pill">
+            Work with us
+          </Link>
         </div>
+
+        {/* Below 1240px: the mark centered and a menu button at the right. */}
+        <Link href="/" aria-label="Graphite Group home" className="min-[1240px]:hidden">
+          <MarkTile size={40} />
+        </Link>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-controls="mobile-menu"
+          className="absolute top-1/2 right-3 flex h-11 w-11 -translate-y-1/2 items-center justify-center min-[1240px]:hidden"
+        >
+          <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
+          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+            {open ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 9h16M4 15h16" />}
+          </svg>
+        </button>
       </div>
 
       {open && (
-        <div id="mobile-menu" className="fixed inset-x-0 top-[89px] bottom-0 z-40 overflow-y-auto bg-white xl:hidden">
-          <nav className="container-gg flex flex-col py-6" aria-label="Mobile">
-            {mobileLinks.map((item) => (
-              <Link key={item.href + item.label} href={item.href} className="border-b border-[#edf0f4] py-4 text-2xl font-semibold tracking-[-0.04em]">
-                {item.label}
+        <div id="mobile-menu" className="fixed inset-x-0 top-16 bottom-0 z-40 overflow-y-auto bg-cream min-[1240px]:hidden">
+          <nav className="container-gg flex flex-col pt-4 pb-10" aria-label="Mobile">
+            {mobileLinks.map((l) => (
+              <Link
+                key={l.href + l.label}
+                href={l.href}
+                aria-current={pathname === l.href ? "page" : undefined}
+                className={`border-b border-rule py-3.5 text-[20px] font-normal ${pathname === l.href ? "text-prussian" : "text-coal"}`}
+              >
+                {l.label}
               </Link>
             ))}
-            <Link href="/login" className="pill mt-8 self-start">
-              Log in
-            </Link>
+            <div className="mt-8 flex flex-wrap items-center gap-5">
+              <Link href="/contact" className="pill">
+                Work with us
+              </Link>
+              <Link href="/login" className="text-[17px] font-normal text-coal">
+                Log in
+              </Link>
+            </div>
           </nav>
         </div>
       )}

@@ -34,11 +34,9 @@ Copy `.env.example` to `.env.local` and set it in Vercel too.
 
 ## Design notes
 
-Rebuilt from the original graphitegroup.co in the brand palette: Inter with tight tracking, pewter-to-ink gradient titles, black pill buttons, dark feature bands with the dotted world map, glowing icon tiles, half-photo practice cards and faint column guides. Tokens and utilities (`grad-title`, `t-hero` to `t-h4`, `pill`, `band`, `lines-bg`, `card-glow`) live in `src/app/globals.css`; page building blocks are in `src/components/gg.tsx`. The portal uses the same system through `src/portal/ui.tsx`.
+The public site is modeled on ycombinator.com: a warm cream page (`#F5F5EE`), Source Serif 4 display type with italic emphasis, light Outfit body copy, hairline cards, uppercase eyebrows and tag chips, and black pills with italic serif labels. The header centers its links around Graphite's mark in a Prussian square, which plays the part of YC's orange square; the footer is black. Layout and type follow YC, while the name, mark and colors stay Graphite's own.
 
-### Variants
-
-Four color treatments share one layout: `original` (default), `prussian`, `gradient` and `light`. Each is a block of `--v-*` variables under `[data-variant]` in `globals.css`, so a variant never changes structure. Preview one with `?variant=prussian` or the Variant button in the corner (`src/components/variant-switcher.tsx`); the choice is remembered per browser. To ship one, make its values the `:root` defaults, then remove the switcher from both layouts and `VARIANT_BOOT` from `src/app/layout.tsx`.
+Tokens and type classes (`t-hero`, `t-display`, `t-h2`, `t-h3`, `eyebrow`, `chip`, `card`, `pill`, `field`) live in `src/app/globals.css`, scoped under `.site`; page building blocks (`PageHeader`, `CaseRows`, `ClientShowcase`, `PersonRows`, `FactCard`, `SideNav`) are in `src/components/gg.tsx`. The portal keeps its own Bookface-style system through `src/portal/ui.tsx`.
 
 ## Preview without a server
 
