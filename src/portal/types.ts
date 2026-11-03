@@ -110,7 +110,7 @@ export type Application = {
   /** 1 to 5: how well the role fits the member's interests. */
   fit?: Score;
   updatedAt: string;
-  /** Private to the member, even once the application is shared. */
+  /** Shown to every member on the firm's page without a name, separate from the application itself. */
   notes: string;
 };
 
@@ -137,9 +137,7 @@ export type QuestionRound = (typeof QUESTION_ROUNDS)[number];
 /**
  * One interview question in a firm's question bank. It keeps only the firm,
  * a broad round and the text: no author, date, year or position, and nothing
- * that points to the report it came with. Questions wait in `pendingQuestions`
- * and publish in batches (see `logInterview`), so their timing can't give the
- * author away either.
+ * that points to the report it came with.
  */
 export type InterviewQuestion = { id: string; company: string; round: QuestionRound; question: string };
 
@@ -363,12 +361,7 @@ export type PortalData = {
   accounts: Record<string, string>;
   applications: Application[];
   reports: InterviewReport[];
-  /** The published question bank. */
   questions: InterviewQuestion[];
-  /** Questions waiting for their firm's next batch. Nobody can read these in the app. */
-  pendingQuestions: InterviewQuestion[];
-  /** Company slug -> the reports already counted toward a published batch. */
-  questionBatches: Record<string, string[]>;
   comments: Comment[];
   contacts: Contact[];
   outreach: Outreach[];

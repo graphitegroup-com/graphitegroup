@@ -158,7 +158,8 @@ create table task_completions (
 -- ---------------------------------------------------------------- recruiting
 -- An application is private to its member until it reaches a first round.
 -- From then on members see it through applications_visible (below), by name
--- or as "Anonymous member". Notes, effort and fit are never shown to others.
+-- or as "Anonymous member". Notes show to every member right away, without a
+-- name, through application_notes_visible. Effort and fit never show one by one.
 create table applications (
   id uuid primary key default gen_random_uuid(),
   member_id uuid not null references members (id) on delete cascade,
@@ -212,8 +213,6 @@ create table interview_reports (
   difficulty int check (difficulty between 1 and 5),
   outcome text check (outcome in ('Advanced', 'Offer', 'Rejected', 'Unknown')),
   anonymous boolean not null default false,
-  -- Counted toward a published question batch at this firm already.
-  batched boolean not null default false,
   created_at timestamptz not null default now()
 );
 create index interview_reports_company_idx on interview_reports (lower(btrim(company)));
@@ -228,10 +227,6 @@ create table interview_questions (
   question text not null check (length(btrim(question)) between 1 and 1000)
 );
 create index interview_questions_company_idx on interview_questions (lower(btrim(company)));
-
--- Questions waiting for their firm's next batch. No policies, so nobody,
--- exec included, can read them through the app.
-create table interview_questions_pending (like interview_questions including all);
 
 create table contacts (
   id uuid primary key default gen_random_uuid(),
@@ -464,7 +459,6 @@ alter table task_completions enable row level security;
 alter table applications enable row level security;
 alter table interview_reports enable row level security;
 alter table interview_questions enable row level security;
-alter table interview_questions_pending enable row level security;
 alter table contacts enable row level security;
 alter table outreach enable row level security;
 alter table comments enable row level security;
@@ -499,9 +493,9 @@ create policy "own completions" on task_completions for all
   using (member_id = current_member_id() or is_exec())
   with check (member_id = current_member_id());
 
--- Each member reads and writes only their own rows here; everyone, exec
--- included, sees other members' through applications_visible (below), which
--- leaves out notes, effort and fit.
+-- Each member reads and writes only their own rows here. Everyone, exec
+-- included, sees other members' through applications_visible and
+-- application_notes_visible (below).
 create policy "own applications" on applications for all
   using (member_id = current_member_id())
   with check (member_id = current_member_id());
@@ -512,8 +506,8 @@ create policy "own reports or exec" on interview_reports for select using (membe
 create policy "edit own reports" on interview_reports for update using (member_id = current_member_id()) with check (member_id = current_member_id());
 create policy "delete own reports or exec" on interview_reports for delete using (member_id = current_member_id() or is_exec());
 
--- The published bank: every member reads, exec removes. Nobody inserts
--- directly; questions arrive only in batches from log_interview.
+-- The bank: every member reads, exec removes. Questions arrive only through
+-- log_interview, so no row ever carries who added it.
 create policy "read question bank" on interview_questions for select using (current_member_id() is not null);
 create policy "exec removes questions" on interview_questions for delete using (is_exec());
 create policy "read contacts" on contacts for select using (current_member_id() is not null);
@@ -554,8 +548,7 @@ create policy "add own jobs" on jobs for insert with check (member_id = current_
 create policy "edit own jobs" on jobs for update using (member_id = current_member_id()) with check (member_id = current_member_id());
 create policy "delete own jobs or exec" on jobs for delete using (member_id = current_member_id() or is_exec());
 
--- Per-firm totals over every application, shared or not. Effort is averaged
--- only once three members have rated it, so no one rating can be picked out.
+-- Per-firm totals over every application, shared or not.
 create view company_application_stats with (security_invoker = false) as
 select
   lower(btrim(company)) as company_key,
@@ -563,14 +556,15 @@ select
   count(distinct member_id) as applicants,
   count(distinct member_id) filter (where stage = 'Offer') as offers,
   count(distinct member_id) filter (where effort is not null) as effort_ratings,
-  case when count(distinct member_id) filter (where effort is not null) >= 3 then round(avg(effort), 1) end as avg_effort
+  round(avg(effort), 1) as avg_effort
 from applications
 where current_member_id() is not null
 group by lower(btrim(company));
 
--- Applications other members can see: from a first round on, without notes,
--- effort or fit, and with the member blanked out if they chose anonymous.
--- Exec sees every application this way, but still not notes, effort or fit.
+-- Applications other members can see: from a first round on, with the member
+-- blanked out if they chose anonymous. Exec sees every application this way.
+-- Notes are left out because this view can carry a name; they show in
+-- application_notes_visible instead. Effort and fit are left out too.
 create view applications_visible with (security_invoker = false) as
 select
   a.id, a.company, a.position, a.cycle, a.stage, a.furthest, a.anonymous, a.updated_at,
@@ -579,13 +573,15 @@ from applications a
 where current_member_id() is not null
   and (a.furthest in ('First Round', 'Superday / Final', 'Offer') or a.member_id = current_member_id() or is_exec());
 
--- Log an interview: the overview under the member, the questions into the
--- firm's waiting pile with nothing pointing back. Once three different
--- members have logged interviews at the firm since its last batch, every
--- waiting question there moves to the bank at once, in random order, so each
--- published question came from one of at least three people. Until then,
--- someone with direct database access could still match waiting rows to a
--- report by transaction; nobody can through the app.
+-- Every member's application notes, as soon as they're written, with no name,
+-- application id or date: just the firm, the cycle and the note.
+create view application_notes_visible with (security_invoker = false) as
+select a.company, a.cycle, a.notes
+from applications a
+where current_member_id() is not null and btrim(a.notes) <> '';
+
+-- Log an interview: the overview under the member (named or anonymous), and
+-- the questions straight into the bank with nothing pointing back to either.
 create or replace function log_interview(
   p_company text,
   p_year int,
@@ -603,7 +599,6 @@ create or replace function log_interview(
 language plpgsql security definer set search_path = public as $$
 declare
   me uuid := current_member_id();
-  firm text := lower(btrim(p_company));
   report_id uuid;
 begin
   if me is null then
@@ -613,17 +608,10 @@ begin
   values (btrim(p_company), me, p_year, p_position, p_round, p_format, p_overview, p_tips, p_difficulty, p_outcome, coalesce(p_anonymous, false))
   returning id into report_id;
 
-  insert into interview_questions_pending (company, round, question)
+  insert into interview_questions (company, round, question)
   select btrim(p_company), coalesce(p_question_round, 'Other'), btrim(q)
   from unnest(coalesce(p_questions, '{}')) as q
   where btrim(q) <> '';
-
-  if (select count(distinct member_id) from interview_reports where lower(btrim(company)) = firm and not batched) >= 3 then
-    insert into interview_questions (company, round, question)
-    select company, round, question from interview_questions_pending where lower(btrim(company)) = firm order by random();
-    delete from interview_questions_pending where lower(btrim(company)) = firm;
-    update interview_reports set batched = true where lower(btrim(company)) = firm and not batched;
-  end if;
   return report_id;
 end $$;
 

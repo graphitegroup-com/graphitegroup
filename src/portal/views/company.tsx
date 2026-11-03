@@ -3,7 +3,7 @@
 import Link from "@/components/app-link";
 import { useState } from "react";
 import { usePortal } from "@/portal/store";
-import { byline, isExec, companyNames, companySlug, contactGrade, firmGradeSummary, fmtDate, matchCompany, nextStep, outreachStage, pct, threadActivity, uid, firmType, jobsAt, visibleApplications, isShared, appYear, appOutcome, stageRank, batchProgress, logInterview, questionRound, QUESTION_BATCH, MIN_GRADERS, reachedLabel } from "@/portal/logic";
+import { byline, isExec, companyNames, companySlug, contactGrade, firmGradeSummary, fmtDate, matchCompany, nextStep, outreachStage, pct, threadActivity, uid, firmType, jobsAt, visibleApplications, isShared, appYear, appOutcome, stageRank, logInterview, questionRound, reachedLabel, firmNotes } from "@/portal/logic";
 import { AddPersonForm, StageChip, StepPing, myOutreachAt } from "@/portal/outreach";
 import { QUESTION_ROUNDS, type ClassLevel, type CompanyType, type InterviewReport, type Job, type PortalData, type QuestionRound, type Stage } from "@/portal/types";
 import { PostForm, ThreadRow, useThreadVote } from "@/portal/forum";
@@ -111,10 +111,9 @@ export type ReportPrefill = { position?: string; year?: number; round?: string }
 /**
  * Log an interview in two parts. The overview (how it went, advice,
  * difficulty) is saved under your name or anonymously, so members know who
- * to talk to. The questions keep only the firm and a broad round, and wait
- * for the firm's next batch (see `logInterview`), so nobody (exec included)
- * can tell who was asked them. With `company` set the firm is fixed. Mount
- * only while open.
+ * to talk to. The questions go straight into the firm's question bank with
+ * only the firm and a broad round, so nobody (exec included) can see who was
+ * asked them. With `company` set the firm is fixed. Mount only while open.
  */
 export function ReportForm({ company, prefill, onDone }: { company?: string; prefill?: ReportPrefill; onDone: () => void }) {
   const { data, me, update } = usePortal();
@@ -203,9 +202,8 @@ export function ReportForm({ company, prefill, onDone }: { company?: string; pre
       <fieldset className="space-y-3 rounded-[3px] border border-edge p-4">
         <legend className="px-1 text-[13px] font-medium">2. Questions you were asked</legend>
         <p className="-mt-1 text-[12.5px] text-muted">
-          One per line. Only the firm and a broad round are kept: no name, year, position or link to your overview. They publish in a batch once{" "}
-          {QUESTION_BATCH} members have logged interviews at {company ?? "the firm"} since its last batch, so they can&apos;t be matched to you by timing. Nobody,
-          exec included, can see who added them, and you won&apos;t be able to find them as yours later.
+          One per line. They go into {company ?? "the firm"}&apos;s question bank right away, anonymously: only the firm and a broad round are kept, with no name,
+          year, position or link to your overview. Nobody, exec included, can see who added them.
         </p>
         <Field label="Filed under">
           <Select
@@ -223,7 +221,7 @@ export function ReportForm({ company, prefill, onDone }: { company?: string; pre
         />
         {questions.length > 0 && (
           <p className="text-[12.5px] text-muted">
-            {questions.length === 1 ? "1 question" : `${questions.length} questions`} will wait for the next batch.
+            {questions.length === 1 ? "1 question" : `${questions.length} questions`} will be added.
           </p>
         )}
       </fieldset>
@@ -278,15 +276,14 @@ export default function CompanyView() {
   const sharedApps = apps.filter(isShared);
   const offerYears = [...new Set(sharedApps.filter((a) => a.stage === "Offer").map(appYear))].sort();
   const bank = data.questions.filter((q) => companySlug(q.company.trim()) === companySlug(name));
-  const batch = batchProgress(data, name);
+  const notes = firmNotes(data.applications, name);
   const bankGroups = QUESTION_ROUNDS.map((round) => ({ round, items: bank.filter((q) => q.round === round).sort((a, b) => a.question.localeCompare(b.question)) })).filter(
     (g) => g.items.length > 0,
   );
   const avgDifficulty = reports.length ? reports.reduce((s, r) => s + r.difficulty, 0) / reports.length : undefined;
-  // Averaged over every application here, shared or not, once three members have rated it.
+  // Averaged over every application here, shared or not.
   const efforts = apps.filter((a) => a.effort != null);
-  const effortRaters = new Set(efforts.map((a) => a.memberId)).size;
-  const avgEffort = effortRaters >= MIN_GRADERS ? efforts.reduce((s, a) => s + (a.effort ?? 0), 0) / efforts.length : undefined;
+  const avgEffort = efforts.length ? efforts.reduce((s, a) => s + (a.effort ?? 0), 0) / efforts.length : undefined;
   const contacts = data.contacts.filter((c) => c.company.trim() === name).sort((a, b) => a.name.localeCompare(b.name));
   const grade = firmGradeSummary(data.grades.filter((g) => g.company.trim() === name));
   const threads = data.posts.filter((p) => p.company === name).sort((a, b) => threadActivity(b, data.replies).localeCompare(threadActivity(a, data.replies)));
@@ -304,7 +301,7 @@ export default function CompanyView() {
         <Stat
           label="Application effort"
           value={avgEffort != null ? avgEffort.toFixed(1) : "None"}
-          sub={avgEffort != null ? `Out of 5, ${effortRaters} members` : `Shown once ${MIN_GRADERS} members rate it`}
+          sub={avgEffort != null ? `Out of 5, ${efforts.length} ${efforts.length === 1 ? "rating" : "ratings"}` : "Not rated yet"}
         />
       </StatGroup>
 
@@ -386,14 +383,10 @@ export default function CompanyView() {
             }
           >
             <p className="border-b border-edge bg-[#fbfbf7] px-4 py-2 text-[12.5px] text-muted">
-              No names, years or positions, and no link to any overview. Questions publish in batches once {QUESTION_BATCH} members have logged interviews here since
-              the last batch, so none can be traced to one person.{" "}
-              <span className="text-ink-2 tabular-nums">
-                Next batch: {Math.min(batch.members, QUESTION_BATCH)} of {QUESTION_BATCH} members so far.
-              </span>
+              Anonymous: no names, years or positions, and no link to any overview.
             </p>
             {bank.length === 0 ? (
-              <Empty>No questions published yet.</Empty>
+              <Empty>No questions yet. Questions you add when you log an interview show here right away.</Empty>
             ) : (
               bankGroups.map((g) => (
                 <div key={g.round} className="border-b border-edge last:border-0">
@@ -405,6 +398,27 @@ export default function CompanyView() {
                   </ul>
                 </div>
               ))
+            )}
+          </Card>
+
+          <Card title="Notes from members" flush>
+            <p className="border-b border-edge bg-[#fbfbf7] px-4 py-2 text-[12.5px] text-muted">
+              What members wrote on their applications here. Anonymous: no names, and kept apart from the application list below.
+            </p>
+            {notes.length === 0 ? (
+              <Empty>No notes yet. Notes members add to an application in My recruiting show here.</Empty>
+            ) : (
+              <ul className="divide-y divide-edge">
+                {notes.map((a) => (
+                  <li key={a.id} className="px-4 py-2.5">
+                    <p className="text-[13.5px] whitespace-pre-line text-ink-2">{a.notes}</p>
+                    <p className="mt-0.5 text-[12px] text-faint">
+                      {a.cycle || appYear(a)}
+                      {a.memberId === me.id && " · Yours"}
+                    </p>
+                  </li>
+                ))}
+              </ul>
             )}
           </Card>
 

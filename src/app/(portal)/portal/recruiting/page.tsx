@@ -57,6 +57,7 @@ export default function RecruitingPage() {
   const [rating, setRating] = useState<Application | null>(null);
   const [logging, setLogging] = useState<Application | null>(null);
   const [grading, setGrading] = useState<Application | null>(null);
+  const [noting, setNoting] = useState<Application | null>(null);
 
   // Links like /portal/recruiting#network open the right tab, including from the same page.
   useEffect(() => {
@@ -191,7 +192,7 @@ export default function RecruitingPage() {
       >
         <p className="border-b border-edge bg-[#fbfbf7] px-4 py-2 text-[12.5px] text-muted">
           Only you and exec see an application until it reaches a first round. Then members see the firm, position, cycle, how far you got and the outcome, with
-          your name or as &ldquo;Anonymous member&rdquo;. Your notes stay private.
+          your name or as &ldquo;Anonymous member&rdquo;. Notes show on the firm&apos;s page right away, always without your name.
         </p>
         {mine.length === 0 ? (
           <Empty>No applications yet. Add the first one to start tracking your recruiting.</Empty>
@@ -233,6 +234,14 @@ export default function RecruitingPage() {
                         <Td className="max-w-xs py-2">
                           <span className="block">{a.position}</span>
                           {a.notes && <span className="mt-0.5 block text-[12.5px] whitespace-pre-line text-muted">{a.notes}</span>}
+                          <button
+                            type="button"
+                            onClick={() => setNoting(a)}
+                            aria-label={`${a.notes ? "Edit note" : "Add a note"}: ${a.company}`}
+                            className="mt-0.5 text-[12px] text-link hover:underline"
+                          >
+                            {a.notes ? "Edit note" : "Add a note"}
+                          </button>
                         </Td>
                         <Td className="text-muted">{a.cycle}</Td>
                         <Td>
@@ -348,8 +357,8 @@ export default function RecruitingPage() {
               onChange={(e) => setDraft({ ...draft, anonymous: e.target.value === "anonymous" })}
             />
           </Field>
-          <Field label="Notes">
-            <Textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} placeholder="Deadlines, contacts, preparation" />
+          <Field label="Notes for other members" hint="Shown on the firm's page without your name.">
+            <Textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} placeholder="How the process went, what to prepare, how long it took" />
           </Field>
           <div className="flex gap-2 pt-2">
             <Button type="submit">Save application</Button>
@@ -377,6 +386,18 @@ export default function RecruitingPage() {
       <Drawer open={!!logging} onClose={() => setLogging(null)} title={logging ? `Log your ${logging.company} interview` : "Log the interview"}>
         {logging && (
           <ReportForm company={logging.company} prefill={{ position: logging.position, year: Number(logging.updatedAt.slice(0, 4)), round: roundFor(logging) }} onDone={() => setLogging(null)} />
+        )}
+      </Drawer>
+      <Drawer open={!!noting} onClose={() => setNoting(null)} title={noting ? `Notes on ${noting.company}` : "Notes"}>
+        {noting && (
+          <NoteForm
+            app={noting}
+            onSave={(notes) => {
+              setApp(noting.id, { notes, updatedAt: today() });
+              setNoting(null);
+            }}
+            onCancel={() => setNoting(null)}
+          />
         )}
       </Drawer>
       <Drawer open={!!grading} onClose={() => setGrading(null)} title={grading ? `Grade ${grading.company}` : "Grade the process"}>
@@ -484,8 +505,8 @@ function RateApplication({ app, onSave, onCancel }: { app: Application; onSave: 
       }}
     >
       <p className="text-[13px] text-muted">
-        {[app.position, app.cycle].filter(Boolean).join(", ")}. Effort is shown on the firm&apos;s page as an average once three members have rated it. Fit is
-        only used to find members with interests like yours.
+        {[app.position, app.cycle].filter(Boolean).join(", ")}. Effort is averaged on the firm&apos;s page with no names. Fit is only used to find members with
+        interests like yours.
       </p>
       <ScorePicker name="rate-effort" label="How hard was the application?" hint={EFFORT_HINT} scale={EFFORT_SCALE} value={effort} onChange={setEffort} />
       <ScorePicker name="rate-fit" label="How well does it fit your interests?" hint={FIT_HINT} scale={FIT_SCALE} value={fit} onChange={setFit} />
@@ -493,6 +514,30 @@ function RateApplication({ app, onSave, onCancel }: { app: Application; onSave: 
         <Button type="submit" disabled={effort == null || fit == null}>
           Save ratings
         </Button>
+        <Button variant="secondary" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/** Notes on an application, for other members. They show on the firm's page right away, without a name. */
+function NoteForm({ app, onSave, onCancel }: { app: Application; onSave: (notes: string) => void; onCancel: () => void }) {
+  const [notes, setNotes] = useState(app.notes);
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSave(notes.trim());
+      }}
+    >
+      <Field label="Notes for other members" hint={`Shown on ${app.company}'s page without your name, with the cycle (${app.cycle || "none set"}).`}>
+        <Textarea rows={6} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="How the process went, what to prepare, how long it took" />
+      </Field>
+      <div className="flex gap-2">
+        <Button type="submit">Save note</Button>
         <Button variant="secondary" onClick={onCancel}>
           Cancel
         </Button>

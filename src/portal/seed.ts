@@ -84,32 +84,33 @@ export const seed: PortalData = {
       .map((id) => [id, "2026-08-25T12:00:00Z"]),
   ),
   // Applications stay private until a first round; after that, members see them by name or as "Anonymous member".
+  // Notes show on the firm's page right away, without a name.
   applications: [
-    { id: "a1", memberId: "m1", company: "McKinsey & Company", position: "Business Analyst", cycle: "Full-time 2027", stage: "Superday / Final", furthest: "Superday / Final", anonymous: false, effort: 4, fit: 5, updatedAt: "2026-09-26", notes: "Final round next week. Prep the PEI stories." },
+    { id: "a1", memberId: "m1", company: "McKinsey & Company", position: "Business Analyst", cycle: "Full-time 2027", stage: "Superday / Final", furthest: "Superday / Final", anonymous: false, effort: 4, fit: 5, updatedAt: "2026-09-26", notes: "Final round is two cases and a PEI with a partner. Have three PEI stories with numbers in them." },
     { id: "a2", memberId: "m1", company: "Bain & Company", position: "Associate Consultant", cycle: "Full-time 2027", stage: "First Round", furthest: "First Round", anonymous: false, effort: 3, fit: 5, updatedAt: "2026-09-20", notes: "" },
-    { id: "a3", memberId: "m1", company: "Goldman Sachs", position: "Investment Banking Analyst", cycle: "Full-time 2027", stage: "Rejected", furthest: "Superday / Final", anonymous: false, effort: 4, fit: 3, updatedAt: "2026-08-30", notes: "Technicals were fine; fit answer too long." },
+    { id: "a3", memberId: "m1", company: "Goldman Sachs", position: "Investment Banking Analyst", cycle: "Full-time 2027", stage: "Rejected", furthest: "Superday / Final", anonymous: false, effort: 4, fit: 3, updatedAt: "2026-08-30", notes: "Technicals were fine; my fit answer ran long. Keep it under two minutes." },
     { id: "a4", memberId: "m9", company: "Jane Street", position: "Trading Intern", cycle: "Summer 2027 Internship", stage: "Online Assessment", furthest: "Online Assessment", anonymous: false, effort: 3, fit: 4, updatedAt: "2026-09-25", notes: "" },
     { id: "a5", memberId: "m9", company: "BlackRock", position: "Summer Analyst", cycle: "Summer 2027 Internship", stage: "Applied", furthest: "Applied", anonymous: false, updatedAt: "2026-09-18", notes: "" },
-    { id: "a6", memberId: "m9", company: "Palantir", position: "Deployment Strategist Intern", cycle: "Summer 2027 Internship", stage: "Researching", furthest: "Researching", anonymous: false, updatedAt: "2026-09-10", notes: "Ask Ethan about his contact." },
+    { id: "a6", memberId: "m9", company: "Palantir", position: "Deployment Strategist Intern", cycle: "Summer 2027 Internship", stage: "Researching", furthest: "Researching", anonymous: false, updatedAt: "2026-09-10", notes: "The application asks for a short essay on a problem you'd break down. Took about an hour." },
     { id: "a7", memberId: "m10", company: "J.P. Morgan", position: "Investment Banking Summer Analyst", cycle: "Summer 2027 Internship", stage: "Offer", furthest: "Offer", anonymous: false, effort: 3, fit: 4, updatedAt: "2026-09-12", notes: "" },
-    { id: "a8", memberId: "m10", company: "Goldman Sachs", position: "Investment Banking Summer Analyst", cycle: "Summer 2027 Internship", stage: "Rejected", furthest: "First Round", anonymous: false, effort: 4, fit: 4, updatedAt: "2026-07-28", notes: "" },
+    { id: "a8", memberId: "m10", company: "Goldman Sachs", position: "Investment Banking Summer Analyst", cycle: "Summer 2027 Internship", stage: "Rejected", furthest: "First Round", anonymous: false, effort: 4, fit: 4, updatedAt: "2026-07-28", notes: "HireVue first, then one 30-minute call, mostly fit. Heard back in a week." },
     { id: "a9", memberId: "m10", company: "BlackRock", position: "Summer Analyst", cycle: "Summer 2027 Internship", stage: "First Round", furthest: "First Round", anonymous: true, effort: 2, fit: 3, updatedAt: "2026-09-30", notes: "" },
     { id: "a10", memberId: "m6", company: "McKinsey & Company", position: "Business Analyst Intern", cycle: "Summer 2027 Internship", stage: "First Round", furthest: "First Round", anonymous: false, effort: 4, fit: 5, updatedAt: "2026-10-14", notes: "" },
     { id: "a11", memberId: "m6", company: "Bain & Company", position: "Associate Consultant Intern", cycle: "Summer 2027 Internship", stage: "Rejected", furthest: "Online Assessment", anonymous: false, effort: 3, fit: 5, updatedAt: "2026-10-05", notes: "" },
-    { id: "a12", memberId: "m13", company: "McKinsey & Company", position: "Business Analyst Intern", cycle: "Summer 2027 Internship", stage: "First Round", furthest: "First Round", anonymous: true, effort: 4, fit: 4, updatedAt: "2026-10-22", notes: "" },
+    { id: "a12", memberId: "m13", company: "McKinsey & Company", position: "Business Analyst Intern", cycle: "Summer 2027 Internship", stage: "First Round", furthest: "First Round", anonymous: true, effort: 4, fit: 4, updatedAt: "2026-10-22", notes: "The online form was quick; the Solve game took about 70 minutes. Do it somewhere quiet." },
     { id: "a13", memberId: "m13", company: "Bain & Company", position: "Associate Consultant Intern", cycle: "Summer 2027 Internship", stage: "Applied", furthest: "Applied", anonymous: false, fit: 5, updatedAt: "2026-10-18", notes: "" },
     { id: "a14", memberId: "m2", company: "McKinsey & Company", position: "Business Analyst Intern", cycle: "Summer 2026 Internship", stage: "Rejected", furthest: "First Round", anonymous: true, effort: 4, fit: 4, updatedAt: "2026-01-30", notes: "" },
-    { id: "a15", memberId: "m18", company: "Goldman Sachs", position: "Investment Banking Summer Analyst", cycle: "Summer 2025 Internship", stage: "Offer", furthest: "Offer", anonymous: false, effort: 4, fit: 4, updatedAt: "2025-03-10", notes: "" },
+    { id: "a15", memberId: "m18", company: "Goldman Sachs", position: "Investment Banking Summer Analyst", cycle: "Summer 2025 Internship", stage: "Offer", furthest: "Offer", anonymous: false, effort: 4, fit: 4, updatedAt: "2025-03-10", notes: "Superday invites came about two weeks after the first round." },
     { id: "a16", memberId: "m18", company: "McKinsey & Company", position: "Business Analyst", cycle: "Full-time 2026", stage: "Offer", furthest: "Offer", anonymous: false, effort: 4, fit: 5, updatedAt: "2025-10-02", notes: "" },
     { id: "a17", memberId: "m18", company: "Bain & Company", position: "Associate Consultant", cycle: "Full-time 2026", stage: "Withdrew", furthest: "Superday / Final", anonymous: false, effort: 3, fit: 5, updatedAt: "2025-10-04", notes: "" },
     { id: "a18", memberId: "m21", company: "McKinsey & Company", position: "Business Analyst", cycle: "Full-time 2025", stage: "Offer", furthest: "Offer", anonymous: false, effort: 5, fit: 5, updatedAt: "2024-11-20", notes: "" },
-    { id: "a19", memberId: "m21", company: "Bain & Company", position: "Associate Consultant Intern", cycle: "Summer 2024 Internship", stage: "Rejected", furthest: "Superday / Final", anonymous: false, effort: 3, fit: 4, updatedAt: "2024-02-11", notes: "" },
+    { id: "a19", memberId: "m21", company: "Bain & Company", position: "Associate Consultant Intern", cycle: "Summer 2024 Internship", stage: "Rejected", furthest: "Superday / Final", anonymous: false, effort: 3, fit: 4, updatedAt: "2024-02-11", notes: "The final was two cases back to back; the second was candidate-led." },
     { id: "a20", memberId: "m20", company: "Jane Street", position: "Trading Intern", cycle: "Summer 2024 Internship", stage: "Offer", furthest: "Offer", anonymous: false, effort: 5, fit: 5, updatedAt: "2024-03-01", notes: "" },
     { id: "a21", memberId: "m19", company: "Palantir", position: "Deployment Strategist", cycle: "Full-time 2026", stage: "Offer", furthest: "Offer", anonymous: false, effort: 4, fit: 5, updatedAt: "2025-04-12", notes: "" },
     { id: "a22", memberId: "m3", company: "Palantir", position: "Software Engineering Intern", cycle: "Summer 2026 Internship", stage: "Offer", furthest: "Offer", anonymous: false, effort: 4, fit: 5, updatedAt: "2026-01-15", notes: "" },
     { id: "a23", memberId: "m12", company: "Palantir", position: "Deployment Strategist Intern", cycle: "Summer 2027 Internship", stage: "First Round", furthest: "First Round", anonymous: false, effort: 3, fit: 5, updatedAt: "2026-10-30", notes: "" },
     { id: "a24", memberId: "m12", company: "Jane Street", position: "Software Engineer Intern", cycle: "Summer 2027 Internship", stage: "Rejected", furthest: "First Round", anonymous: false, effort: 4, fit: 4, updatedAt: "2026-10-12", notes: "" },
-    { id: "a25", memberId: "m17", company: "Goldman Sachs", position: "Summer Analyst", cycle: "Summer 2028 Internship", stage: "Applied", furthest: "Applied", anonymous: false, fit: 4, updatedAt: "2026-10-28", notes: "" },
+    { id: "a25", memberId: "m17", company: "Goldman Sachs", position: "Summer Analyst", cycle: "Summer 2028 Internship", stage: "Applied", furthest: "Applied", anonymous: false, fit: 4, updatedAt: "2026-10-28", notes: "Sophomore program: resume and two short answers. About 30 minutes." },
   ],
   reports: [
     { id: "r1", company: "Goldman Sachs", memberId: "m18", year: 2025, position: "IB Summer Analyst", round: "Superday", format: "3 back-to-back 30-minute interviews", overview: "Fast and friendly. Each interviewer had read my resume, and the technical one went deep on valuation.", tips: "Know one recent deal deeply. Keep fit answers under two minutes.", difficulty: 4, outcome: "Offer" },
@@ -125,8 +126,6 @@ export const seed: PortalData = {
     { id: "r11", company: "McKinsey & Company", memberId: "m6", year: 2026, position: "Business Analyst Intern", round: "First Round", format: "1 case + PEI, 45 minutes", overview: "Interviewer-led and quick. Chart reading came up twice.", tips: "Practice reading exhibits out loud.", difficulty: 4, outcome: "Advanced" },
   ],
   // The question bank: no author, no time and no link to a report, by design.
-  // Goldman Sachs and McKinsey each have interviews from three members, so their batches have published.
-  // The other firms have one each, so their questions are still waiting.
   questions: [
     { id: "q1", company: "Goldman Sachs", round: "Final round", question: "Walk me through a DCF." },
     { id: "q4", company: "Goldman Sachs", round: "Final round", question: "When is an acquisition accretive?" },
@@ -139,8 +138,6 @@ export const seed: PortalData = {
     { id: "q18", company: "McKinsey & Company", round: "First round", question: "Read this exhibit: what is driving the margin decline?" },
     { id: "q6", company: "McKinsey & Company", round: "Final round", question: "Profitability case for a regional grocery chain." },
     { id: "q19", company: "McKinsey & Company", round: "First round", question: "Tell me about a time you changed someone's mind." },
-  ],
-  pendingQuestions: [
     { id: "q8", company: "Bain & Company", round: "First round", question: "Should a PE firm acquire a pet-food company?" },
     { id: "q9", company: "Jane Street", round: "First round", question: "Expected value of a dice game where you can reroll once." },
     { id: "q10", company: "Jane Street", round: "First round", question: "How much would you bet on a coin you think is biased 60/40?" },
@@ -150,10 +147,6 @@ export const seed: PortalData = {
     { id: "q14", company: "J.P. Morgan", round: "Final round", question: "Walk me through the three statements." },
     { id: "q15", company: "J.P. Morgan", round: "Final round", question: "Why J.P. Morgan, and why this group?" },
   ],
-  questionBatches: {
-    "goldman-sachs": ["r1", "r2", "r9"],
-    "mckinsey-company": ["r3", "r10", "r11"],
-  },
   // Company discussion moved to the forum (posts with a `company`).
   comments: [],
   contacts: [

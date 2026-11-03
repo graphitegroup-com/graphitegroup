@@ -487,22 +487,6 @@ export function applicationPrompt(a: Application, data: Pick<PortalData, "report
 
 /* ---------------------------------------------------------------- question bank */
 
-/**
- * A firm's waiting questions publish together once this many different
- * members have logged an interview there since its last batch. Any published
- * question then came from one of at least three people, and nothing records
- * which.
- */
-export const QUESTION_BATCH = MIN_GRADERS;
-
-/** Reports at a firm that haven't been counted toward a published batch yet. */
-export function batchProgress(data: Pick<PortalData, "reports" | "questionBatches">, company: string) {
-  const slug = companySlug(company.trim());
-  const counted = new Set(data.questionBatches[slug] ?? []);
-  const waiting = data.reports.filter((r) => companySlug(r.company.trim()) === slug && !counted.has(r.id));
-  return { slug, waiting, members: new Set(waiting.map((r) => r.memberId)).size };
-}
-
 /** The broad round a report's free-text round falls in. */
 export function questionRound(round: string): QuestionRound {
   if (/assess|\boa\b|hirevue|test|online|video/i.test(round)) return "Online assessment";
@@ -511,35 +495,22 @@ export function questionRound(round: string): QuestionRound {
   return "Other";
 }
 
-function shuffle<T>(xs: T[]): T[] {
-  const out = [...xs];
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
-
 /**
- * Save an interview: the report under the member (named or anonymous), the
- * questions into the firm's waiting pile with nothing that links them to it.
- * If the firm now has interviews from QUESTION_BATCH members since its last
- * batch, every waiting question there publishes at once, in random order.
+ * Save an interview: the report under the member (named or anonymous), and
+ * the questions straight into the firm's question bank with nothing that
+ * links them to the member or the report.
  */
 export function logInterview(d: PortalData, report: InterviewReport, questions: { round: QuestionRound; question: string }[]): PortalData {
   const company = report.company.trim();
-  const pending = [...d.pendingQuestions, ...questions.map((q) => ({ id: uid(), company, ...q }))];
-  const next = { ...d, reports: [report, ...d.reports], pendingQuestions: pending };
-  const { slug, waiting, members } = batchProgress(next, company);
-  if (members < QUESTION_BATCH) return next;
-  const here = (q: InterviewQuestion) => companySlug(q.company.trim()) === slug;
-  return {
-    ...next,
-    questions: [...next.questions, ...shuffle(pending.filter(here))],
-    pendingQuestions: pending.filter((q) => !here(q)),
-    questionBatches: { ...next.questionBatches, [slug]: [...(next.questionBatches[slug] ?? []), ...waiting.map((r) => r.id)] },
-  };
+  const added: InterviewQuestion[] = questions.map((q) => ({ id: uid(), company, ...q }));
+  return { ...d, reports: [report, ...d.reports], questions: [...d.questions, ...added] };
 }
+
+/** Every member's notes on their applications at a firm, newest cycle first. Shown without names. */
+export const firmNotes = (apps: Application[], company: string) =>
+  apps
+    .filter((a) => companySlug(a.company.trim()) === companySlug(company.trim()) && a.notes.trim())
+    .sort((a, b) => appYear(b) - appYear(a));
 
 /* ---------------------------------------------------------------- similar members */
 
