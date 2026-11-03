@@ -99,7 +99,7 @@ export default function DirectoryPage() {
             type="button"
             onClick={() => setSchool(school === s.school ? ALL : s.school)}
             aria-pressed={school === s.school}
-            className={`h-7 rounded-md px-2 transition-colors ${
+            className={`h-7 rounded-[3px] px-2 transition-colors ${
               school === s.school ? "bg-stone font-medium text-ink shadow-[inset_0_0_0_1px_var(--color-edge)]" : "text-ink-2 hover:bg-stone hover:text-ink"
             }`}
           >
@@ -202,12 +202,12 @@ export default function DirectoryPage() {
               <Row label="Role">{selected.role}</Row>
               {selected.execTitle && <Row label="Exec title">{selected.execTitle}</Row>}
               <Row label="School email">
-                <a href={`mailto:${selected.schoolEmail}`} className="text-prussian hover:underline">
+                <a href={`mailto:${selected.schoolEmail}`} className="text-link hover:underline">
                   {selected.schoolEmail}
                 </a>
               </Row>
               <Row label="Personal email">
-                <a href={`mailto:${selected.personalEmail}`} className="text-prussian hover:underline">
+                <a href={`mailto:${selected.personalEmail}`} className="text-link hover:underline">
                   {selected.personalEmail}
                 </a>
               </Row>
@@ -223,7 +223,7 @@ export default function DirectoryPage() {
               </Row>
               <Row label="LinkedIn">
                 {selected.linkedin ? (
-                  <a href={selected.linkedin} target="_blank" rel="noreferrer" className="text-prussian hover:underline">
+                  <a href={selected.linkedin} target="_blank" rel="noreferrer" className="text-link hover:underline">
                     {selected.linkedin}
                   </a>
                 ) : (

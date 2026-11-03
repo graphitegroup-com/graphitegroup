@@ -111,7 +111,7 @@ export default function RecruitingPage() {
               <tbody>
                 {grouped.map((g) => (
                   <Fragment key={g.stage}>
-                    <tr className="border-b border-edge bg-[#fafbfc]">
+                    <tr className="border-b border-edge bg-[#fbfbf7]">
                       <td colSpan={6} className="px-4 py-1.5">
                         <Badge tone={stageTone(g.stage)}>{g.stage}</Badge>
                         <span className="ml-2 text-[12px] text-faint tabular-nums">{g.items.length}</span>
@@ -134,7 +134,7 @@ export default function RecruitingPage() {
                             aria-label={`Stage for ${a.company}`}
                             value={a.stage}
                             onChange={(e) => setStage(a.id, e.target.value as Stage)}
-                            className="h-7 rounded-md border border-edge bg-white pr-6 pl-2 text-[12.5px] text-ink hover:border-[#cfd4dc] focus:border-sapphire focus:outline-none"
+                            className="h-7 rounded-[3px] border border-edge bg-white pr-6 pl-2 text-[12.5px] text-ink hover:border-[#cfcfc4] focus:border-accent focus:outline-none"
                           >
                             {STAGES.map((s) => (
                               <option key={s} value={s}>

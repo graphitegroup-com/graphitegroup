@@ -113,7 +113,7 @@ function ProfileForm({ me, exec, onSave }: { me: Member; exec: boolean; onSave: 
                   type="file"
                   accept="image/*"
                   onChange={onPhoto}
-                  className="block text-[13px] text-muted file:mr-3 file:h-8 file:rounded-md file:border file:border-edge file:bg-white file:px-3 file:text-[13px] file:font-medium file:text-ink hover:file:bg-stone"
+                  className="block text-[13px] text-muted file:mr-3 file:h-8 file:rounded-[3px] file:border file:border-edge file:bg-white file:px-3 file:text-[13px] file:font-medium file:text-ink hover:file:bg-stone"
                 />
                 {form.photo && (
                   <Button variant="ghost" onClick={removePhoto}>
@@ -224,7 +224,7 @@ function ProfileForm({ me, exec, onSave }: { me: Member; exec: boolean; onSave: 
               type="checkbox"
               checked={form.showOnWebsite}
               onChange={(e) => set("showOnWebsite", e.target.checked)}
-              className="h-4 w-4 accent-[var(--color-prussian)]"
+              className="h-4 w-4 accent-[var(--color-accent)]"
             />
             Show me on the public website
           </label>

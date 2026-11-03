@@ -17,7 +17,7 @@ const TABS = ["Numbers", "People", "Case studies", "Recruiting", "Testimonials"]
 type Tab = (typeof TABS)[number];
 const TAB_OPTIONS = TABS.map((t) => ({ value: t, label: t }));
 
-const ghostCls = "inline-flex h-7 cursor-pointer items-center rounded-md px-2 text-[12.5px] font-medium text-muted hover:bg-stone hover:text-ink";
+const ghostCls = "inline-flex h-7 cursor-pointer items-center rounded-[3px] px-2 text-[12.5px] font-medium text-muted hover:bg-stone hover:text-ink";
 
 export default function WebsiteAdminPage() {
   const content = useSiteContent();
@@ -69,7 +69,7 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
         actions={
           <>
             {!STATIC_PREVIEW && (
-              <Link href="/" target="_blank" className="inline-flex h-8 items-center rounded-md px-2 text-[13px] font-medium text-muted hover:bg-stone hover:text-ink">
+              <Link href="/" target="_blank" className="inline-flex h-8 items-center rounded-[3px] px-2 text-[13px] font-medium text-muted hover:bg-stone hover:text-ink">
                 View site
               </Link>
             )}
@@ -87,7 +87,7 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
       {msg && (
         <div
           role="status"
-          className={`mb-5 rounded-md border px-3 py-2 text-[13px] ${msg.tone === "green" ? "border-[#c4e3cd] bg-[#e5f3e9] text-[#1d6b37]" : "border-[#f0c9c5] bg-[#fbe9e8] text-[#a8261b]"}`}
+          className={`mb-5 rounded-[3px] border px-3 py-2 text-[13px] ${msg.tone === "green" ? "border-[#c4e3cd] bg-[#e5f3e9] text-[#1d6b37]" : "border-[#f0c9c5] bg-[#fbe9e8] text-[#a8261b]"}`}
         >
           {msg.text}
         </div>

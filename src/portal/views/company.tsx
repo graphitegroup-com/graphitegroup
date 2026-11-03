@@ -3,9 +3,11 @@
 import Link from "@/components/app-link";
 import { useState } from "react";
 import { usePortal } from "@/portal/store";
-import { companySlug, fmtDate, fullName, pct, responseStats, uid } from "@/portal/logic";
-import type { Comment, InterviewReport, PortalData, Stage } from "@/portal/types";
-import { Avatar, Badge, Button, Card, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, Td, Textarea, Th, rowCls } from "@/portal/ui";
+import { companyNames, companySlug, contactGrade, firmGradeSummary, fmtDate, fullName, matchCompany, pct, threadActivity, uid } from "@/portal/logic";
+import type { InterviewReport, PortalData, Stage } from "@/portal/types";
+import { PostForm, ThreadRow, useThreadVote } from "@/portal/forum";
+import { FirmGrades } from "@/portal/grades";
+import { Badge, Button, Card, Drawer, Empty, Field, GradeTile, Input, PageTitle, Select, Stat, StatGroup, Td, Textarea, Th, linkCls, rowCls } from "@/portal/ui";
 import { useRouteParam } from "@/lib/use-route-param";
 
 type Outcome = InterviewReport["outcome"];
@@ -22,24 +24,27 @@ export function stageTone(s: Stage) {
   return "blue" as const;
 }
 
-export type CompanyRow = { name: string; slug: string; reports: number; applicants: number; offers: number; latestYear?: number };
+export type CompanyRow = {
+  name: string;
+  slug: string;
+  reports: number;
+  applicants: number;
+  offers: number;
+  latestYear?: number;
+  grade: ReturnType<typeof firmGradeSummary>;
+  threads: number;
+};
 
-/** Every company named in applications, interview reports or contacts. */
-export function companyNames(data: Pick<PortalData, "applications" | "reports" | "contacts">) {
-  const names = new Set<string>();
-  data.applications.forEach((a) => names.add(a.company.trim()));
-  data.reports.forEach((r) => names.add(r.company.trim()));
-  data.contacts.forEach((c) => names.add(c.company.trim()));
-  names.delete("");
-  return [...names];
-}
 
 export function companyRows(data: PortalData): CompanyRow[] {
   return companyNames(data)
     .map((name) => {
       const apps = data.applications.filter((a) => a.company.trim() === name);
       const reps = data.reports.filter((r) => r.company.trim() === name);
-      const years = [...reps.map((r) => r.year), ...apps.map((a) => Number(a.updatedAt.slice(0, 4)))].filter((y) => Number.isFinite(y) && y > 0);
+      const grades = data.grades.filter((g) => g.company.trim() === name);
+      const years = [...reps.map((r) => r.year), ...apps.map((a) => Number(a.updatedAt.slice(0, 4))), ...grades.map((g) => Number(g.createdAt.slice(0, 4)))].filter(
+        (y) => Number.isFinite(y) && y > 0,
+      );
       return {
         name,
         slug: companySlug(name),
@@ -47,6 +52,8 @@ export function companyRows(data: PortalData): CompanyRow[] {
         applicants: new Set(apps.map((a) => a.memberId)).size,
         offers: apps.filter((a) => a.stage === "Offer").length + reps.filter((r) => r.outcome === "Offer").length,
         latestYear: years.length ? Math.max(...years) : undefined,
+        grade: firmGradeSummary(grades),
+        threads: data.posts.filter((p) => p.company === name).length,
       };
     })
     .sort((a, b) => b.reports - a.reports || a.name.localeCompare(b.name));
@@ -82,13 +89,13 @@ const newReportDraft = (company = ""): ReportDraft => ({
  * each opening starts from a blank draft.
  */
 export function ReportForm({ company, onDone }: { company?: string; onDone: () => void }) {
-  const { me, update } = usePortal();
+  const { data, me, update } = usePortal();
   const [draft, setDraft] = useState<ReportDraft>(() => newReportDraft(company));
   const set = (patch: Partial<ReportDraft>) => setDraft((d) => ({ ...d, ...patch }));
 
   const save = (e: React.FormEvent) => {
     e.preventDefault();
-    const name = (company ?? draft.company).trim();
+    const name = company ?? matchCompany(data, draft.company);
     if (!me || !name || !draft.position.trim()) return;
     const report: InterviewReport = {
       id: uid(),
@@ -156,9 +163,10 @@ export function ReportForm({ company, onDone }: { company?: string; onDone: () =
 
 export default function CompanyView() {
   const slug = useRouteParam("slug");
-  const { data, me, update } = usePortal();
+  const { data, me } = usePortal();
+  const vote = useThreadVote();
   const [adding, setAdding] = useState(false);
-  const [comment, setComment] = useState("");
+  const [posting, setPosting] = useState(false);
 
   if (!me) return null;
 
@@ -183,7 +191,7 @@ export default function CompanyView() {
     const m = data.members.find((x) => x.id === id);
     return m ? fullName(m) : "Former member";
   };
-  const member = (id: string) => data.members.find((x) => x.id === id);
+  const now = new Date();
 
   const reports = data.reports.filter((r) => r.company.trim() === name);
   const years = [...new Set(reports.map((r) => r.year))].sort((a, b) => b - a);
@@ -192,31 +200,25 @@ export default function CompanyView() {
   const offers = apps.filter((a) => a.stage === "Offer").length + reports.filter((r) => r.outcome === "Offer").length;
   const avgDifficulty = reports.length ? reports.reduce((s, r) => s + r.difficulty, 0) / reports.length : undefined;
   const contacts = data.contacts.filter((c) => c.company.trim() === name).sort((a, b) => a.name.localeCompare(b.name));
-  const subject = `company:${slug}`;
-  const comments = data.comments.filter((c) => c.subject === subject).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-
-  const post = (e: React.FormEvent) => {
-    e.preventDefault();
-    const body = comment.trim();
-    if (!body) return;
-    const c: Comment = { id: uid(), subject, memberId: me.id, body, createdAt: new Date().toISOString() };
-    update((d) => ({ ...d, comments: [...d.comments, c] }));
-    setComment("");
-  };
+  const grade = firmGradeSummary(data.grades.filter((g) => g.company.trim() === name));
+  const threads = data.posts.filter((p) => p.company === name).sort((a, b) => threadActivity(b, data.replies).localeCompare(threadActivity(a, data.replies)));
 
   return (
     <div>
       <PageTitle title={name} back={{ href: "/portal/companies", label: "Companies" }} />
 
-      <StatGroup>
+      <StatGroup className="md:grid-cols-5!">
+        <Stat label="Grade" value={<GradeTile letter={grade.letter} size="md" className="my-0.5" />} sub={grade.graders ? `${grade.graders} ${grade.graders === 1 ? "member" : "members"}` : "Not graded yet"} />
         <Stat label="Interview reports" value={reports.length} />
         <Stat label="Members applied" value={applicants} />
         <Stat label="Offers" value={offers} />
         <Stat label="Average difficulty" value={avgDifficulty != null ? avgDifficulty.toFixed(1) : "None"} sub={avgDifficulty != null ? "Out of 5" : undefined} />
       </StatGroup>
 
-      <div className="mt-6 grid items-start gap-6 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
+          <FirmGrades company={name} />
+
           <Card
             title="Interview reports"
             flush
@@ -300,37 +302,24 @@ export default function CompanyView() {
             )}
           </Card>
 
-          <Card title="Discussion" flush>
-            {comments.length === 0 ? (
-              <Empty>No discussion yet. Share what you know about timelines, networking or preparation.</Empty>
+          <Card
+            title="Forum threads"
+            flush
+            action={
+              <Button variant="ghost" onClick={() => setPosting(true)}>
+                Start a thread
+              </Button>
+            }
+          >
+            {threads.length === 0 ? (
+              <Empty>No threads about {name} yet. Ask about timelines, networking or preparation and members will see it in the forum.</Empty>
             ) : (
               <ul className="divide-y divide-edge">
-                {comments.map((c) => {
-                  const m = member(c.memberId);
-                  const who = m ? fullName(m) : "Former member";
-                  return (
-                    <li key={c.id} className="flex gap-3 px-4 py-3">
-                      <Avatar name={who} photo={m?.photo} size={24} />
-                      <div className="min-w-0">
-                        <p className="flex items-baseline gap-2">
-                          <span className="text-[13px] font-medium">{who}</span>
-                          <span className="text-[12px] text-faint">{fmtDate(c.createdAt)}</span>
-                        </p>
-                        <p className="mt-0.5 text-[13.5px] leading-relaxed whitespace-pre-line text-ink-2">{c.body}</p>
-                      </div>
-                    </li>
-                  );
-                })}
+                {threads.map((p) => (
+                  <ThreadRow key={p.id} post={p} data={data} me={me} now={now} onVote={() => vote(p.id)} showCompany={false} />
+                ))}
               </ul>
             )}
-            <form onSubmit={post} className="border-t border-edge bg-stone px-4 py-3">
-              <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={`Add a note about ${name}`} aria-label="New comment" />
-              <div className="mt-2 flex justify-end">
-                <Button type="submit" disabled={!comment.trim()}>
-                  Post
-                </Button>
-              </div>
-            </form>
           </Card>
         </div>
 
@@ -346,10 +335,12 @@ export default function CompanyView() {
           ) : (
             <ul className="divide-y divide-edge">
               {contacts.map((c) => {
-                const s = responseStats(data.outreach.filter((o) => o.contactId === c.id));
+                const s = contactGrade(data.outreach.filter((o) => o.contactId === c.id));
                 return (
-                  <li key={c.id} className="px-4 py-2.5">
-                    <Link href={`/portal/network/${c.id}`} className="font-medium hover:underline">
+                  <li key={c.id} className="flex gap-3 px-4 py-2.5">
+                    <GradeTile letter={s.letter} />
+                    <div className="min-w-0">
+                    <Link href={`/portal/network/${c.id}`} className={`font-medium ${linkCls}`}>
                       {c.name}
                     </Link>
                     <p className="mt-0.5 text-[13px] text-ink-2">{c.title}</p>
@@ -357,6 +348,7 @@ export default function CompanyView() {
                       {c.isAlum && <span>Graphite alum{c.alumClass ? `, ${c.alumClass}` : ""}. </span>}
                       {s.total ? `Responded to ${pct(s.rate)} of ${s.total} message${s.total === 1 ? "" : "s"}` : "No outreach logged yet"}
                     </p>
+                    </div>
                   </li>
                 );
               })}
@@ -367,6 +359,9 @@ export default function CompanyView() {
 
       <Drawer open={adding} onClose={() => setAdding(false)} title="Add interview report">
         {adding && <ReportForm company={name} onDone={() => setAdding(false)} />}
+      </Drawer>
+      <Drawer open={posting} onClose={() => setPosting(false)} title={`New thread about ${name}`}>
+        {posting && <PostForm company={name} onDone={() => setPosting(false)} />}
       </Drawer>
     </div>
   );

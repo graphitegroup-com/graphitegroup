@@ -3,107 +3,118 @@
 <title>Graphite Group Preview</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;1,8..60,400&display=swap" />
 <style>
-  /* Same system as the site: Inter, gradient titles, black pills, gray boxes. */
+  /* Same system as the site: cream page, serif titles, light sans copy, hairline cards. */
   :root {
-    --bg: #ffffff;
-    --ink: #000000;
-    --text: #5e6774;
-    --line: #eef0f4;
-    --box: #e8ebf5;
-    --title: linear-gradient(160deg, #abd1e8 0%, #073863 55%, #000 100%);
+    --bg: #f5f5ee;
+    --ink: #16140f;
+    --text: #5f5d55;
+    --line: #d2d1c6;
+    --card: #fdfdf8;
+    --tile: #073863;
+    --link: #3a56c8;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #000000;
-      --ink: #ffffff;
-      --text: #b8bfca;
-      --line: #22262c;
-      --box: #11151b;
-      --title: linear-gradient(90deg, #abd1e8, #fff);
+      --bg: #0d0c0a;
+      --ink: #f5f5ee;
+      --text: #b9b7ad;
+      --line: #34322c;
+      --card: #16150f;
+      --tile: #0b4a82;
+      --link: #9fb0f0;
       color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #000000;
-    --ink: #ffffff;
-    --text: #b8bfca;
-    --line: #22262c;
-    --box: #11151b;
-    --title: linear-gradient(90deg, #abd1e8, #fff);
+    --bg: #0d0c0a;
+    --ink: #f5f5ee;
+    --text: #b9b7ad;
+    --line: #34322c;
+    --card: #16150f;
+    --tile: #0b4a82;
+    --link: #9fb0f0;
     color-scheme: dark;
   }
   body {
     margin: 0;
     background: var(--bg);
     color: var(--ink);
-    font-family: "Inter", system-ui, sans-serif;
-    font-size: 16px;
-    line-height: 1.6;
-    letter-spacing: -0.4px;
+    font-family: "Outfit", system-ui, sans-serif;
+    font-weight: 300;
+    font-size: 17px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
   }
   .wrap {
-    max-width: 920px;
+    max-width: 880px;
     margin: 0 auto;
     padding: 64px 16px 80px;
+    text-align: center;
   }
-  .mark {
-    width: 34px;
-    height: 34px;
+  .tile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: var(--tile);
+    color: #fff;
+  }
+  .tile svg {
+    width: 30px;
+    height: 30px;
   }
   h1 {
-    font-weight: 600;
-    font-size: clamp(40px, 7vw, 68px);
-    line-height: 1.02;
-    letter-spacing: -0.05em;
-    margin: 40px 0 20px;
+    font-family: "Source Serif 4", Georgia, serif;
+    font-weight: 500;
+    font-size: clamp(40px, 7vw, 60px);
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    margin: 32px 0 16px;
     text-wrap: balance;
-    background-image: var(--title);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
   }
-  h2 {
-    font-weight: 600;
-    font-size: 22px;
-    letter-spacing: -0.04em;
-    margin: 56px 0 16px;
+  h1 em {
+    font-weight: 400;
   }
   .lede {
-    max-width: 58ch;
-    color: var(--text);
-    font-size: 18px;
-    margin: 0;
+    max-width: 40rem;
+    margin: 0 auto;
+    color: var(--ink);
+    text-wrap: pretty;
   }
   ul {
     list-style: none;
-    margin: 40px 0 0;
+    margin: 48px 0 0;
     padding: 0;
-    border-top: 1px solid var(--line);
+    display: grid;
+    gap: 16px;
+    text-align: left;
   }
   li a {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 2px 24px;
-    padding: 22px 0;
-    border-bottom: 1px solid var(--line);
+    gap: 4px 24px;
+    padding: 22px 24px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--card);
     color: inherit;
     text-decoration: none;
   }
   .name {
-    font-weight: 600;
+    grid-column: 1;
+    font-family: "Source Serif 4", Georgia, serif;
+    font-weight: 500;
     font-size: 26px;
-    letter-spacing: -0.045em;
-    line-height: 1.15;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
   }
   li a:hover .name {
     text-decoration: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 0.2em;
-  }
-  .name {
-    grid-column: 1;
   }
   .desc {
     grid-column: 1;
@@ -117,54 +128,19 @@
     font-size: 22px;
     color: var(--text);
   }
-  .variants {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 12px;
-  }
-  .variants a {
-    display: block;
-    padding: 16px 18px;
-    border-radius: 8px;
-    background: var(--box);
-    color: inherit;
-    text-decoration: none;
-  }
-  .variants a:hover {
-    outline: 1px solid var(--ink);
-  }
-  .variants b {
-    display: block;
-    font-weight: 600;
-  }
-  .variants span {
-    font-size: 14px;
-    color: var(--text);
-  }
-  .sw {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 10px;
-  }
-  .sw i {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    border: 1px solid rgba(127, 127, 127, 0.3);
-  }
   .notes {
-    margin-top: 48px;
+    margin-top: 40px;
     display: grid;
     gap: 6px;
     color: var(--text);
-    font-size: 14px;
+    font-size: 15px;
   }
   button {
     background: none;
     border: 0;
     padding: 0;
     font: inherit;
-    color: var(--ink);
+    color: var(--link);
     text-decoration: underline;
     text-underline-offset: 0.2em;
     cursor: pointer;
@@ -177,11 +153,13 @@
 </style>
 
 <main class="wrap">
-  <svg class="mark" viewBox="0 0 100 100" fill="currentColor" aria-hidden="true">
-    <path d="M52.20 5.27 L89.84 27.00 L71.65 37.50 L52.20 26.27Z M57.86 52.00 L89.84 52.00 L89.84 70.46Z M87.64 74.27 L52.20 94.73 L52.20 73.73 L69.45 63.77Z M47.80 94.73 L12.36 74.27 L30.55 63.77 L47.80 73.73Z M10.16 70.46 L10.16 29.54 L28.35 40.04 L28.35 59.96Z M12.36 25.73 L47.80 5.27 L47.80 26.27 L30.55 36.23Z" />
-  </svg>
-  <h1>graphitegroup.co, before launch</h1>
-  <p class="lede">Every page rebuilt in the look of the original site, in the brand colors, plus the member portal. Review here before it moves to Vercel.</p>
+  <span class="tile" aria-hidden="true">
+    <svg viewBox="0 0 100 100" fill="currentColor">
+      <path d="M52.20 5.27 L89.84 27.00 L71.65 37.50 L52.20 26.27Z M57.86 52.00 L89.84 52.00 L89.84 70.46Z M87.64 74.27 L52.20 94.73 L52.20 73.73 L69.45 63.77Z M47.80 94.73 L12.36 74.27 L30.55 63.77 L47.80 73.73Z M10.16 70.46 L10.16 29.54 L28.35 40.04 L28.35 59.96Z M12.36 25.73 L47.80 5.27 L47.80 26.27 L30.55 36.23Z" />
+    </svg>
+  </span>
+  <h1>graphitegroup.co, <em>before launch</em></h1>
+  <p class="lede">The public site in a layout modeled on ycombinator.com, in Graphite's own brand, plus the member portal. Review here before it moves to Vercel.</p>
 
   <ul>
     <li>
@@ -194,20 +172,11 @@
     <li>
       <a href="login.html">
         <span class="name">Member portal</span>
-        <span class="desc">Log in to see tasks, recruiting, companies, the network, projects and the executive tools, including the website editor.</span>
+        <span class="desc">Modeled on Bookface: a forum for recruiting questions, grades for every firm and contact members have dealt with, interview reports, projects and the executive tools.</span>
         <span class="arrow" aria-hidden="true">→</span>
       </a>
     </li>
   </ul>
-
-  <h2>Variants</h2>
-  <p class="lede" style="font-size: 16px">Same layout, different color treatment. Pick one here, or switch any time with the Variant button in the corner of every page.</p>
-  <div class="variants" style="margin-top: 20px">
-    <a href="home.html?variant=original"><div class="sw"><i style="background:#000"></i><i style="background:#abd1e8"></i><i style="background:#073863"></i></div><b>Original</b><span>Black bands, pewter to prussian titles</span></a>
-    <a href="home.html?variant=prussian"><div class="sw"><i style="background:#073863"></i><i style="background:#4566df"></i><i style="background:#abd1e8"></i></div><b>Prussian</b><span>Bands and buttons in Prussian Blue</span></a>
-    <a href="home.html?variant=gradient"><div class="sw"><i style="background:#1b06dd"></i><i style="background:#7e18ff"></i><i style="background:#000"></i></div><b>Gradient</b><span>Phthalo to violet titles and buttons</span></a>
-    <a href="home.html?variant=light"><div class="sw"><i style="background:#e8ebf5"></i><i style="background:#073863"></i><i style="background:#000"></i></div><b>Light</b><span>Gray bands with dark text</span></a>
-  </div>
 
   <div class="notes">
     <span>The portal runs on sample data with fictional people. Changes are saved in your browser only.</span>

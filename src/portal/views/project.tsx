@@ -54,7 +54,7 @@ export default function ProjectView() {
         sub={[`${p.term} ${p.year}`, p.practice, p.sector].filter(Boolean).join(" · ")}
       />
 
-      <div className="grid items-start gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
         <div className="min-w-0 space-y-6 lg:col-span-2">
           <Card title="Summary">
             <p className="max-w-[70ch] py-3 leading-relaxed text-ink-2">
@@ -69,7 +69,7 @@ export default function ProjectView() {
               <ul className="divide-y divide-edge">
                 {p.deliverables.map((d) => (
                   <li key={d.label + d.url}>
-                    <a href={d.url} target="_blank" rel="noreferrer" className="block px-4 py-2.5 font-medium hover:bg-[#fafbfc] hover:underline">
+                    <a href={d.url} target="_blank" rel="noreferrer" className="block px-4 py-2.5 font-medium hover:bg-[#fbfbf7] hover:underline">
                       {d.label}
                     </a>
                   </li>
@@ -84,7 +84,7 @@ export default function ProjectView() {
             ) : (
               <ul className="divide-y divide-edge">
                 {templates.map((t) => (
-                  <li key={t.id} className="px-4 py-2.5 hover:bg-[#fafbfc]">
+                  <li key={t.id} className="px-4 py-2.5 hover:bg-[#fbfbf7]">
                     <a href={t.url} target="_blank" rel="noreferrer" className="font-medium hover:underline">
                       {t.title}
                     </a>

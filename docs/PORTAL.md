@@ -8,11 +8,12 @@ Built and clickable, running on sample data in the browser (`src/portal/store.ts
 
 | Module | Route | What it does |
 | --- | --- | --- |
-| Home | `/portal` | Action items generated from exec's recurring tasks, a recruiting snapshot, recent org activity and (for exec) items that need approval |
+| Home | `/portal` | Action items generated from exec's recurring tasks, the most active forum threads, a recruiting snapshot and (for exec) items that need approval |
+| Forum | `/portal/forum` | Bookface-style threads in six channels (Recruiting, Interview prep, Referrals and intros, Opportunities, Offers, General), with replies, "helpful" votes, search and sorting. A thread can be tagged with a firm and then also shows on that company's page. Exec can pin threads and remove any post |
 | Directory | `/portal/directory` | Members and alumni with filters. Class standing and alumni status are computed from graduation year. Phone and student ID are visible only to the member and exec |
 | My Recruiting | `/portal/recruiting` | Personal application pipeline by stage, plus your coffee chats |
-| Companies | `/portal/companies` | Every firm members recruit with: interview reports by year, outcomes and discussion |
-| Network | `/portal/network` | Shared contacts with response rate, median response time, helpfulness and referrals, plus an outreach log |
+| Companies | `/portal/companies` | Every firm members recruit with, graded by members on their recruiting process (communication, speed, fairness, interviewers, would they recommend applying), plus interview reports by year and forum threads about the firm |
+| Network | `/portal/network` | Shared contacts with an outreach grade built from the outreach log (response rate, reply speed, helpfulness), plus referrals and how to approach them |
 | Projects | `/portal/projects` | Searchable archive of past engagements and reusable templates |
 | Archive | `/portal/archive` | Link to the historical slide deck (set by exec) |
 | Profile | `/portal/profile` | Onboarding fields: name, emails, phone, school, student ID, grad year, practice, role, headshot |
@@ -20,15 +21,29 @@ Built and clickable, running on sample data in the browser (`src/portal/store.ts
 | Recurring Tasks (exec) | `/portal/admin/tasks` | Yearly task calendar aimed at everyone, a role, or whoever holds an exec title |
 | Website (exec) | `/portal/admin/website` | Edit the public site with no code changes: stats, Our People roster with headshots (or sync it from the directory), case studies, recruiting status and testimonials |
 
-The automation rules are pure functions in `src/portal/logic.ts` (academic year, class standing, alumni cutoff, promotion proposals, task generation, response stats), so the same code can run in a nightly job.
+The automation rules are pure functions in `src/portal/logic.ts` (academic year, class standing, alumni cutoff, promotion proposals, task generation, response stats, grades), so the same code can run in a nightly job.
+
+### Grades
+
+Modeled on how Bookface founders rate investors, and built to be trusted for the same reasons: only members can see or write them, every grade is tied to a real interaction, and the letter needs a minimum of evidence.
+
+- **Firms.** A member grades a firm once per recruiting cycle, saying how far they got (application, online assessment, first round, final) and the outcome. Communication and speed are always scored; fairness only once they were assessed; interviewers only once they were interviewed. The letter (A to F) is the average of every grade's mean score.
+- **Contacts.** No separate form: every logged outreach counts. Response rate, median reply time and average helpfulness are each mapped to 1 to 5 and averaged.
+- **Minimum of 3 members.** A letter only appears once 3 different members have graded a firm or logged outreach to a contact (`MIN_GRADERS`). Below that, one bad week would define a firm, and an anonymous grade would be easy to trace.
+- **Anonymous, not unaccountable.** Grades and outreach can be posted anonymously. Other members see "Anonymous member"; the author and exec still see the name. In the database the base tables are readable only by their author and exec; members read `firm_grades_visible` and `outreach_visible`, which blank out the author of anonymous rows.
+
+### Design
+
+The portal mirrors Bookface: a warm beige page (`#f6f6ef`), white panels with hairline borders and 3px corners, small uppercase panel labels, Avenir (Nunito Sans where Avenir isn't installed) and one blue for actions and links. Bookface's own `#268bd2` is darkened to `#1f78bd` so white text on it passes WCAG AA. Tokens are in `src/app/globals.css`, type in `src/portal/portal.css`, components in `src/portal/ui.tsx`.
 
 ## Going live
 
 1. Create a Supabase project and run `supabase/schema.sql`.
 2. Enable Google sign-in and restrict it to 5C domains.
-3. Replace the browser store in `src/portal/store.tsx` and `src/lib/use-site-content.ts` with Supabase queries. The data shapes already match the tables.
+3. Replace the browser store in `src/portal/store.tsx` and `src/lib/use-site-content.ts` with Supabase queries. The data shapes already match the tables. Read grades from `firm_grades_visible` and outreach from `outreach_visible`, never the base tables, and store forum votes as rows in `forum_votes`.
 4. Move headshots to Supabase Storage (the preview stores them as resized data URLs).
 5. Add a daily scheduled job for alumni transitions, task generation on July 1 and promotion proposals each term.
+6. Turn on Supabase Realtime for `forum_posts` and `forum_replies` so new threads and replies appear without a refresh. Direct messages between members are the next step after the forum and would use the same channel.
 
 ## Stack
 
@@ -43,10 +58,11 @@ The automation rules are pure functions in `src/portal/logic.ts` (academic year,
 1. **Home**: action items for you, chosen by your role and the time of year.
 2. **Directory**: everyone, filterable by school, year, practice and role.
 3. **My Recruiting**: your applications and coffee chats.
-4. **Companies**: shared interview intel by firm and year.
-5. **Network**: alumni and contacts, with response rates.
-6. **Projects**: a searchable archive of every engagement, plus templates.
-7. **Archive**: a link to the historical slide deck (the URL is a setting).
+4. **Forum**: questions and answers about recruiting, interviews, referrals and offers.
+5. **Companies**: member grades and interview intel by firm and year.
+6. **Network**: alumni and contacts, with outreach grades.
+7. **Projects**: a searchable archive of every engagement, plus templates.
+8. **Archive**: a link to the historical slide deck (the URL is a setting).
 
 ## Data model (first pass)
 
@@ -75,7 +91,12 @@ applications        member_id, company_id, role_title, cycle (e.g. 2026-27 SA),
                     stage (applied|oa|first_round|superday|final|offer|rejected|withdrew),
                     stage_dates jsonb, notes
 interview_reports   company_id, member_id, year, round, format, questions, tips, difficulty
-comments            subject_type (company|report|contact|project), subject_id, author_id, body
+comments            subject_type (contact|project), subject_id, author_id, body
+firm_grades         company, member_id, cycle, stage_reached, outcome, communication,
+                    speed, fairness?, interviewers?, recommend, review, anonymous
+forum_posts         channel, member_id, title, body, company?, pinned, edited_at
+forum_replies       post_id, member_id, body
+forum_votes         member_id, post_id | reply_id (one helpful vote each)
 
 contacts            id, name, company_id, title, email, linkedin, is_graphite_alum,
                     alum_member_id, preferences (how they like to be reached)

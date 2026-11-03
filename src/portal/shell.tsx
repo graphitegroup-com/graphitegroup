@@ -2,7 +2,7 @@
 
 import Link from "@/components/app-link";
 import { useEffect, useState, type ReactNode } from "react";
-import { Mark } from "@/components/mark";
+import { MarkTile } from "@/components/mark";
 import { useGo } from "@/lib/use-go";
 import { usePagePath } from "@/lib/use-page-path";
 import { STATIC_PREVIEW } from "@/lib/preview";
@@ -13,6 +13,7 @@ import { Avatar } from "./ui";
 /** 16px line icons, drawn on a 24 grid. */
 const ICONS = {
   home: "M3.5 10.5 12 3.5l8.5 7M5.5 9v11h13V9",
+  forum: "M4.5 4.5h15a1 1 0 0 1 1 1V15a1 1 0 0 1-1 1H10l-4.5 3.5V16h-1a1 1 0 0 1-1-1V5.5a1 1 0 0 1 1-1zM8 9h8M8 12h5",
   recruiting: "M3.5 8h17v11.5h-17zM8.5 8V5.5a1.5 1.5 0 0 1 1.5-1.5h4a1.5 1.5 0 0 1 1.5 1.5V8M3.5 13h17",
   companies: "M5 20.5V4.5h9v16M14 9.5h5v11M3 20.5h18M8 8h3M8 11.5h3M8 15h3",
   network: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20a6.5 6.5 0 0 1 13 0M16 4.3a3.5 3.5 0 0 1 0 6.4M18.5 14a6.5 6.5 0 0 1 3 6",
@@ -36,7 +37,12 @@ function Icon({ name, className = "h-4 w-4" }: { name: keyof typeof ICONS; class
 type NavItem = { href: string; label: string; icon: keyof typeof ICONS; exec?: boolean };
 
 const NAV: { section?: string; items: NavItem[] }[] = [
-  { items: [{ href: "/portal", label: "Home", icon: "home" }] },
+  {
+    items: [
+      { href: "/portal", label: "Home", icon: "home" },
+      { href: "/portal/forum", label: "Forum", icon: "forum" },
+    ],
+  },
   {
     section: "Recruiting",
     items: [
@@ -74,7 +80,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
   }, [ready, me, go]);
 
   if (!ready || !me) {
-    return <div className="portal flex min-h-dvh items-center justify-center text-muted">Loading</div>;
+    return <div className="portal flex min-h-dvh items-center justify-center bg-stone text-muted">Loading</div>;
   }
 
   const exec = isExec(me);
@@ -82,10 +88,10 @@ export function PortalShell({ children }: { children: ReactNode }) {
     href === "/portal" ? pathname === "/portal" : href === "/portal/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 
   const sidebar = (
-    <nav className="flex h-full flex-col border-r border-edge bg-[#fafbfc]" aria-label="Portal">
-      <Link href="/portal" className="flex h-14 shrink-0 items-center gap-2 px-4" aria-label="Portal home">
-        <Mark className="h-5 w-5 text-ink" />
-        <span className="text-[14px] font-semibold">Graphite Group</span>
+    <nav className="flex h-full flex-col border-r border-edge bg-stone" aria-label="Portal">
+      <Link href="/portal" className="flex h-16 shrink-0 items-center gap-2.5 px-4" aria-label="Portal home">
+        <MarkTile size={28} />
+        <span className="text-[19px] leading-none font-light tracking-[-0.01em]">Graphite Group</span>
       </Link>
       <div className="flex-1 overflow-y-auto px-2 pb-4">
         {NAV.map((group, gi) => {
@@ -93,7 +99,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
           if (!items.length) return null;
           return (
             <div key={gi} className={gi ? "mt-4" : ""}>
-              {group.section && <p className="px-2 pb-1 text-[12px] font-medium text-faint">{group.section}</p>}
+              {group.section && <p className="px-2 pb-1 text-[11px] font-medium tracking-[0.06em] text-faint uppercase">{group.section}</p>}
               <ul className="space-y-px">
                 {items.map((i) => {
                   const on = active(i.href);
@@ -103,11 +109,11 @@ export function PortalShell({ children }: { children: ReactNode }) {
                         href={i.href}
                         onClick={() => setOpen(false)}
                         aria-current={on ? "page" : undefined}
-                        className={`flex h-8 items-center gap-2.5 rounded-md px-2 text-[13.5px] transition-colors ${
-                          on ? "bg-[#eceef2] font-medium text-ink" : "text-ink-2 hover:bg-[#f0f2f5]"
+                        className={`flex h-8 items-center gap-2.5 rounded-[3px] px-2 text-[13.5px] transition-colors ${
+                          on ? "bg-white font-medium text-ink shadow-[inset_0_0_0_1px_var(--color-edge)]" : "text-ink-2 hover:bg-[#ecebe1]"
                         }`}
                       >
-                        <Icon name={i.icon} className={`h-4 w-4 ${on ? "text-ink" : "text-faint"}`} />
+                        <Icon name={i.icon} className={`h-4 w-4 ${on ? "text-accent" : "text-faint"}`} />
                         {i.label}
                       </Link>
                     </li>
@@ -123,7 +129,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
           href="/portal/profile"
           onClick={() => setOpen(false)}
           aria-current={pathname === "/portal/profile" ? "page" : undefined}
-          className={`flex items-center gap-2.5 rounded-md px-2 py-1.5 ${pathname === "/portal/profile" ? "bg-[#eceef2]" : "hover:bg-[#f0f2f5]"}`}
+          className={`flex items-center gap-2.5 rounded-[3px] px-2 py-1.5 ${pathname === "/portal/profile" ? "bg-white shadow-[inset_0_0_0_1px_var(--color-edge)]" : "hover:bg-[#ecebe1]"}`}
         >
           <Avatar name={fullName(me)} photo={me.photo} size={28} />
           <span className="min-w-0 leading-tight">
@@ -133,7 +139,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
         </Link>
         <button
           type="button"
-          className="mt-1 flex h-8 w-full items-center rounded-md px-2 text-left text-[13px] text-muted hover:bg-[#f0f2f5] hover:text-ink"
+          className="mt-1 flex h-8 w-full items-center rounded-[3px] px-2 text-left text-[13px] text-muted hover:bg-[#ecebe1] hover:text-ink"
           onClick={() => {
             signOut();
             go("/login", { replace: true });
@@ -146,7 +152,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="portal min-h-dvh bg-white">
+    <div className="portal min-h-dvh bg-stone">
       <aside className="fixed inset-y-0 left-0 hidden w-[232px] lg:block">{sidebar}</aside>
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
@@ -155,17 +161,17 @@ export function PortalShell({ children }: { children: ReactNode }) {
         </div>
       )}
       <div className="lg:pl-[232px]">
-        <header className="sticky top-0 z-40 flex h-12 items-center justify-between border-b border-edge bg-white px-4 lg:hidden">
+        <header className="sticky top-0 z-40 flex h-12 items-center justify-between border-b border-edge bg-stone px-4 lg:hidden">
           <Link href="/portal" className="flex items-center gap-2">
-            <Mark className="h-5 w-5" />
-            <span className="text-[14px] font-semibold">Graphite Group</span>
+            <MarkTile size={24} />
+            <span className="text-[16px] font-light">Graphite Group</span>
           </Link>
-          <button type="button" aria-label="Open menu" className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-stone" onClick={() => setOpen(true)}>
+          <button type="button" aria-label="Open menu" className="flex h-8 w-8 items-center justify-center rounded-[3px] hover:bg-[#ecebe1]" onClick={() => setOpen(true)}>
             <Icon name="menu" className="h-5 w-5" />
           </button>
         </header>
         {STATIC_PREVIEW && (
-          <div className="border-b border-edge bg-stone px-4 py-1.5 text-center text-[12px] text-muted md:px-8">
+          <div className="border-b border-edge bg-[#fbf1da] px-4 py-1.5 text-center text-[12px] text-[#5c4300] md:px-8">
             Preview with sample data. Changes are saved in this browser only.
           </div>
         )}

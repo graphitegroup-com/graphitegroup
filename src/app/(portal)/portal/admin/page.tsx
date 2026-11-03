@@ -96,7 +96,7 @@ function AdminMembers() {
         title="Roster"
         action={
           <label className="flex items-center gap-2 text-[12.5px] text-muted">
-            <input type="checkbox" className="h-4 w-4 accent-[var(--color-prussian)]" checked={showAlumni} onChange={(e) => setShowAlumni(e.target.checked)} />
+            <input type="checkbox" className="h-4 w-4 accent-[var(--color-accent)]" checked={showAlumni} onChange={(e) => setShowAlumni(e.target.checked)} />
             Include alumni
           </label>
         }
@@ -164,7 +164,7 @@ function AdminMembers() {
                         checked={m.showOnWebsite && standing !== "Alumni"}
                         disabled={standing === "Alumni"}
                         onChange={(e) => setMember(m.id, { showOnWebsite: e.target.checked })}
-                        className="h-4 w-4 accent-[var(--color-prussian)]"
+                        className="h-4 w-4 accent-[var(--color-accent)]"
                       />
                     </Td>
                   </tr>

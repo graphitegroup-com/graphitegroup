@@ -104,7 +104,7 @@ export type InterviewReport = {
 
 export type Comment = {
   id: string;
-  subject: string; // "company:goldman-sachs", "contact:c1", "project:p1"
+  subject: string; // "contact:c1", "project:p1". Company discussion lives in the forum.
   memberId: string;
   body: string;
   createdAt: string;
@@ -135,6 +135,83 @@ export type Outreach = {
   helpfulness?: 1 | 2 | 3 | 4 | 5;
   referred: boolean;
   notes: string;
+  /** Hidden from other members; the member and exec still see who logged it. */
+  anonymous?: boolean;
+};
+
+export type Score = 1 | 2 | 3 | 4 | 5;
+
+export const STAGES_REACHED = ["Applied", "Online Assessment", "First Round", "Superday / Final"] as const;
+export type StageReached = (typeof STAGES_REACHED)[number];
+
+/**
+ * What a member grades a firm's recruiting process on, each 1 to 5. A
+ * dimension only applies once the candidate reached `from`: someone who was
+ * never interviewed can't grade the interviewers.
+ */
+export const FIRM_DIMENSIONS = [
+  { key: "communication", label: "Communication", hint: "Clear timelines, updates and responses", from: "Applied" },
+  { key: "speed", label: "Speed", hint: "Moved quickly from application to decision", from: "Applied" },
+  { key: "fairness", label: "Fairness", hint: "Assessments matched the role and were judged fairly", from: "Online Assessment" },
+  { key: "interviewers", label: "Interviewers", hint: "Prepared, engaged and respectful", from: "First Round" },
+] as const satisfies readonly { key: string; label: string; hint: string; from: StageReached }[];
+export type FirmDimension = (typeof FIRM_DIMENSIONS)[number]["key"];
+
+export const GRADE_OUTCOMES = ["Offer", "Rejected", "No response", "Withdrew", "Still in process"] as const;
+export type GradeOutcome = (typeof GRADE_OUTCOMES)[number];
+
+/**
+ * One member's grade of a firm's recruiting process for one cycle. A member
+ * holds at most one grade per firm and cycle; saving again replaces it.
+ */
+export type FirmGrade = {
+  id: string;
+  company: string;
+  memberId: string;
+  cycle: string; // e.g. "Summer 2027 Internship"
+  stageReached: StageReached;
+  outcome: GradeOutcome;
+  /** Only the dimensions that apply at `stageReached`. */
+  scores: Partial<Record<FirmDimension, Score>>;
+  recommend: boolean;
+  review: string;
+  /** Hidden from other members; the member and exec still see who wrote it. */
+  anonymous: boolean;
+  createdAt: string;
+};
+
+export const FORUM_CHANNELS = [
+  { id: "recruiting", label: "Recruiting", description: "Timelines, strategy and which firms to target" },
+  { id: "interview-prep", label: "Interview prep", description: "Cases, technicals, behaviorals and mock partners" },
+  { id: "referrals", label: "Referrals and intros", description: "Ask for an intro or offer one" },
+  { id: "opportunities", label: "Opportunities", description: "Open roles members and alumni are hiring for" },
+  { id: "offers", label: "Offers", description: "Deadlines, extensions, negotiation and choosing" },
+  { id: "general", label: "General", description: "Everything else" },
+] as const;
+export type ForumChannel = (typeof FORUM_CHANNELS)[number]["id"];
+
+export type ForumPost = {
+  id: string;
+  channel: ForumChannel;
+  memberId: string;
+  title: string;
+  body: string;
+  /** Firm the thread is about; the thread also appears on that company's page. */
+  company?: string;
+  pinned?: boolean;
+  createdAt: string;
+  editedAt?: string;
+  /** Member ids. Production keeps these in forum_votes. */
+  upvotes: string[];
+};
+
+export type ForumReply = {
+  id: string;
+  postId: string;
+  memberId: string;
+  body: string;
+  createdAt: string;
+  upvotes: string[];
 };
 
 export type Project = {
@@ -175,6 +252,9 @@ export type PortalData = {
   comments: Comment[];
   contacts: Contact[];
   outreach: Outreach[];
+  grades: FirmGrade[];
+  posts: ForumPost[];
+  replies: ForumReply[];
   projects: Project[];
   templates: Template[];
   settings: Settings;

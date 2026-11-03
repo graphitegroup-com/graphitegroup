@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "@/components/app-link";
-import { academicYearLabel, classStanding, companySlug, fmtDate, fullName, isAlum, isExec, promotionSuggestions, tasksFor, type TaskInstance } from "@/portal/logic";
+import { academicYearLabel, classStanding, companySlug, fmtDate, fullName, isAlum, isExec, promotionSuggestions, tasksFor, threadActivity, type TaskInstance } from "@/portal/logic";
+import { ThreadRow, useThreadVote } from "@/portal/forum";
 import { usePortal } from "@/portal/store";
-import { Badge, Card, Empty, PageTitle, Stat, StatGroup } from "@/portal/ui";
+import { Badge, ButtonLink, Card, Empty, PageTitle, Stat, StatGroup } from "@/portal/ui";
 import { stageTone } from "@/portal/views/company";
 
 const DAY = 86_400_000;
 
 export default function PortalHome() {
   const { data, me, update } = usePortal();
+  const vote = useThreadVote();
   if (!me) return null;
 
   const now = new Date();
@@ -38,14 +40,11 @@ export default function PortalHome() {
     const m = data.members.find((x) => x.id === id);
     return m ? fullName(m) : "A member";
   };
-  const recent = [
-    ...data.reports.map((r) => ({ date: `${r.year}-06-01`, text: `${r.position}, ${r.round}`, title: r.company, href: `/portal/companies/${companySlug(r.company)}`, who: r.memberId })),
-    ...data.comments
-      .filter((c) => c.subject.startsWith("company:"))
-      .map((c) => ({ date: c.createdAt, text: c.body, title: "Discussion", href: `/portal/companies/${c.subject.slice(8)}`, who: c.memberId })),
-  ]
+  const recent = data.reports
+    .map((r) => ({ id: r.id, date: `${r.year}-06-01`, text: `${r.position}, ${r.round}`, title: r.company, href: `/portal/companies/${companySlug(r.company)}`, who: r.memberId }))
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 5);
+  const threads = [...data.posts].sort((a, b) => threadActivity(b, data.replies).localeCompare(threadActivity(a, data.replies))).slice(0, 5);
 
   const dateLine = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
@@ -60,13 +59,40 @@ export default function PortalHome() {
         <Stat label="Active members" value={active.length} sub={`${seniors.length} seniors this year`} />
       </StatGroup>
 
-      <div className="mt-6 grid items-start gap-6 lg:grid-cols-3">
-        <Card title="Your tasks" action="Set by the executive board each year" className="lg:col-span-2" flush>
-          {open.length === 0 && done.length === 0 && <Empty>No tasks for you this year.</Empty>}
-          <TaskList label="Overdue" tasks={overdue} onToggle={toggle} now={now} />
-          <TaskList label="Coming up" tasks={upcoming} onToggle={toggle} now={now} />
-          <TaskList label="Done" tasks={done} onToggle={toggle} now={now} />
-        </Card>
+      <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <Card title="Your tasks" action="Set by the executive board each year" flush>
+            {open.length === 0 && done.length === 0 && <Empty>No tasks for you this year.</Empty>}
+            <TaskList label="Overdue" tasks={overdue} onToggle={toggle} now={now} />
+            <TaskList label="Coming up" tasks={upcoming} onToggle={toggle} now={now} />
+            <TaskList label="Done" tasks={done} onToggle={toggle} now={now} />
+          </Card>
+
+          <Card
+            title="Active in the forum"
+            flush
+            action={
+              <Link href="/portal/forum" className="text-link hover:underline">
+                Open the forum
+              </Link>
+            }
+          >
+            {threads.length === 0 ? (
+              <Empty>
+                <span className="mb-3 block">No threads yet. Ask the question everyone else is wondering about.</span>
+                <ButtonLink href="/portal/forum" variant="primary">
+                  Start a thread
+                </ButtonLink>
+              </Empty>
+            ) : (
+              <ul className="divide-y divide-edge">
+                {threads.map((p) => (
+                  <ThreadRow key={p.id} post={p} data={data} me={me} now={now} onVote={() => vote(p.id)} />
+                ))}
+              </ul>
+            )}
+          </Card>
+        </div>
 
         <div className="space-y-6">
           {isExec(me) && (
@@ -83,7 +109,7 @@ export default function PortalHome() {
             title="My applications"
             flush
             action={
-              <Link href="/portal/recruiting" className="hover:text-ink">
+              <Link href="/portal/recruiting" className="text-link hover:underline">
                 View all
               </Link>
             }
@@ -94,7 +120,7 @@ export default function PortalHome() {
               <ul className="divide-y divide-edge">
                 {myApps.slice(0, 5).map((a) => (
                   <li key={a.id}>
-                    <Link href={`/portal/companies/${companySlug(a.company)}`} className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-[#fafbfc]">
+                    <Link href={`/portal/companies/${companySlug(a.company)}`} className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-[#fbfbf7]">
                       <span className="min-w-0">
                         <span className="block truncate font-medium">{a.company}</span>
                         <span className="block truncate text-[12.5px] text-muted">{a.position}</span>
@@ -107,11 +133,11 @@ export default function PortalHome() {
             )}
           </Card>
 
-          <Card title="Recent company notes" flush>
+          <Card title="New interview reports" flush>
             <ul className="divide-y divide-edge">
-              {recent.map((r, i) => (
-                <li key={i}>
-                  <Link href={r.href} className="block px-4 py-2.5 hover:bg-[#fafbfc]">
+              {recent.map((r) => (
+                <li key={r.id}>
+                  <Link href={r.href} className="block px-4 py-2.5 hover:bg-[#fbfbf7]">
                     <span className="flex items-baseline justify-between gap-3">
                       <span className="truncate font-medium">{r.title}</span>
                       <span className="shrink-0 text-[12px] text-faint">{fmtDate(r.date)}</span>
@@ -132,7 +158,7 @@ export default function PortalHome() {
 function Row({ href, label, value }: { href: string; label: string; value: string | number }) {
   return (
     <li>
-      <Link href={href} className="flex items-center justify-between px-4 py-2.5 hover:bg-[#fafbfc]">
+      <Link href={href} className="flex items-center justify-between px-4 py-2.5 hover:bg-[#fbfbf7]">
         <span>{label}</span>
         <span className="text-muted tabular-nums">{value}</span>
       </Link>
@@ -157,7 +183,7 @@ function TaskList({ label, tasks, onToggle, now }: { label: string; tasks: TaskI
                 type="checkbox"
                 checked={!!t.done}
                 onChange={() => onToggle(t)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-prussian)]"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-accent)]"
                 aria-label={`Mark "${t.template.title}" ${t.done ? "not done" : "done"}`}
               />
               <div className="min-w-0 flex-1">

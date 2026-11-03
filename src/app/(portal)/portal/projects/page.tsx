@@ -210,7 +210,7 @@ export default function ProjectsPage() {
                 {list.map((t) => {
                   const src = projectById(t.sourceProjectId);
                   return (
-                    <li key={t.id} className="grid gap-x-6 gap-y-0.5 px-4 py-2.5 hover:bg-[#fafbfc] md:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_auto] md:items-baseline">
+                    <li key={t.id} className="grid gap-x-6 gap-y-0.5 px-4 py-2.5 hover:bg-[#fbfbf7] md:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_auto] md:items-baseline">
                       <a href={t.url} target="_blank" rel="noreferrer" className="truncate font-medium hover:underline">
                         {t.title}
                       </a>

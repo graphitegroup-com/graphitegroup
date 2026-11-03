@@ -1,0 +1,30 @@
+/*
+  Portal type and surface, modeled on Bookface: Avenir at 14px on a warm beige
+  page. Colors are the portal tokens in app/globals.css (stone, edge, accent,
+  link). `body .portal` outranks the base `.portal` rule there, whatever order
+  the stylesheets load in.
+*/
+
+body .portal {
+  font-family: Avenir, "Avenir Next", var(--font-portal), Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: 0;
+  color: #16140f;
+  /* No background here: the Drawer overlay is also a .portal and must stay see-through. */
+}
+
+body .portal h1,
+body .portal h2,
+body .portal h3 {
+  letter-spacing: 0;
+}
+
+/* Forum and review bodies: comfortable reading measure inside dense pages. */
+body .portal .prose-portal {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--color-ink-2);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}

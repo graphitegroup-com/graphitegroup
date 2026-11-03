@@ -90,7 +90,7 @@ function TasksAdmin() {
                           {done}/{assignees.length}
                         </span>
                         <span className="mt-1.5 block h-1 w-24 overflow-hidden rounded-sm bg-edge">
-                          <span className="block h-1 bg-prussian" style={{ width: `${assignees.length ? (done / assignees.length) * 100 : 0}%` }} />
+                          <span className="block h-1 bg-accent" style={{ width: `${assignees.length ? (done / assignees.length) * 100 : 0}%` }} />
                         </span>
                       </Td>
                       <Td className="text-right whitespace-nowrap">

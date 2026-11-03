@@ -4,9 +4,10 @@ import { useState } from "react";
 import Link from "@/components/app-link";
 import { useRouteParam } from "@/lib/use-route-param";
 import { usePortal } from "@/portal/store";
-import { companySlug, fmtDate, fullName, pct, responseStats, uid } from "@/portal/logic";
+import { byline, companySlug, fmtDate, fullName, pct, responseStats, uid } from "@/portal/logic";
+import { ContactGradeCard } from "@/portal/grades";
 import type { Comment, Outreach } from "@/portal/types";
-import { Avatar, Badge, Button, Card, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, Td, Textarea, Th, rowCls } from "@/portal/ui";
+import { Avatar, Badge, Button, Card, Check, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, Td, Textarea, Th, linkCls, rowCls } from "@/portal/ui";
 
 const CHANNELS: Outreach["channel"][] = ["Email", "LinkedIn", "Referral", "In person"];
 const RATINGS = ["Not rated", "1", "2", "3", "4", "5"] as const;
@@ -23,6 +24,7 @@ type OutreachDraft = {
   helpfulness: string;
   referred: boolean;
   notes: string;
+  anonymous: boolean;
 };
 const newOutreachDraft = (): OutreachDraft => ({
   date: today(),
@@ -33,16 +35,8 @@ const newOutreachDraft = (): OutreachDraft => ({
   helpfulness: "Not rated",
   referred: false,
   notes: "",
+  anonymous: false,
 });
-
-function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <label className="flex items-center gap-2 text-[13px] text-ink-2">
-      <input type="checkbox" className="h-4 w-4 accent-[var(--color-prussian)]" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      {label}
-    </label>
-  );
-}
 
 export default function ContactView() {
   const id = useRouteParam("id");
@@ -60,7 +54,7 @@ export default function ContactView() {
         <PageTitle title="Contact not found" back={{ href: "/portal/network", label: "Network" }} />
         <p className="text-[13.5px] text-muted">
           This contact may have been removed, or the link is incomplete.{" "}
-          <Link href="/portal/network" className="text-ink hover:underline">
+          <Link href="/portal/network" className={linkCls}>
             Return to the network
           </Link>
           .
@@ -94,6 +88,7 @@ export default function ContactView() {
       helpfulness: draft.helpfulness === "Not rated" ? undefined : (Number(draft.helpfulness) as Outreach["helpfulness"]),
       referred: draft.referred,
       notes: draft.notes.trim(),
+      anonymous: draft.anonymous || undefined,
     };
     update((d) => ({ ...d, outreach: [...d.outreach, o] }));
     setDraft(newOutreachDraft());
@@ -123,7 +118,7 @@ export default function ContactView() {
                 {c.title}
                 {c.title && c.company && " at "}
                 {c.company && (
-                  <Link href={`/portal/companies/${companySlug(c.company)}`} className="text-ink hover:underline">
+                  <Link href={`/portal/companies/${companySlug(c.company)}`} className={linkCls}>
                     {c.company}
                   </Link>
                 )}
@@ -142,7 +137,7 @@ export default function ContactView() {
         <Stat label="Referrals" value={s.referrals} />
       </StatGroup>
 
-      <div className="mt-6 grid items-start gap-6 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card
             title="Outreach log"
@@ -172,9 +167,14 @@ export default function ContactView() {
                     </tr>
                   </thead>
                   <tbody>
-                    {log.map((o) => (
+                    {log.map((o) => {
+                      const by = byline(o.memberId, o.anonymous, me, data.members);
+                      return (
                       <tr key={o.id} className={rowCls}>
-                        <Td className="font-medium whitespace-nowrap">{memberName(o.memberId)}</Td>
+                        <Td className="whitespace-nowrap">
+                          <span className="font-medium">{by.name}</span>
+                          {by.note && <span className="block text-[12px] text-muted">{by.note}</span>}
+                        </Td>
                         <Td className="whitespace-nowrap text-muted tabular-nums">{fmtDate(o.date)}</Td>
                         <Td className="whitespace-nowrap">{o.channel}</Td>
                         <Td>{o.responded ? <Badge tone="green">Responded</Badge> : <Badge>No reply</Badge>}</Td>
@@ -184,7 +184,8 @@ export default function ContactView() {
                         <Td>{o.referred ? "Yes" : "No"}</Td>
                         <Td className="max-w-[28ch] text-[13px] text-muted">{o.notes}</Td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -226,6 +227,8 @@ export default function ContactView() {
         </div>
 
         <div className="space-y-6">
+          <ContactGradeCard items={log} />
+
           <Card title="How to approach">
             <p className="py-3 text-[13.5px] leading-relaxed whitespace-pre-line text-ink-2">
               {c.preferences || <span className="text-muted">No guidance yet. If you reach out, add what you learn to the notes.</span>}
@@ -265,7 +268,9 @@ export default function ContactView() {
 
       <Drawer open={logging} onClose={() => setLogging(false)} title="Log outreach">
         <form onSubmit={saveOutreach} className="space-y-4">
-          <p className="text-[13px] text-muted">Logged as {fullName(me)}, for {c.name}.</p>
+          <p className="text-[13px] text-muted">
+            Logged as {fullName(me)}, for {c.name}. Each outreach feeds this contact&apos;s grade.
+          </p>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Date">
               <Input type="date" required value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} />
@@ -290,6 +295,12 @@ export default function ContactView() {
           <Field label="Notes">
             <Textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
           </Field>
+          <Check
+            label="Log anonymously"
+            checked={draft.anonymous}
+            onChange={(v) => setDraft({ ...draft, anonymous: v })}
+            hint="Your outreach still counts toward the grade. Other members see “Anonymous member”; you and exec see your name."
+          />
           <div className="flex gap-2 pt-2">
             <Button type="submit">Save outreach</Button>
             <Button variant="secondary" onClick={() => setLogging(false)}>

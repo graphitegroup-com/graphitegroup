@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Link from "@/components/app-link";
 import { usePortal } from "@/portal/store";
-import { companySlug, pct, responseStats, uid } from "@/portal/logic";
+import { MIN_GRADERS, companySlug, contactGrade, pct, responseStats, uid } from "@/portal/logic";
 import type { Contact } from "@/portal/types";
-import { Button, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, TableWrap, Td, Textarea, Th, rowCls } from "@/portal/ui";
+import { Button, Drawer, Empty, Field, GradeTile, Input, PageTitle, Select, Stat, StatGroup, TableWrap, Td, Textarea, Th, linkCls, rowCls } from "@/portal/ui";
 
 const ALL = "All companies";
 
@@ -18,7 +18,7 @@ const none = <span className="text-faint">None</span>;
 function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className="flex items-center gap-2 text-[13px] whitespace-nowrap text-ink-2">
-      <input type="checkbox" className="h-4 w-4 accent-[var(--color-prussian)]" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <input type="checkbox" className="h-4 w-4 accent-[var(--color-accent)]" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       {label}
     </label>
   );
@@ -44,7 +44,7 @@ export default function NetworkPage() {
         (!alumOnly || c.isAlum) &&
         (company === ALL || c.company === company),
     )
-    .map((c) => ({ contact: c, stats: responseStats(data.outreach.filter((o) => o.contactId === c.id)) }))
+    .map((c) => ({ contact: c, stats: contactGrade(data.outreach.filter((o) => o.contactId === c.id)) }))
     .sort((a, b) => a.contact.name.localeCompare(b.contact.name));
 
   const saveContact = (e: React.FormEvent) => {
@@ -72,7 +72,7 @@ export default function NetworkPage() {
     <div>
       <PageTitle
         title="Network"
-        sub="People Graphite members have reached out to, with how they respond and how to approach them."
+        sub="People Graphite members have reached out to, graded on how often they reply, how fast and how much they help."
         actions={<Button onClick={() => setAdding(true)}>Add contact</Button>}
       />
 
@@ -100,10 +100,11 @@ export default function NetworkPage() {
         {rows.length === 0 ? (
           <Empty>No contacts match these filters.</Empty>
         ) : (
-          <table className="w-full min-w-[920px]">
+          <table className="w-full min-w-[1020px]">
             <thead>
               <tr>
                 <Th>Name</Th>
+                <Th>Grade</Th>
                 <Th>Company</Th>
                 <Th>Title</Th>
                 <Th className="text-right">Outreach</Th>
@@ -122,8 +123,14 @@ export default function NetworkPage() {
                     {c.isAlum && <span className="ml-2 text-[12.5px] text-muted">{alumShort(c)}</span>}
                   </Td>
                   <Td>
+                    <span className="flex items-center gap-2" title={s.letter ? undefined : `A letter needs ${MIN_GRADERS} members' outreach`}>
+                      <GradeTile letter={s.letter} />
+                      <span className="text-[12px] text-muted tabular-nums">{s.graders ? `${s.graders} ${s.graders === 1 ? "member" : "members"}` : "None yet"}</span>
+                    </span>
+                  </Td>
+                  <Td>
                     {c.company ? (
-                      <Link href={`/portal/companies/${companySlug(c.company)}`} className="hover:underline">
+                      <Link href={`/portal/companies/${companySlug(c.company)}`} className={linkCls}>
                         {c.company}
                       </Link>
                     ) : (

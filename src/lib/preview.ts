@@ -13,7 +13,7 @@ export function previewHref(href: string) {
   const [path, hash] = href.split("#");
   const clean = path.replace(/^\/+|\/+$/g, "");
   // Detail pages share one exported file per type; the id travels in the query string.
-  const detail = clean.match(/^portal\/(companies|network|projects)\/([^/]+)$/);
+  const detail = clean.match(/^portal\/(companies|network|projects|forum)\/([^/]+)$/);
   if (detail) return `portal-${detail[1]}-item.html?id=${detail[2]}${hash ? `#${hash}` : ""}`;
   const file = clean ? `${clean.replace(/\//g, "-")}.html` : "home.html";
   return hash ? `${file}#${hash}` : file;
