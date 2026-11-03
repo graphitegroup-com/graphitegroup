@@ -6,7 +6,11 @@
 import {
   FIRM_DIMENSIONS,
   STAGES_REACHED,
+  type Application,
   type Audience,
+  type InterviewQuestion,
+  type InterviewReport,
+  type QuestionRound,
   type ClassLevel,
   type CompanyType,
   type Contact,
@@ -23,6 +27,7 @@ import {
   type Role,
   type RoleChange,
   type SemesterDates,
+  type Stage,
   type StageReached,
   type TaskTemplate,
   type TaskWhen,
@@ -419,6 +424,196 @@ export function companyNames(data: Pick<PortalData, "applications" | "reports" |
   for (const p of data.posts) if (p.company) names.add(p.company.trim());
   names.delete("");
   return [...names];
+}
+
+/* ---------------------------------------------------------------- applications */
+
+/** Stages in order of progress. Rejected and Withdrew are outcomes, not progress. */
+export const PROGRESS_STAGES: Stage[] = ["Researching", "Applied", "Online Assessment", "First Round", "Superday / Final", "Offer"];
+export const stageRank = (s: Stage) => PROGRESS_STAGES.indexOf(s);
+
+/** Applications stay private until the member reaches this stage. */
+export const SHARED_FROM: Stage = "First Round";
+export const isShared = (a: Pick<Application, "furthest">) => stageRank(a.furthest) >= stageRank(SHARED_FROM);
+
+/**
+ * Moves an application to a stage. Rejected and Withdrew keep how far it got;
+ * any other stage becomes how far it got, since nobody moves backwards in a
+ * process and a lower stage is a correction. Matches the database trigger.
+ */
+export function withStage(a: Application, stage: Stage, on: string): Application {
+  const furthest = stageRank(stage) >= 0 ? stage : a.furthest;
+  return { ...a, stage, furthest, updatedAt: on };
+}
+
+const REACHED: Partial<Record<Stage, string>> = { "Online Assessment": "Online assessment", "First Round": "First round", "Superday / Final": "Final round" };
+/** How far an application got, in words: "Online assessment", "First round", "Final round", "Offer". */
+export const reachedLabel = (s: Stage) => REACHED[s] ?? s;
+
+export type AppOutcome = "Offer" | "Rejected" | "Withdrew" | "In process";
+export const appOutcome = (a: Pick<Application, "stage">): AppOutcome =>
+  a.stage === "Offer" || a.stage === "Rejected" || a.stage === "Withdrew" ? a.stage : "In process";
+
+/** The recruiting year: the first four-digit year in the cycle, else when it was last updated. */
+export const appYear = (a: Pick<Application, "cycle" | "updatedAt">) => Number(a.cycle.match(/\d{4}/)?.[0]) || Number(a.updatedAt.slice(0, 4));
+
+/** What a viewer may see: their own, everything for exec, and other members' once shared. */
+export const visibleApplications = (apps: Application[], viewer: Member) => apps.filter((a) => a.memberId === viewer.id || isExec(viewer) || isShared(a));
+
+export type AppPrompt = { kind: "rate" | "interview" | "grade" | "experience"; label: string };
+
+/**
+ * The one thing worth logging next for an application, in the order it comes
+ * up: rate the application once you've applied, log the interview once you
+ * reach a first round, grade the process once there's an outcome, and add an
+ * offer to your experience.
+ */
+export function applicationPrompt(a: Application, data: Pick<PortalData, "reports" | "grades" | "jobs">): AppPrompt | undefined {
+  const firm = companySlug(a.company.trim());
+  const at = (c: string) => companySlug(c.trim()) === firm;
+  if (stageRank(a.furthest) >= stageRank("Applied") && (a.effort == null || a.fit == null)) return { kind: "rate", label: "Rate the application" };
+  // Interviews for a cycle happen in its year or the year before (fall 2026 for a summer 2027 internship).
+  const y = appYear(a);
+  if (stageRank(a.furthest) >= stageRank("First Round") && !data.reports.some((r) => r.memberId === a.memberId && at(r.company) && r.year >= y - 1 && r.year <= y)) {
+    return { kind: "interview", label: "Log the interview" };
+  }
+  const decided = a.stage === "Offer" || a.stage === "Rejected";
+  if (decided && stageRank(a.furthest) >= stageRank("Online Assessment") && !data.grades.some((g) => g.memberId === a.memberId && at(g.company) && g.cycle.trim().toLowerCase() === a.cycle.trim().toLowerCase())) {
+    return { kind: "grade", label: "Grade the process" };
+  }
+  if (a.stage === "Offer" && !data.jobs.some((j) => j.memberId === a.memberId && at(j.company))) return { kind: "experience", label: "Add to my experience" };
+  return undefined;
+}
+
+/* ---------------------------------------------------------------- question bank */
+
+/**
+ * A firm's waiting questions publish together once this many different
+ * members have logged an interview there since its last batch. Any published
+ * question then came from one of at least three people, and nothing records
+ * which.
+ */
+export const QUESTION_BATCH = MIN_GRADERS;
+
+/** Reports at a firm that haven't been counted toward a published batch yet. */
+export function batchProgress(data: Pick<PortalData, "reports" | "questionBatches">, company: string) {
+  const slug = companySlug(company.trim());
+  const counted = new Set(data.questionBatches[slug] ?? []);
+  const waiting = data.reports.filter((r) => companySlug(r.company.trim()) === slug && !counted.has(r.id));
+  return { slug, waiting, members: new Set(waiting.map((r) => r.memberId)).size };
+}
+
+/** The broad round a report's free-text round falls in. */
+export function questionRound(round: string): QuestionRound {
+  if (/assess|\boa\b|hirevue|test|online|video/i.test(round)) return "Online assessment";
+  if (/final|super|partner|last/i.test(round)) return "Final round";
+  if (/first|1st|phone|screen|initial|second|2nd/i.test(round)) return "First round";
+  return "Other";
+}
+
+function shuffle<T>(xs: T[]): T[] {
+  const out = [...xs];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+/**
+ * Save an interview: the report under the member (named or anonymous), the
+ * questions into the firm's waiting pile with nothing that links them to it.
+ * If the firm now has interviews from QUESTION_BATCH members since its last
+ * batch, every waiting question there publishes at once, in random order.
+ */
+export function logInterview(d: PortalData, report: InterviewReport, questions: { round: QuestionRound; question: string }[]): PortalData {
+  const company = report.company.trim();
+  const pending = [...d.pendingQuestions, ...questions.map((q) => ({ id: uid(), company, ...q }))];
+  const next = { ...d, reports: [report, ...d.reports], pendingQuestions: pending };
+  const { slug, waiting, members } = batchProgress(next, company);
+  if (members < QUESTION_BATCH) return next;
+  const here = (q: InterviewQuestion) => companySlug(q.company.trim()) === slug;
+  return {
+    ...next,
+    questions: [...next.questions, ...shuffle(pending.filter(here))],
+    pendingQuestions: pending.filter((q) => !here(q)),
+    questionBatches: { ...next.questionBatches, [slug]: [...(next.questionBatches[slug] ?? []), ...waiting.map((r) => r.id)] },
+  };
+}
+
+/* ---------------------------------------------------------------- similar members */
+
+/** Only applications shared with a name feed suggestions; anonymous and early-stage ones never do. */
+const suggestable = (a: Application) => isShared(a) && !a.anonymous;
+
+const jaccard = <T,>(a: Set<T>, b: Set<T>) => {
+  const union = new Set([...a, ...b]).size;
+  if (!union) return 0;
+  return [...a].filter((x) => b.has(x)).length / union;
+};
+
+export type SimilarMember = { member: Member; score: number; sharedFirms: string[]; sharedTypes: CompanyType[]; apps: Application[] };
+
+/**
+ * Members whose applications look most like yours: the same firms (60%) and
+ * the same kinds of firm they're most interested in (40%; types rated a fit
+ * of 4 or 5, or every type applied to if they haven't rated fit).
+ */
+export function similarMembers(data: Pick<PortalData, "applications" | "members" | "firms">, me: Member, limit = 5): SimilarMember[] {
+  const key = (c: string) => companySlug(c.trim());
+  const interests = (apps: Application[]) => {
+    const rated = apps.filter((a) => a.fit != null);
+    const from = rated.length ? rated.filter((a) => (a.fit ?? 0) >= 4) : apps;
+    return new Set(from.map((a) => firmType(data.firms, a.company)).filter((t): t is CompanyType => !!t));
+  };
+  const mine = data.applications.filter((a) => a.memberId === me.id);
+  const myFirms = new Set(mine.map((a) => key(a.company)));
+  const myTypes = interests(mine);
+  const byMember = new Map<string, Application[]>();
+  for (const a of data.applications) {
+    if (a.memberId === me.id || !suggestable(a)) continue;
+    byMember.set(a.memberId, [...(byMember.get(a.memberId) ?? []), a]);
+  }
+  const out: SimilarMember[] = [];
+  for (const [id, apps] of byMember) {
+    const member = data.members.find((m) => m.id === id);
+    if (!member) continue;
+    const firms = new Set(apps.map((a) => key(a.company)));
+    const types = interests(apps);
+    const score = 0.6 * jaccard(myFirms, firms) + 0.4 * jaccard(myTypes, types);
+    if (score <= 0) continue;
+    const sharedFirms = [...new Set(apps.filter((a) => myFirms.has(key(a.company))).map((a) => a.company.trim()))];
+    out.push({ member, score, sharedFirms, sharedTypes: [...types].filter((t) => myTypes.has(t)), apps });
+  }
+  return out.sort((a, b) => b.score - a.score || a.member.lastName.localeCompare(b.member.lastName)).slice(0, limit);
+}
+
+export type SuggestedFirm = { company: string; score: number; members: Member[]; finals: number; offers: number; offerYears: number[] };
+
+/** Firms similar members applied to that you haven't, weighted by how alike you are and how far they got. */
+export function suggestedFirms(data: Pick<PortalData, "applications">, me: Member, similar: SimilarMember[], limit = 8): SuggestedFirm[] {
+  const key = (c: string) => companySlug(c.trim());
+  const myFirms = new Set(data.applications.filter((a) => a.memberId === me.id).map((a) => key(a.company)));
+  const byFirm = new Map<string, SuggestedFirm>();
+  for (const s of similar) {
+    for (const a of s.apps) {
+      const k = key(a.company);
+      if (myFirms.has(k)) continue;
+      const f = byFirm.get(k) ?? { company: a.company.trim(), score: 0, members: [], finals: 0, offers: 0, offerYears: [] };
+      const final = stageRank(a.furthest) >= stageRank("Superday / Final");
+      const offer = a.stage === "Offer";
+      // Every shared application reached a first round; a final counts more, an offer most.
+      f.score += s.score * (1 + (final ? 1 : 0) + (offer ? 2 : 0));
+      if (!f.members.includes(s.member)) f.members.push(s.member);
+      if (final) f.finals++;
+      if (offer) {
+        f.offers++;
+        f.offerYears.push(appYear(a));
+      }
+      byFirm.set(k, f);
+    }
+  }
+  return [...byFirm.values()].sort((a, b) => b.score - a.score || a.company.localeCompare(b.company)).slice(0, limit);
 }
 
 /* ---------------------------------------------------------------- firms and jobs */

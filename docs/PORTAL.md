@@ -12,8 +12,8 @@ Built and clickable, running on sample data in the browser (`src/portal/store.ts
 | Home | `/portal` | This semester's tasks, follow-ups due from your network, the most active forum threads, your applications and (for exec) items that need approval |
 | Forum | `/portal/forum` | Bookface-style threads split into All threads, Current members and Alumni, across six channels (Recruiting, Interview prep, Referrals and intros, Opportunities, Offers, General), with replies, "helpful" votes, search and sorting. Everyone can read every space. A thread can be tagged with a firm and then also shows on that company's page. Exec can pin threads and remove any post |
 | Directory | `/portal/directory` | Members and alumni with filters, showing personal emails. Class standing and alumni status are computed from graduation year; alumni show the highest role they held. Phone is visible only to the member and exec |
-| My Recruiting | `/portal/recruiting` | Three tabs: Applications (your pipeline by stage), My network (your outreach spreadsheet: add a person with their LinkedIn and current role and they join the shared Network; follow-up reminders after 7 days with no reply; one-click updates for replies, chats and thank-yous that feed the contact grades) and My interviews |
-| Companies | `/portal/companies` | Every firm members recruit with or worked at. Filter by type of company and by "has hired a" freshman, sophomore, junior or senior, to find where members that age have been hired (summers count the year just finished). Each firm shows member grades of its recruiting process, who worked there and in which year, interview reports and forum threads. Application counts only; names are exec-only |
+| My Recruiting | `/portal/recruiting` | Four tabs. Applications: your pipeline by stage, with one prompt at a time for what to log next (rate effort and fit once you apply, log the interview once you reach a first round, grade the process once there's an outcome, add an offer to your experience). My network: your outreach spreadsheet (add a person with their LinkedIn and current role and they join the shared Network; follow-up reminders after 7 days with no reply; one-click updates for replies, chats and thank-yous that feed the contact grades). My interviews. Similar members: who applies like you and where they did well (see Applications below) |
+| Companies | `/portal/companies` | Every firm members recruit with or worked at. Filter by type of company and by "has hired a" freshman, sophomore, junior or senior, to find where members that age have been hired (summers count the year just finished). Each firm shows member grades of its recruiting process, who worked there and in which year, which members reached a first round or further and how it ended (with the year of each offer), interview overviews, an unattributed question bank, the average application effort and forum threads |
 | Network | `/portal/network` | Shared contacts with an outreach grade built from the outreach log (response rate, reply speed, helpfulness), searchable by firm and filterable by type of company. Any member can move a contact to a new firm or title; earlier roles are kept |
 | Projects | `/portal/projects` | Past engagements, what each team learned (tagged lessons that stack up by topic and are searchable across projects) and reusable templates |
 | Profile | `/portal/profile` | Name, emails, phone, school, grad year, practice, headshot, and Experience: internships and jobs with the year in school at the time, shared with every member. My recruiting offers to add an application here once it reaches Offer |
@@ -32,6 +32,14 @@ Modeled on how Bookface founders rate investors, and built to be trusted for the
 - **Minimum of 3 members.** A letter only appears once 3 different members have graded a firm or logged outreach to a contact (`MIN_GRADERS`). Below that, one bad week would define a firm, and an anonymous grade would be easy to trace.
 - **Anonymous, not unaccountable.** Grades and outreach can be posted anonymously. Other members see "Anonymous member"; the author and exec still see the name. In the database the base tables are readable only by their author and exec; members read `firm_grades_visible` and `outreach_visible`, which blank out the author of anonymous rows.
 
+### Applications and interviews
+
+- **Hidden until a first round.** Only the member sees an application at first. Once it reaches a first round, every member sees the firm, position, cycle, how far it got and the outcome, by name or as "Anonymous member" (per application, or all at once). Notes, effort and fit never show; exec sees every application but not those either. "How far it got" survives a rejection, so a rejection after a final still reads as a final.
+- **Effort and fit.** Asked when you apply. Effort is averaged on the firm's page once 3 members have rated it. Fit is used only for Similar members.
+- **Similar members.** 60% the share of firms you both applied to, 40% the overlap in kinds of firm you each rated a 4 or 5 for fit (Jaccard on both). It reads only applications other members shared with their name, so anonymous and pre-first-round ones never count. "Where they did well" lists firms your matches reached that you haven't applied to, weighted by similarity, a final counting double and an offer triple. In the database this runs in `similar_members()`, so other members' fit ratings never reach the browser.
+- **Interview logs come in two halves.** The overview (format, how it went, advice, difficulty, outcome) is named or anonymous like everything else. The questions keep only the firm, a broad round (online assessment, first, final, other) and the text: no author, year, position, timestamp or link to the overview.
+- **Questions publish in batches.** A firm's questions wait until 3 different members have logged interviews there since its last batch, then all publish at once in random order. Without this, a question appearing right after one person's named overview would give them away. What it can't hide: if you're one of the three, you know which questions were yours, so to you the rest come from two people; and until a batch publishes, someone with direct access to the database (not the app) could match waiting rows to an overview by transaction. Supabase's request logs also record that a member called `log_interview`, not what they wrote.
+
 ### Design
 
 The portal mirrors Bookface on a plain white page: panels with hairline borders and 3px corners, warm-gray fills (`#f6f6ef`) for hovers and table headers, small uppercase panel labels, Avenir (Nunito Sans where Avenir isn't installed) and one blue for actions and links. Bookface's own `#268bd2` is darkened to `#1f78bd` so white text on it passes WCAG AA. Tokens are in `src/app/globals.css`, type in `src/portal/portal.css`, components in `src/portal/ui.tsx`.
@@ -42,7 +50,7 @@ The portal mirrors Bookface on a plain white page: panels with hairline borders 
 2. In Authentication, keep email + password sign-in and **email confirmation on** (otherwise anyone who knows a member's email could claim their account before they do). The `auth_users_roster_only` trigger already rejects emails that aren't on the roster.
 3. Connect an email sender (Authentication, SMTP settings). Supabase writes and sends the confirmation and password-reset emails itself, but its built-in sender only delivers to your Supabase team's own addresses, a few an hour. A free option: a shared club Gmail account with an app password as the SMTP server. GitHub doesn't send email for apps.
 4. Import the real roster into `members` from a spreadsheet (Table editor, Import CSV). Real member data goes in the database only, never into this repo.
-5. Replace the browser store in `src/portal/store.tsx` and `src/lib/use-site-content.ts` with Supabase queries. The data shapes already match the tables. Read grades from `firm_grades_visible`, outreach from `outreach_visible` and interview reports from `interview_reports_visible`, never the base tables, and store forum votes as rows in `forum_votes`.
+5. Replace the browser store in `src/portal/store.tsx` and `src/lib/use-site-content.ts` with Supabase queries. The data shapes already match the tables. Read grades from `firm_grades_visible`, outreach from `outreach_visible`, interview reports from `interview_reports_visible` and other members' applications from `applications_visible`, never the base tables. Save interviews with the `log_interview` function (never by inserting rows), load Similar members from `similar_members()`, and store forum votes as rows in `forum_votes`.
 4. Move headshots to Supabase Storage (the preview stores them as resized data URLs).
 5. Add a daily scheduled job for alumni transitions, task generation on July 1 and promotion proposals each term.
 6. Follow [`OPERATIONS.md`](OPERATIONS.md) to switch on GitHub Pages and add the keep-awake and backup settings.
@@ -93,10 +101,11 @@ tasks                                       -- generated instances
   template_id, assignee_id, due_at, done_at, academic_year
 
 companies           id, name, industry, website
-applications        member_id, company_id, role_title, cycle (e.g. 2026-27 SA),
-                    stage (applied|oa|first_round|superday|final|offer|rejected|withdrew),
-                    stage_dates jsonb, notes
-interview_reports   company_id, member_id, year, round, format, questions, tips, difficulty
+applications        member_id, company, position, cycle, stage, furthest, anonymous,
+                    effort 1-5, fit 1-5, notes (private)
+interview_reports   company, member_id, year, round, format, overview, tips, difficulty, anonymous
+interview_questions company, round (online assessment|first|final|other), question
+                    -- no author or time; published in batches by log_interview
 comments            subject_type (contact|project), subject_id, author_id, body
 firms               name, type (consulting, banking, ... ), updated_by
 jobs                member_id, company, role, kind (summer internship|full-time|part-time),

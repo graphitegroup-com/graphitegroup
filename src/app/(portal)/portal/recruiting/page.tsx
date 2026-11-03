@@ -3,15 +3,17 @@
 import Link from "@/components/app-link";
 import { Fragment, useEffect, useState } from "react";
 import { usePortal } from "@/portal/store";
-import { byline, companySlug, fmtDate, followUpsDue, jobsAt, uid } from "@/portal/logic";
+import { applicationPrompt, byline, companySlug, fmtDate, followUpsDue, isShared, reachedLabel, uid, withStage, type AppPrompt } from "@/portal/logic";
+import { GradeForm, ScorePicker } from "@/portal/grades";
+import { SimilarMembers } from "@/portal/similar";
 import { JobForm } from "@/portal/jobs";
 import { MyNetwork, myOutreachAt } from "@/portal/outreach";
-import { STAGES, type Application, type Stage } from "@/portal/types";
+import { STAGES, type Application, type Score, type Stage } from "@/portal/types";
 import { Badge, Button, Card, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, Tabs, Td, Textarea, Th, rowCls } from "@/portal/ui";
 import { ReportForm, outcomeTone } from "@/portal/views/company";
 
-type Tab = "applications" | "network" | "interviews";
-const TAB_HASH: Record<string, Tab> = { "#network": "network", "#interviews": "interviews", "#applications": "applications" };
+type Tab = "applications" | "network" | "interviews" | "similar";
+const TAB_HASH: Record<string, Tab> = { "#network": "network", "#interviews": "interviews", "#applications": "applications", "#similar": "similar" };
 const tabFromHash = () => (typeof window === "undefined" ? "applications" : (TAB_HASH[window.location.hash] ?? "applications"));
 
 const INTERVIEW_STAGES: Stage[] = ["Online Assessment", "First Round", "Superday / Final"];
@@ -31,8 +33,16 @@ function stageTone(s: Stage) {
   return "blue" as const;
 }
 
-type Draft = { company: string; position: string; cycle: string; stage: Stage; notes: string };
-const emptyDraft: Draft = { company: "", position: "", cycle: "", stage: "Researching", notes: "" };
+type Draft = { company: string; position: string; cycle: string; stage: Stage; notes: string; anonymous: boolean; effort?: Score; fit?: Score };
+const emptyDraft: Draft = { company: "", position: "", cycle: "", stage: "Applied", notes: "", anonymous: false };
+
+const EFFORT_HINT = "How much work the application took";
+const EFFORT_SCALE = "1 a quick form, 5 essays, tests and video";
+const FIT_HINT = "How closely the role matches what you want to do";
+const FIT_SCALE = "1 a backup, 5 exactly what you want";
+
+/** The interview round a report most likely covers, from how far the application got. */
+const roundFor = (a: Application) => (a.furthest === "First Round" ? "First round" : a.furthest === "Superday / Final" || a.furthest === "Offer" ? "Final round" : "");
 
 export default function RecruitingPage() {
   const { data, me, update } = usePortal();
@@ -44,6 +54,9 @@ export default function RecruitingPage() {
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [confirming, setConfirming] = useState<string | null>(null);
   const [addingJob, setAddingJob] = useState<Application | null>(null);
+  const [rating, setRating] = useState<Application | null>(null);
+  const [logging, setLogging] = useState<Application | null>(null);
+  const [grading, setGrading] = useState<Application | null>(null);
 
   // Links like /portal/recruiting#network open the right tab, including from the same page.
   useEffect(() => {
@@ -73,8 +86,19 @@ export default function RecruitingPage() {
   const setStage = (id: string, stage: Stage) =>
     update((d) => ({
       ...d,
-      applications: d.applications.map((a) => (a.id === id ? { ...a, stage, updatedAt: today() } : a)),
+      applications: d.applications.map((a) => (a.id === id ? withStage(a, stage, today()) : a)),
     }));
+  const setApp = (id: string, patch: Partial<Application>) =>
+    update((d) => ({ ...d, applications: d.applications.map((a) => (a.id === id ? { ...a, ...patch } : a)) }));
+  const allAnonymous = mine.length > 0 && mine.every((a) => a.anonymous);
+  const setAllAnonymous = (anonymous: boolean) =>
+    update((d) => ({ ...d, applications: d.applications.map((a) => (a.memberId === me.id ? { ...a, anonymous } : a)) }));
+  const openPrompt = (a: Application, p: AppPrompt) => {
+    if (p.kind === "rate") setRating(a);
+    else if (p.kind === "interview") setLogging(a);
+    else if (p.kind === "grade") setGrading(a);
+    else setAddingJob(a);
+  };
 
   const remove = (id: string) => {
     update((d) => ({ ...d, applications: d.applications.filter((a) => a.id !== id) }));
@@ -96,6 +120,11 @@ export default function RecruitingPage() {
       position: draft.position.trim(),
       cycle: draft.cycle.trim(),
       stage: draft.stage,
+      // A rejection or withdrawal logged straight away still counts as an application sent.
+      furthest: draft.stage === "Rejected" || draft.stage === "Withdrew" ? "Applied" : draft.stage,
+      anonymous: draft.anonymous,
+      effort: draft.effort,
+      fit: draft.fit,
       notes: draft.notes.trim(),
       updatedAt: today(),
     };
@@ -108,15 +137,15 @@ export default function RecruitingPage() {
       <Button onClick={openAdd}>Add application</Button>
     ) : tab === "network" ? (
       <Button onClick={() => setAddingPerson(true)}>Add a person</Button>
-    ) : (
+    ) : tab === "interviews" ? (
       <Button onClick={() => setAddingInterview(true)}>Add interview</Button>
-    );
+    ) : undefined;
 
   return (
     <div>
       <PageTitle
         title="My recruiting"
-        sub="Your applications, the people you reach out to and your interviews. Applications are private to you and the executive board; outreach and interviews also feed the shared Network and Companies pages."
+        sub="Your applications, the people you reach out to and your interviews. An application stays private until you reach a first round. From then on members see it on the firm's page, with your name or anonymously, so they know who to ask."
         actions={action}
       />
 
@@ -139,26 +168,44 @@ export default function RecruitingPage() {
             { value: "applications", label: "Applications", count: mine.length },
             { value: "network", label: "My network", count: new Set(myOutreach.map((o) => o.contactId)).size },
             { value: "interviews", label: "My interviews", count: myReports.length },
+            { value: "similar", label: "Similar members" },
           ]}
         />
       </div>
 
       {tab === "network" && <MyNetwork adding={addingPerson} setAdding={setAddingPerson} />}
       {tab === "interviews" && <MyInterviews onAdd={() => setAddingInterview(true)} />}
+      {tab === "similar" && <SimilarMembers />}
 
       {tab === "applications" && (
-      <Card title="Applications" flush>
+      <Card
+        title="Applications"
+        flush
+        action={
+          mine.length > 0 && (
+            <Button variant="ghost" onClick={() => setAllAnonymous(!allAnonymous)}>
+              {allAnonymous ? "Show my name on all" : "Make all anonymous"}
+            </Button>
+          )
+        }
+      >
+        <p className="border-b border-edge bg-[#fbfbf7] px-4 py-2 text-[12.5px] text-muted">
+          Only you and exec see an application until it reaches a first round. Then members see the firm, position, cycle, how far you got and the outcome, with
+          your name or as &ldquo;Anonymous member&rdquo;. Your notes stay private.
+        </p>
         {mine.length === 0 ? (
           <Empty>No applications yet. Add the first one to start tracking your recruiting.</Empty>
         ) : (
           <div className="relative overflow-x-auto">
-            <table className="w-full min-w-[820px]">
+            <table className="w-full min-w-[1040px]">
               <thead>
                 <tr>
                   <Th>Company</Th>
                   <Th>Position</Th>
                   <Th>Cycle</Th>
                   <Th>Stage</Th>
+                  <Th>Shared</Th>
+                  <Th>Next step</Th>
                   <Th>Updated</Th>
                   <Th>
                     <span className="sr-only">Actions</span>
@@ -169,12 +216,14 @@ export default function RecruitingPage() {
                 {grouped.map((g) => (
                   <Fragment key={g.stage}>
                     <tr className="border-b border-edge bg-[#fbfbf7]">
-                      <td colSpan={6} className="px-4 py-1.5">
+                      <td colSpan={8} className="px-4 py-1.5">
                         <Badge tone={stageTone(g.stage)}>{g.stage}</Badge>
                         <span className="ml-2 text-[12px] text-faint tabular-nums">{g.items.length}</span>
                       </td>
                     </tr>
-                    {g.items.map((a) => (
+                    {g.items.map((a) => {
+                      const prompt = applicationPrompt(a, data);
+                      return (
                       <tr key={a.id} className={rowCls}>
                         <Td>
                           <Link href={`/portal/companies/${companySlug(a.company)}`} className="font-medium hover:underline">
@@ -199,10 +248,29 @@ export default function RecruitingPage() {
                               </option>
                             ))}
                           </select>
-                          {a.stage === "Offer" && !jobsAt(data.jobs, a.company).some((j) => j.memberId === me.id) && (
-                            <button type="button" onClick={() => setAddingJob(a)} className="mt-1 block text-[12px] text-link hover:underline">
-                              Add to my experience
+                          {a.furthest !== a.stage && <span className="mt-1 block text-[12px] text-muted">Got to {reachedLabel(a.furthest).toLowerCase()}</span>}
+                        </Td>
+                        <Td className="py-2">
+                          <span className="block text-[13px]">{isShared(a) ? (a.anonymous ? "Anonymously" : "With your name") : "Not yet"}</span>
+                          <span className="block text-[12px] text-muted">
+                            {isShared(a) ? "" : `From a first round, ${a.anonymous ? "anonymously" : "with your name"}. `}
+                            <button
+                              type="button"
+                              onClick={() => setApp(a.id, { anonymous: !a.anonymous })}
+                              aria-label={`${a.company}: ${a.anonymous ? "show your name" : "make anonymous"}`}
+                              className="text-link hover:underline"
+                            >
+                              {a.anonymous ? "Show my name" : "Make anonymous"}
                             </button>
+                          </span>
+                        </Td>
+                        <Td>
+                          {prompt ? (
+                            <Button variant="secondary" onClick={() => openPrompt(a, prompt)} aria-label={`${prompt.label}: ${a.company}`}>
+                              {prompt.label}
+                            </Button>
+                          ) : (
+                            <span className="text-[12.5px] text-faint">Nothing due</span>
                           )}
                         </Td>
                         <Td className="whitespace-nowrap text-muted">{fmtDate(a.updatedAt)}</Td>
@@ -225,7 +293,8 @@ export default function RecruitingPage() {
                           )}
                         </Td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </Fragment>
                 ))}
               </tbody>
@@ -263,6 +332,22 @@ export default function RecruitingPage() {
           <Field label="Stage">
             <Select options={STAGES} value={draft.stage} onChange={(e) => setDraft({ ...draft, stage: e.target.value as Stage })} />
           </Field>
+          {draft.stage !== "Researching" && (
+            <>
+              <ScorePicker name="new-effort" label="How hard was the application?" hint={EFFORT_HINT} scale={EFFORT_SCALE} value={draft.effort} onChange={(effort) => setDraft({ ...draft, effort })} />
+              <ScorePicker name="new-fit" label="How well does it fit your interests?" hint={FIT_HINT} scale={FIT_SCALE} value={draft.fit} onChange={(fit) => setDraft({ ...draft, fit })} />
+            </>
+          )}
+          <Field label="Once you reach a first round, show it" hint="Before a first round, only you and exec can see it.">
+            <Select
+              options={[
+                { value: "named", label: "With my name" },
+                { value: "anonymous", label: "Anonymously" },
+              ]}
+              value={draft.anonymous ? "anonymous" : "named"}
+              onChange={(e) => setDraft({ ...draft, anonymous: e.target.value === "anonymous" })}
+            />
+          </Field>
           <Field label="Notes">
             <Textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} placeholder="Deadlines, contacts, preparation" />
           </Field>
@@ -276,6 +361,26 @@ export default function RecruitingPage() {
       </Drawer>
       <Drawer open={addingInterview} onClose={() => setAddingInterview(false)} title="Add interview">
         {addingInterview && <ReportForm onDone={() => setAddingInterview(false)} />}
+      </Drawer>
+      <Drawer open={!!rating} onClose={() => setRating(null)} title={rating ? `Rate your ${rating.company} application` : "Rate the application"}>
+        {rating && (
+          <RateApplication
+            app={rating}
+            onSave={(patch) => {
+              setApp(rating.id, patch);
+              setRating(null);
+            }}
+            onCancel={() => setRating(null)}
+          />
+        )}
+      </Drawer>
+      <Drawer open={!!logging} onClose={() => setLogging(null)} title={logging ? `Log your ${logging.company} interview` : "Log the interview"}>
+        {logging && (
+          <ReportForm company={logging.company} prefill={{ position: logging.position, year: Number(logging.updatedAt.slice(0, 4)), round: roundFor(logging) }} onDone={() => setLogging(null)} />
+        )}
+      </Drawer>
+      <Drawer open={!!grading} onClose={() => setGrading(null)} title={grading ? `Grade ${grading.company}` : "Grade the process"}>
+        {grading && <GradeForm company={grading.company.trim()} fromApp={grading} onDone={() => setGrading(null)} />}
       </Drawer>
     </div>
   );
@@ -294,7 +399,8 @@ function MyInterviews({ onAdd }: { onAdd: () => void }) {
       <Card flush>
         <Empty>
           <span className="mb-3 block">
-            No interviews logged yet. After each round, add the format, questions and advice; it shows on the company&apos;s page for the next member.
+            No interviews logged yet. After each round, add how it went and the questions you were asked. The overview shows on the firm&apos;s page; the
+            questions go into its question bank with no name or date attached.
           </span>
           <Button onClick={onAdd}>Add interview</Button>
         </Empty>
@@ -347,12 +453,14 @@ function MyInterviews({ onAdd }: { onAdd: () => void }) {
                         </>
                       )}
                     </p>
-                    {r.questions && <p className="mt-2 text-[13px] whitespace-pre-line text-ink-2">{r.questions}</p>}
+                    {r.overview && <p className="mt-2 text-[13px] whitespace-pre-line text-ink-2">{r.overview}</p>}
+                    {r.tips && <p className="mt-1.5 text-[13px] whitespace-pre-line text-muted">Advice: {r.tips}</p>}
                   </li>
                 );
               })}
             </ul>
             <p className="border-t border-edge bg-[#fbfbf7] px-4 py-2 text-[12.5px] text-muted">
+              Questions you added are in the firm&apos;s question bank without your name, so they aren&apos;t listed here.{" "}
               {app ? `Application: ${app.position}, ${app.stage}. ` : ""}
               {people.length ? `You've reached out to ${people.length} ${people.length === 1 ? "person" : "people"} here.` : "You haven't logged outreach to anyone here yet."}
             </p>
@@ -360,5 +468,35 @@ function MyInterviews({ onAdd }: { onAdd: () => void }) {
         );
       })}
     </div>
+  );
+}
+
+/** The two ratings asked for once you apply. Effort tells the next member what they're in for; fit feeds Similar members. */
+function RateApplication({ app, onSave, onCancel }: { app: Application; onSave: (patch: Pick<Application, "effort" | "fit">) => void; onCancel: () => void }) {
+  const [effort, setEffort] = useState<Score | undefined>(app.effort);
+  const [fit, setFit] = useState<Score | undefined>(app.fit);
+  return (
+    <form
+      className="space-y-5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSave({ effort, fit });
+      }}
+    >
+      <p className="text-[13px] text-muted">
+        {[app.position, app.cycle].filter(Boolean).join(", ")}. Effort is shown on the firm&apos;s page as an average once three members have rated it. Fit is
+        only used to find members with interests like yours.
+      </p>
+      <ScorePicker name="rate-effort" label="How hard was the application?" hint={EFFORT_HINT} scale={EFFORT_SCALE} value={effort} onChange={setEffort} />
+      <ScorePicker name="rate-fit" label="How well does it fit your interests?" hint={FIT_HINT} scale={FIT_SCALE} value={fit} onChange={setFit} />
+      <div className="flex gap-2">
+        <Button type="submit" disabled={effort == null || fit == null}>
+          Save ratings
+        </Button>
+        <Button variant="secondary" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </form>
   );
 }

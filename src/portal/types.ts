@@ -98,7 +98,19 @@ export type Application = {
   position: string;
   cycle: string; // e.g. "Summer 2027 Internship"
   stage: Stage;
+  /** Furthest stage reached, so a rejection after a final round still shows how far it got. */
+  furthest: Stage;
+  /**
+   * Shared with members under "Anonymous member" instead of a name. Either
+   * way an application stays private until it reaches a first round.
+   */
+  anonymous: boolean;
+  /** 1 to 5: how much work the application took. */
+  effort?: Score;
+  /** 1 to 5: how well the role fits the member's interests. */
+  fit?: Score;
   updatedAt: string;
+  /** Private to the member, even once the application is shared. */
   notes: string;
 };
 
@@ -110,13 +122,26 @@ export type InterviewReport = {
   position: string;
   round: string;
   format: string;
-  questions: string;
+  /** General thoughts on how it went. Interview questions live in the question bank, unlinked. */
+  overview: string;
   tips: string;
   difficulty: 1 | 2 | 3 | 4 | 5;
   outcome: "Advanced" | "Offer" | "Rejected" | "Unknown";
   /** Hidden from other members; the member and exec still see who wrote it. */
   anonymous?: boolean;
 };
+
+export const QUESTION_ROUNDS = ["Online assessment", "First round", "Final round", "Other"] as const;
+export type QuestionRound = (typeof QUESTION_ROUNDS)[number];
+
+/**
+ * One interview question in a firm's question bank. It keeps only the firm,
+ * a broad round and the text: no author, date, year or position, and nothing
+ * that points to the report it came with. Questions wait in `pendingQuestions`
+ * and publish in batches (see `logInterview`), so their timing can't give the
+ * author away either.
+ */
+export type InterviewQuestion = { id: string; company: string; round: QuestionRound; question: string };
 
 export type Comment = {
   id: string;
@@ -338,6 +363,12 @@ export type PortalData = {
   accounts: Record<string, string>;
   applications: Application[];
   reports: InterviewReport[];
+  /** The published question bank. */
+  questions: InterviewQuestion[];
+  /** Questions waiting for their firm's next batch. Nobody can read these in the app. */
+  pendingQuestions: InterviewQuestion[];
+  /** Company slug -> the reports already counted toward a published batch. */
+  questionBatches: Record<string, string[]>;
   comments: Comment[];
   contacts: Contact[];
   outreach: Outreach[];

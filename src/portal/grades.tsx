@@ -23,6 +23,7 @@ import {
   GRADE_OUTCOMES,
   STAGES_REACHED,
   type FirmDimension,
+  type Application,
   type FirmGrade,
   type GradeOutcome,
   type Outreach,
@@ -54,7 +55,23 @@ const outcomeFromApp = (s: Stage): GradeOutcome => (s === "Offer" || s === "Reje
 
 const SCORES: Score[] = [1, 2, 3, 4, 5];
 
-function ScorePicker({ name, label, hint, value, onChange, disabledNote }: { name: string; label: string; hint: string; value?: Score; onChange: (s: Score) => void; disabledNote?: string }) {
+export function ScorePicker({
+  name,
+  label,
+  hint,
+  value,
+  onChange,
+  disabledNote,
+  scale = "1 poor, 5 excellent",
+}: {
+  name: string;
+  label: string;
+  hint: string;
+  value?: Score;
+  onChange: (s: Score) => void;
+  disabledNote?: string;
+  scale?: string;
+}) {
   const disabled = !!disabledNote;
   return (
     <fieldset disabled={disabled} className="disabled:opacity-60">
@@ -72,7 +89,7 @@ function ScorePicker({ name, label, hint, value, onChange, disabledNote }: { nam
               </label>
             ))}
           </div>
-          <span className="text-[12px] text-faint">1 poor, 5 excellent</span>
+          <span className="text-[12px] text-faint">{scale}</span>
         </div>
       )}
     </fieldset>
@@ -95,7 +112,7 @@ type GradeDraft = {
  * grade by the same member for the same firm and cycle. Mount it only while
  * its drawer is open.
  */
-export function GradeForm({ company, existing, onDone }: { company?: string; existing?: FirmGrade; onDone: () => void }) {
+export function GradeForm({ company, existing, fromApp, onDone }: { company?: string; existing?: FirmGrade; fromApp?: Application; onDone: () => void }) {
   const { data, me, update } = usePortal();
   const [draft, setDraft] = useState<GradeDraft>(() => {
     if (existing) {
@@ -104,15 +121,15 @@ export function GradeForm({ company, existing, onDone }: { company?: string; exi
     }
     // Start from the member's latest tracked application at this firm that they haven't graded yet.
     const graded = new Set(data.grades.filter((g) => g.memberId === me?.id && g.company.trim() === company).map((g) => g.cycle.trim().toLowerCase()));
-    const app = me && company
+    const app = fromApp ?? (me && company
       ? data.applications
           .filter((a) => a.memberId === me.id && a.company.trim() === company && !graded.has(a.cycle.trim().toLowerCase()))
           .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0]
-      : undefined;
+      : undefined);
     return {
       company: company ?? "",
       cycle: app?.cycle ?? "",
-      stageReached: app ? stageFromApp(app.stage) : "Applied",
+      stageReached: app ? stageFromApp(app.furthest) : "Applied",
       outcome: app ? outcomeFromApp(app.stage) : "Still in process",
       scores: {},
       review: "",

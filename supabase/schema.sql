@@ -156,17 +156,49 @@ create table task_completions (
 );
 
 -- ---------------------------------------------------------------- recruiting
+-- An application is private to its member until it reaches a first round.
+-- From then on members see it through applications_visible (below), by name
+-- or as "Anonymous member". Notes, effort and fit are never shown to others.
 create table applications (
   id uuid primary key default gen_random_uuid(),
   member_id uuid not null references members (id) on delete cascade,
   company text not null,
   position text not null,
   cycle text not null,
-  stage app_stage not null default 'Researching',
+  stage app_stage not null default 'Applied',
+  -- How far it got, so a rejection after a final still shows the final. Kept by
+  -- applications_track_furthest (below); never Rejected or Withdrew.
+  furthest app_stage not null default 'Applied' check (furthest not in ('Rejected', 'Withdrew')),
+  anonymous boolean not null default false,
+  -- Asked when you apply: how much work it took, and how well it fits your interests.
+  effort int check (effort between 1 and 5),
+  fit int check (fit between 1 and 5),
   notes text not null default '',
   updated_at timestamptz not null default now()
 );
+create index applications_company_idx on applications (lower(btrim(company)));
+create index applications_member_idx on applications (member_id);
 
+-- Moving between Researching and Offer sets how far it got; nobody moves
+-- backwards in a process, so a lower stage is a correction. Rejected and
+-- Withdrew keep the stage it ended at.
+create or replace function applications_track_furthest() returns trigger
+language plpgsql as $$
+begin
+  if new.stage not in ('Rejected', 'Withdrew') then
+    new.furthest := new.stage;
+  elsif tg_op = 'UPDATE' then
+    new.furthest := old.furthest;
+  end if;
+  new.updated_at := now();
+  return new;
+end $$;
+
+create trigger applications_track_furthest before insert or update of stage, furthest on applications
+  for each row execute function applications_track_furthest();
+
+-- The overview half of an interview log: named or anonymous. The questions
+-- half goes to the question bank (below) with nothing linking it here.
 create table interview_reports (
   id uuid primary key default gen_random_uuid(),
   company text not null,
@@ -175,13 +207,31 @@ create table interview_reports (
   position text not null,
   round text not null,
   format text,
-  questions text,
+  overview text,
   tips text,
   difficulty int check (difficulty between 1 and 5),
   outcome text check (outcome in ('Advanced', 'Offer', 'Rejected', 'Unknown')),
   anonymous boolean not null default false,
+  -- Counted toward a published question batch at this firm already.
+  batched boolean not null default false,
   created_at timestamptz not null default now()
 );
+create index interview_reports_company_idx on interview_reports (lower(btrim(company)));
+
+-- Question bank. A question keeps only the firm, a broad round and its text:
+-- no author, no timestamps, no year or position, no link to a report.
+create type question_round as enum ('Online assessment', 'First round', 'Final round', 'Other');
+create table interview_questions (
+  id uuid primary key default gen_random_uuid(),
+  company text not null,
+  round question_round not null,
+  question text not null check (length(btrim(question)) between 1 and 1000)
+);
+create index interview_questions_company_idx on interview_questions (lower(btrim(company)));
+
+-- Questions waiting for their firm's next batch. No policies, so nobody,
+-- exec included, can read them through the app.
+create table interview_questions_pending (like interview_questions including all);
 
 create table contacts (
   id uuid primary key default gen_random_uuid(),
@@ -413,6 +463,8 @@ alter table task_templates enable row level security;
 alter table task_completions enable row level security;
 alter table applications enable row level security;
 alter table interview_reports enable row level security;
+alter table interview_questions enable row level security;
+alter table interview_questions_pending enable row level security;
 alter table contacts enable row level security;
 alter table outreach enable row level security;
 alter table comments enable row level security;
@@ -447,14 +499,23 @@ create policy "own completions" on task_completions for all
   using (member_id = current_member_id() or is_exec())
   with check (member_id = current_member_id());
 
--- Applications are personal; exec can see aggregate outcomes through the companies view.
+-- Each member reads and writes only their own rows here; everyone, exec
+-- included, sees other members' through applications_visible (below), which
+-- leaves out notes, effort and fit.
 create policy "own applications" on applications for all
-  using (member_id = current_member_id() or is_exec())
+  using (member_id = current_member_id())
   with check (member_id = current_member_id());
 
--- Reports can be anonymous, so members read them through interview_reports_visible (below).
+-- Reports can be anonymous, so members read them through interview_reports_visible
+-- (below). They're written through log_interview, which also files the questions.
 create policy "own reports or exec" on interview_reports for select using (member_id = current_member_id() or is_exec());
-create policy "write own reports" on interview_reports for insert with check (member_id = current_member_id());
+create policy "edit own reports" on interview_reports for update using (member_id = current_member_id()) with check (member_id = current_member_id());
+create policy "delete own reports or exec" on interview_reports for delete using (member_id = current_member_id() or is_exec());
+
+-- The published bank: every member reads, exec removes. Nobody inserts
+-- directly; questions arrive only in batches from log_interview.
+create policy "read question bank" on interview_questions for select using (current_member_id() is not null);
+create policy "exec removes questions" on interview_questions for delete using (is_exec());
 create policy "read contacts" on contacts for select using (current_member_id() is not null);
 create policy "add contacts" on contacts for insert with check (current_member_id() is not null);
 create policy "members update contacts" on contacts for update using (current_member_id() is not null) with check (current_member_id() is not null);
@@ -493,17 +554,130 @@ create policy "add own jobs" on jobs for insert with check (member_id = current_
 create policy "edit own jobs" on jobs for update using (member_id = current_member_id()) with check (member_id = current_member_id());
 create policy "delete own jobs or exec" on jobs for delete using (member_id = current_member_id() or is_exec());
 
--- Applications are private to each member and exec, so company pages show
--- only these per-firm counts.
+-- Per-firm totals over every application, shared or not. Effort is averaged
+-- only once three members have rated it, so no one rating can be picked out.
 create view company_application_stats with (security_invoker = false) as
 select
   lower(btrim(company)) as company_key,
   min(company) as company,
   count(distinct member_id) as applicants,
-  count(*) filter (where stage = 'Offer') as offers
+  count(distinct member_id) filter (where stage = 'Offer') as offers,
+  count(distinct member_id) filter (where effort is not null) as effort_ratings,
+  case when count(distinct member_id) filter (where effort is not null) >= 3 then round(avg(effort), 1) end as avg_effort
 from applications
 where current_member_id() is not null
 group by lower(btrim(company));
+
+-- Applications other members can see: from a first round on, without notes,
+-- effort or fit, and with the member blanked out if they chose anonymous.
+-- Exec sees every application this way, but still not notes, effort or fit.
+create view applications_visible with (security_invoker = false) as
+select
+  a.id, a.company, a.position, a.cycle, a.stage, a.furthest, a.anonymous, a.updated_at,
+  case when not a.anonymous or a.member_id = current_member_id() or is_exec() then a.member_id end as member_id
+from applications a
+where current_member_id() is not null
+  and (a.furthest in ('First Round', 'Superday / Final', 'Offer') or a.member_id = current_member_id() or is_exec());
+
+-- Log an interview: the overview under the member, the questions into the
+-- firm's waiting pile with nothing pointing back. Once three different
+-- members have logged interviews at the firm since its last batch, every
+-- waiting question there moves to the bank at once, in random order, so each
+-- published question came from one of at least three people. Until then,
+-- someone with direct database access could still match waiting rows to a
+-- report by transaction; nobody can through the app.
+create or replace function log_interview(
+  p_company text,
+  p_year int,
+  p_position text,
+  p_round text,
+  p_format text,
+  p_overview text,
+  p_tips text,
+  p_difficulty int,
+  p_outcome text,
+  p_anonymous boolean,
+  p_question_round question_round,
+  p_questions text[]
+) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  me uuid := current_member_id();
+  firm text := lower(btrim(p_company));
+  report_id uuid;
+begin
+  if me is null then
+    raise exception 'Only members can log interviews';
+  end if;
+  insert into interview_reports (company, member_id, year, position, round, format, overview, tips, difficulty, outcome, anonymous)
+  values (btrim(p_company), me, p_year, p_position, p_round, p_format, p_overview, p_tips, p_difficulty, p_outcome, coalesce(p_anonymous, false))
+  returning id into report_id;
+
+  insert into interview_questions_pending (company, round, question)
+  select btrim(p_company), coalesce(p_question_round, 'Other'), btrim(q)
+  from unnest(coalesce(p_questions, '{}')) as q
+  where btrim(q) <> '';
+
+  if (select count(distinct member_id) from interview_reports where lower(btrim(company)) = firm and not batched) >= 3 then
+    insert into interview_questions (company, round, question)
+    select company, round, question from interview_questions_pending where lower(btrim(company)) = firm order by random();
+    delete from interview_questions_pending where lower(btrim(company)) = firm;
+    update interview_reports set batched = true where lower(btrim(company)) = firm and not batched;
+  end if;
+  return report_id;
+end $$;
+
+revoke execute on function log_interview from public, anon;
+grant execute on function log_interview to authenticated;
+
+-- Members whose shared, named applications look most like yours: the same
+-- firms (60%) and the same kinds of firm they rate a 4 or 5 for fit (40%;
+-- every kind they applied to if they haven't rated fit). Runs here so other
+-- members' fit ratings never leave the database. Mirrors similarMembers in
+-- src/portal/logic.ts.
+create or replace function similar_members(max_results int default 5)
+returns table (member_id uuid, score numeric, shared_firms text[], shared_types company_type[])
+language sql stable security definer set search_path = public as $$
+  with me as (select current_member_id() as id),
+  apps as (
+    select a.member_id, lower(btrim(a.company)) as firm, min(btrim(a.company)) as company, max(a.fit) as fit, max(f.type) as type,
+      bool_or(a.member_id = (select id from me)) as mine
+    from applications a
+    left join firms f on lower(btrim(f.name)) = lower(btrim(a.company))
+    where a.member_id = (select id from me)
+       or (a.furthest in ('First Round', 'Superday / Final', 'Offer') and not a.anonymous)
+    group by a.member_id, lower(btrim(a.company))
+  ),
+  interests as (
+    select member_id, array_agg(distinct type) filter (where type is not null) as types
+    from apps x
+    where fit >= 4 or not exists (select 1 from apps y where y.member_id = x.member_id and y.fit is not null)
+    group by member_id
+  ),
+  firms_of as (select member_id, array_agg(firm) as firms from apps group by member_id),
+  scored as (
+    select o.member_id,
+      (select coalesce(array_agg(distinct c.company), '{}') from apps c where c.member_id = o.member_id and c.firm = any (mf.firms)) as shared_firms,
+      (select coalesce(array_agg(t), '{}') from unnest(oi.types) t where t = any (mi.types)) as shared_types,
+      cardinality(array(select unnest(o.firms) intersect select unnest(mf.firms)))::numeric
+        / nullif(cardinality(array(select unnest(o.firms) union select unnest(mf.firms))), 0) as firm_overlap,
+      cardinality(array(select unnest(oi.types) intersect select unnest(mi.types)))::numeric
+        / nullif(cardinality(array(select unnest(oi.types) union select unnest(mi.types))), 0) as type_overlap
+    from firms_of o
+    cross join (select firms from firms_of where member_id = (select id from me)) mf
+    left join interests oi on oi.member_id = o.member_id
+    left join (select types from interests where member_id = (select id from me)) mi on true
+    where o.member_id <> (select id from me)
+  )
+  select member_id, round(0.6 * coalesce(firm_overlap, 0) + 0.4 * coalesce(type_overlap, 0), 3) as score, shared_firms, shared_types
+  from scored
+  where (select id from me) is not null and 0.6 * coalesce(firm_overlap, 0) + 0.4 * coalesce(type_overlap, 0) > 0
+  order by score desc
+  limit max_results
+$$;
+
+revoke execute on function similar_members from public, anon;
+grant execute on function similar_members to authenticated;
 
 -- Forum: every member reads; authors edit and delete their own; exec moderates.
 create policy "read posts" on forum_posts for select using (current_member_id() is not null);
@@ -563,7 +737,7 @@ where current_member_id() is not null;
 
 create view interview_reports_visible with (security_invoker = false) as
 select
-  r.id, r.company, r.year, r.position, r.round, r.format, r.questions, r.tips, r.difficulty, r.outcome, r.anonymous, r.created_at,
+  r.id, r.company, r.year, r.position, r.round, r.format, r.overview, r.tips, r.difficulty, r.outcome, r.anonymous, r.created_at,
   case when not r.anonymous or r.member_id = current_member_id() or is_exec() then r.member_id end as member_id
 from interview_reports r
 where current_member_id() is not null;
