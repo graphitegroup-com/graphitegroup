@@ -1,6 +1,6 @@
 /*
-  Portal type and surface, modeled on Bookface: Avenir at 14px on a warm beige
-  page. Colors are the portal tokens in app/globals.css (stone, edge, accent,
+  Portal type and surface, modeled on Bookface: Avenir at 14px on a plain
+  white page. Colors are the portal tokens in app/globals.css (stone, edge, accent,
   link). `body .portal` outranks the base `.portal` rule there, whatever order
   the stylesheets load in.
 */

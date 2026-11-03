@@ -64,7 +64,6 @@ const NAV: { section?: string; items: NavItem[] }[] = [
     items: [
       { href: "/portal/admin", label: "Members and roles", icon: "members", exec: true },
       { href: "/portal/admin/tasks", label: "Recurring tasks", icon: "tasks", exec: true },
-      { href: "/portal/admin/website", label: "Website", icon: "website", exec: true },
     ],
   },
 ];
@@ -80,7 +79,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
   }, [ready, me, go]);
 
   if (!ready || !me) {
-    return <div className="portal flex min-h-dvh items-center justify-center bg-stone text-muted">Loading</div>;
+    return <div className="portal flex min-h-dvh items-center justify-center bg-white text-muted">Loading</div>;
   }
 
   const exec = isExec(me);
@@ -88,7 +87,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
     href === "/portal" ? pathname === "/portal" : href === "/portal/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 
   const sidebar = (
-    <nav className="flex h-full flex-col border-r border-edge bg-stone" aria-label="Portal">
+    <nav className="flex h-full flex-col border-r border-edge bg-white" aria-label="Portal">
       <Link href="/portal" className="flex h-16 shrink-0 items-center gap-2.5 px-4" aria-label="Portal home">
         <MarkTile size={28} />
         <span className="text-[19px] leading-none font-light tracking-[-0.01em]">Graphite Group</span>
@@ -110,7 +109,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
                         onClick={() => setOpen(false)}
                         aria-current={on ? "page" : undefined}
                         className={`flex h-8 items-center gap-2.5 rounded-[3px] px-2 text-[13.5px] transition-colors ${
-                          on ? "bg-white font-medium text-ink shadow-[inset_0_0_0_1px_var(--color-edge)]" : "text-ink-2 hover:bg-[#ecebe1]"
+                          on ? "bg-stone font-medium text-ink" : "text-ink-2 hover:bg-stone"
                         }`}
                       >
                         <Icon name={i.icon} className={`h-4 w-4 ${on ? "text-accent" : "text-faint"}`} />
@@ -129,7 +128,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
           href="/portal/profile"
           onClick={() => setOpen(false)}
           aria-current={pathname === "/portal/profile" ? "page" : undefined}
-          className={`flex items-center gap-2.5 rounded-[3px] px-2 py-1.5 ${pathname === "/portal/profile" ? "bg-white shadow-[inset_0_0_0_1px_var(--color-edge)]" : "hover:bg-[#ecebe1]"}`}
+          className={`flex items-center gap-2.5 rounded-[3px] px-2 py-1.5 ${pathname === "/portal/profile" ? "bg-stone" : "hover:bg-stone"}`}
         >
           <Avatar name={fullName(me)} photo={me.photo} size={28} />
           <span className="min-w-0 leading-tight">
@@ -139,7 +138,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
         </Link>
         <button
           type="button"
-          className="mt-1 flex h-8 w-full items-center rounded-[3px] px-2 text-left text-[13px] text-muted hover:bg-[#ecebe1] hover:text-ink"
+          className="mt-1 flex h-8 w-full items-center rounded-[3px] px-2 text-left text-[13px] text-muted hover:bg-stone hover:text-ink"
           onClick={() => {
             signOut();
             go("/login", { replace: true });
@@ -152,7 +151,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="portal min-h-dvh bg-stone">
+    <div className="portal min-h-dvh bg-white">
       <aside className="fixed inset-y-0 left-0 hidden w-[232px] lg:block">{sidebar}</aside>
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
@@ -161,12 +160,12 @@ export function PortalShell({ children }: { children: ReactNode }) {
         </div>
       )}
       <div className="lg:pl-[232px]">
-        <header className="sticky top-0 z-40 flex h-12 items-center justify-between border-b border-edge bg-stone px-4 lg:hidden">
+        <header className="sticky top-0 z-40 flex h-12 items-center justify-between border-b border-edge bg-white px-4 lg:hidden">
           <Link href="/portal" className="flex items-center gap-2">
             <MarkTile size={24} />
             <span className="text-[16px] font-light">Graphite Group</span>
           </Link>
-          <button type="button" aria-label="Open menu" className="flex h-8 w-8 items-center justify-center rounded-[3px] hover:bg-[#ecebe1]" onClick={() => setOpen(true)}>
+          <button type="button" aria-label="Open menu" className="flex h-8 w-8 items-center justify-center rounded-[3px] hover:bg-stone" onClick={() => setOpen(true)}>
             <Icon name="menu" className="h-5 w-5" />
           </button>
         </header>

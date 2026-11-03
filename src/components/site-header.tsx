@@ -94,7 +94,7 @@ export function SiteHeader() {
     );
 
   return (
-    <header className="sticky top-0 z-50 bg-cream">
+    <header className="sticky top-0 z-50 bg-page">
       <div className="relative flex h-16 items-center justify-center px-4 md:px-5">
         {/* Desktop: links split around the mark, sign-in and the pill at the right edge. */}
         <nav className="hidden items-center gap-9 min-[1240px]:flex 2xl:gap-12" aria-label="Primary">
@@ -132,7 +132,7 @@ export function SiteHeader() {
       </div>
 
       {open && (
-        <div id="mobile-menu" className="fixed inset-x-0 top-16 bottom-0 z-40 overflow-y-auto bg-cream min-[1240px]:hidden">
+        <div id="mobile-menu" className="fixed inset-x-0 top-16 bottom-0 z-40 overflow-y-auto bg-page min-[1240px]:hidden">
           <nav className="container-gg flex flex-col pt-4 pb-10" aria-label="Mobile">
             {mobileLinks.map((l) => (
               <Link

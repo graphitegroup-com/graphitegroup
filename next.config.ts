@@ -11,19 +11,12 @@ const nextConfig: NextConfig = preview
       images: { loader: "custom", loaderFile: "./src/lib/preview-image-loader.ts" },
     }
   : {
-      // Keep links to the old Webflow pages working after the domain moves.
+      // Members-only for now: the public site stays on WordPress, so "/" opens the portal.
+      // The old Webflow redirects live in git history for when the public pages move here.
       async redirects() {
         return [
-          { source: "/for-students", destination: "/students", permanent: true },
-          { source: "/apply", destination: "/students#recruiting", permanent: true },
-          { source: "/for-clients", destination: "/clients", permanent: true },
-          { source: "/about-us", destination: "/about", permanent: true },
+          { source: "/", destination: "/portal", permanent: false },
           { source: "/members", destination: "/login", permanent: false },
-          { source: "/our-team", destination: "/people", permanent: true },
-          { source: "/team", destination: "/people", permanent: true },
-          { source: "/services", destination: "/clients", permanent: true },
-          { source: "/our-work-strategy", destination: "/work/strategy", permanent: true },
-          { source: "/our-work-digital", destination: "/work/digital", permanent: true },
         ];
       },
     };

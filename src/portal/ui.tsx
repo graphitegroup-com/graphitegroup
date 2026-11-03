@@ -5,7 +5,7 @@ import { useEffect, type ReactNode } from "react";
 import { letterLabel } from "./logic";
 
 /*
-  Portal UI kit, modeled on Bookface: a warm beige page, white panels with
+  Portal UI kit, modeled on Bookface: a plain white page, panels with
   hairline borders and 3px corners, small uppercase panel labels, Avenir at
   14px and one blue for actions and links. No shadows or gradients. Every
   portal page should be assembled from these.

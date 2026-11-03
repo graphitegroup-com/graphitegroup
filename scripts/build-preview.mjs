@@ -4,6 +4,7 @@
 //
 //   npm run build:preview            whole site plus portal, entry is the hub page
 //   npm run build:preview -- --portal portal only, entry goes straight to sign-in
+//                                     (the default while the public pages are switched off)
 //
 // Differences from production: no contact-form endpoint, no redirects, and the
 // portal runs on sample data saved in the browser.
@@ -16,7 +17,8 @@ const api = path.join(root, "src/app/api");
 const apiOff = path.join(root, "src/app/_api_off");
 const out = path.join(root, ".next-preview"); // with distDir set, `output: "export"` writes here
 const dist = path.join(root, "preview-dist");
-const portalOnly = process.argv.includes("--portal");
+// Portal only when asked, or whenever the public pages are switched off (src/app/(site) absent).
+const portalOnly = process.argv.includes("--portal") || !fs.existsSync(path.join(root, "src/app/(site)"));
 
 // Route types left by `next dev` still name the API route hidden below and fail the
 // build's type check. They are regenerated the next time the dev server starts.

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
-  Graphite Group public site, modeled on ycombinator.com: a warm cream page,
+  Graphite Group public site, modeled on ycombinator.com: a plain white page,
   Source Serif 4 display type with italic emphasis, light Outfit body copy,
   hairline cards, uppercase eyebrows and chips, and black pill buttons with
   italic serif labels. Graphite's Prussian square stands where YC's orange
@@ -15,17 +15,18 @@
   --color-line: #e2e1d6;
   --color-rule: #d2d1c6;
   --color-gray: #e8e7dc;
-  --color-cream: #f5f5ee;
-  --color-card: #fdfdf8;
+  --color-page: #ffffff;
+  --color-card: #ffffff;
   --color-cobalt: #3a56c8;
   --color-pewter: #abd1e8;
   --color-prussian: #073863;
   --color-sapphire: #4566df;
 
   /*
-    Portal: modeled on Bookface. Warm beige page, white panels, warm grays and
-    one blue for actions and links. Bookface's own #268bd2 is darkened just
-    enough to pass WCAG AA with white text. Owned by src/portal/portal.css.
+    Portal: modeled on Bookface. A plain white page, hairline panels, warm
+    grays for fills and borders, and one blue for actions and links.
+    Bookface's own #268bd2 is darkened just enough to pass WCAG AA with white
+    text. Owned by src/portal/portal.css.
   */
   --color-muted: #62625a;
   --color-ink-2: #2a2a25;
@@ -52,7 +53,7 @@ html {
 }
 
 body {
-  background: var(--color-cream);
+  background: #ffffff;
   color: #000;
   font-family: var(--font-sans);
   font-size: 16px;
@@ -74,6 +75,16 @@ h3 {
 @layer components {
   /* ---------------------------------------------------------------- public site */
   .site {
+    /*
+      The site's fonts load in its own layout (so portal pages don't download
+      them), which puts --font-outfit and --font-serif-4 on this element. The
+      theme variables above resolve at :root, where those don't exist, so they
+      are redeclared here, where they do.
+    */
+    --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+    --font-serif: var(--font-serif-4), ui-serif, Georgia, serif;
+    --font-display: var(--font-serif-4), ui-serif, Georgia, serif;
+    font-family: var(--font-sans);
     font-weight: 300;
     font-size: 17px;
     line-height: 1.75;
@@ -240,8 +251,8 @@ h3 {
     color: #000;
   }
   .pill-light:hover {
-    background: var(--color-cream);
-    border-color: var(--color-cream);
+    background: var(--color-gray);
+    border-color: var(--color-gray);
   }
   .pill:disabled {
     opacity: 0.5;

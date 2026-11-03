@@ -7,8 +7,7 @@ import "@/portal/portal.css";
 const nunito = Nunito_Sans({ variable: "--font-portal", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Member Portal",
-  robots: { index: false },
+  robots: { index: false, follow: false },
 };
 
 export default function PortalRootLayout({ children }: { children: React.ReactNode }) {

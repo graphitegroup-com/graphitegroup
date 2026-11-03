@@ -100,7 +100,6 @@ export default function PortalHome() {
               <ul className="divide-y divide-edge">
                 <Row href="/portal/admin" label="Promotions to approve" value={promos.length} />
                 <Row href="/portal/directory" label="Seniors graduating this year" value={seniors.length} />
-                <Row href="/portal/admin/website" label="Public website" value="Edit" />
               </ul>
             </Card>
           )}

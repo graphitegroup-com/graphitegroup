@@ -34,7 +34,7 @@ Modeled on how Bookface founders rate investors, and built to be trusted for the
 
 ### Design
 
-The portal mirrors Bookface: a warm beige page (`#f6f6ef`), white panels with hairline borders and 3px corners, small uppercase panel labels, Avenir (Nunito Sans where Avenir isn't installed) and one blue for actions and links. Bookface's own `#268bd2` is darkened to `#1f78bd` so white text on it passes WCAG AA. Tokens are in `src/app/globals.css`, type in `src/portal/portal.css`, components in `src/portal/ui.tsx`.
+The portal mirrors Bookface on a plain white page: panels with hairline borders and 3px corners, warm-gray fills (`#f6f6ef`) for hovers and table headers, small uppercase panel labels, Avenir (Nunito Sans where Avenir isn't installed) and one blue for actions and links. Bookface's own `#268bd2` is darkened to `#1f78bd` so white text on it passes WCAG AA. Tokens are in `src/app/globals.css`, type in `src/portal/portal.css`, components in `src/portal/ui.tsx`.
 
 ## Going live
 
@@ -47,8 +47,12 @@ The portal mirrors Bookface: a warm beige page (`#f6f6ef`), white panels with ha
 
 ## Stack
 
-- **Vercel + Next.js** (this repo). Portal routes live under `src/app/(portal)/` with their own layout and sidebar.
-- **Supabase**: Postgres, Auth and file storage in one place, with a free tier that fits a club.
+Everything runs on free tiers.
+
+- **Next.js** (this repo), members only. `/` opens the portal; the public site stays on WordPress, so add a "Members" link there pointing at the portal's address. Portal routes live under `src/app/(portal)/` with their own layout and sidebar.
+- **Hosting.** Vercel's free Hobby plan is limited to non-commercial personal use, and Graphite does client work, so confirm with Vercel before relying on it. There's a simpler free option: the portal runs entirely in the browser, and its security comes from Supabase's row-level security, not a server. That means it can be exported as static files (as `npm run build:preview` already does) and served from Cloudflare Pages or GitHub Pages.
+- **Supabase**: Postgres, Auth and file storage in one place. The free plan (500 MB database, 1 GB file storage, 50,000 monthly active users) is far more than a club needs.
+  - **Pausing:** free projects pause after 7 days with no activity and must be restored by hand, which would happen every winter and summer break. Add a free daily GitHub Actions job that makes one small query to keep the project awake.
   - **Sign-in:** Google, limited to 5C email domains (`pomona.edu`, `mymail.pomona.edu`, `cmc.edu`, `hmc.edu`, `g.hmc.edu`, `scrippscollege.edu`, `pitzer.edu`, `students.pitzer.edu`). Alumni keep access through a personal-email magic link once their school address is closed.
   - **Row Level Security** keeps sensitive fields (phone, student ID, payroll) visible only to the member themself and to exec.
   - **`pg_cron`** runs the yearly rollovers (below).

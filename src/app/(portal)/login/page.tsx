@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "@/components/app-link";
 import { MarkTile } from "@/components/mark";
+import { site } from "@/content/site";
 import { STATIC_PREVIEW } from "@/lib/preview";
 import { useGo } from "@/lib/use-go";
 import { usePortal } from "@/portal/store";
@@ -20,7 +20,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="portal min-h-dvh bg-stone px-4 py-14 sm:px-8 md:py-24">
+    <div className="portal min-h-dvh bg-white px-4 py-14 sm:px-8 md:py-24">
       <div className="mx-auto grid max-w-[1160px] items-start gap-10 lg:grid-cols-[1fr_480px] lg:gap-24">
         <div className="max-w-[560px]">
           <h1 className="flex items-center gap-3 text-[clamp(1.75rem,4vw,2.1rem)] leading-tight font-light">
@@ -51,15 +51,9 @@ export default function LoginPage() {
             interviewed with, interview reports, and the alumni and contacts who reply. Nothing here is visible outside Graphite.
           </p>
           <p className="mt-6 text-[13px]">
-            <Link href="/" className="text-link hover:underline">
-              Graphite Group
-            </Link>
-            <span className="mx-2 text-faint" aria-hidden>
-              |
-            </span>
-            <Link href="/students" className="text-link hover:underline">
-              Join Graphite
-            </Link>
+            <a href={site.url} className="text-link hover:underline">
+              {site.url.replace(/^https?:\/\//, "")}
+            </a>
           </p>
           {STATIC_PREVIEW && (
             <p className="mt-6 max-w-md rounded-[3px] border border-[#ecd9a8] bg-[#fbf1da] px-3 py-2 text-[12.5px] leading-relaxed text-[#5c4300]">
@@ -68,18 +62,18 @@ export default function LoginPage() {
           )}
         </div>
 
-        <aside className="rounded-[2px] bg-[#ecece4] px-3 py-3">
+        <aside className="rounded-[2px] bg-[#f1f1ec] px-3 py-3">
           <p className="text-[11.5px] tracking-[0.04em] text-muted uppercase">Hiring at your firm?</p>
           <p className="mt-3 text-[14.5px] leading-relaxed">
-            Graphite alumni and recruiters share open roles, referrals and coffee chats with members. Tell us what you&apos;re hiring for and
-            we&apos;ll post it to the forum.
+            Graphite alumni can post open roles and referrals in the forum&apos;s Opportunities channel once they sign in. Recruiters outside
+            Graphite can reach the team through the main site.
           </p>
-          <Link
-            href="/contact"
+          <a
+            href={site.url}
             className="mt-3 inline-flex h-9 items-center rounded-[2px] border border-[#cfcfc4] bg-white px-3 text-[14px] font-medium hover:bg-stone"
           >
-            Share an opportunity
-          </Link>
+            Contact Graphite
+          </a>
         </aside>
       </div>
     </div>

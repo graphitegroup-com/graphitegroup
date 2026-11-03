@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "@/components/app-link";
 import { useState, type ReactNode } from "react";
 import type { CaseStudy } from "@/content/site";
 import type { PublicMember, SiteContent } from "@/lib/site-content";
 import { resetSiteContent, saveSiteContent, useSiteContent } from "@/lib/use-site-content";
-import { STATIC_PREVIEW } from "@/lib/preview";
 import { ExecOnly } from "@/portal/exec-only";
 import { resizeImage } from "@/portal/image";
 import { fmtDate, fullName, isAlum, uid } from "@/portal/logic";
@@ -65,14 +63,9 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
     <div>
       <PageTitle
         title="Website"
-        sub="Edit what the public site shows. Changes go live when you publish; no code changes needed."
+        sub="Numbers, roster, case studies, recruiting status and testimonials for the public site pages kept in this repo."
         actions={
           <>
-            {!STATIC_PREVIEW && (
-              <Link href="/" target="_blank" className="inline-flex h-8 items-center rounded-[3px] px-2 text-[13px] font-medium text-muted hover:bg-stone hover:text-ink">
-                View site
-              </Link>
-            )}
             {dirty && <Badge tone="amber">Unpublished changes</Badge>}
             <Button variant="secondary" disabled={!dirty} onClick={() => setC(initial)}>
               Discard
@@ -83,6 +76,11 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
           </>
         }
       />
+
+      <p role="note" className="mb-5 rounded-[3px] border border-[#ecd9a8] bg-[#fbf1da] px-3 py-2 text-[13px] text-[#5c4300]">
+        The public site is on WordPress for now, so edits here don&apos;t change it. They apply to the site pages kept in this repo, if those are
+        switched back on.
+      </p>
 
       {msg && (
         <div

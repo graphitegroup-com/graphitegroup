@@ -68,7 +68,7 @@ export default function ForumPage() {
                     aria-pressed={on}
                     onClick={() => setChannel(c.id)}
                     className={`flex h-8 w-full items-center justify-between gap-2 rounded-[3px] px-2 text-left text-[13.5px] transition-colors ${
-                      on ? "bg-white font-medium text-ink shadow-[inset_0_0_0_1px_var(--color-edge)]" : "text-ink-2 hover:bg-[#ecebe1]"
+                      on ? "bg-stone font-medium text-ink" : "text-ink-2 hover:bg-stone"
                     }`}
                   >
                     <span className="truncate">{c.label}</span>
