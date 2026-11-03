@@ -3,12 +3,13 @@
 import Link from "@/components/app-link";
 import { useState } from "react";
 import { usePortal } from "@/portal/store";
-import { byline, companyNames, companySlug, contactGrade, firmGradeSummary, fmtDate, fullName, matchCompany, nextStep, outreachStage, pct, threadActivity, uid } from "@/portal/logic";
+import { byline, isExec, companyNames, companySlug, contactGrade, firmGradeSummary, fmtDate, fullName, matchCompany, nextStep, outreachStage, pct, threadActivity, uid, firmType, jobsAt } from "@/portal/logic";
 import { AddPersonForm, StageChip, StepPing, myOutreachAt } from "@/portal/outreach";
-import type { InterviewReport, PortalData, Stage } from "@/portal/types";
+import type { ClassLevel, CompanyType, InterviewReport, Job, PortalData, Stage } from "@/portal/types";
 import { PostForm, ThreadRow, useThreadVote } from "@/portal/forum";
 import { FirmGrades } from "@/portal/grades";
 import { Badge, Button, Card, Check, Drawer, Empty, Field, GradeTile, Input, PageTitle, Select, Stat, StatGroup, Td, Textarea, Th, linkCls, rowCls } from "@/portal/ui";
+import { CompanyTypeControl, WorkedHereCard } from "@/portal/jobs";
 import { useRouteParam } from "@/lib/use-route-param";
 
 type Outcome = InterviewReport["outcome"];
@@ -34,8 +35,21 @@ export type CompanyRow = {
   latestYear?: number;
   grade: ReturnType<typeof firmGradeSummary>;
   threads: number;
+  type?: CompanyType;
+  /** Years in school members were in when they worked here. */
+  levels: ClassLevel[];
+  /** Different members hired at each year in school. */
+  hiresByLevel: Partial<Record<ClassLevel, number>>;
 };
 
+
+function hireSummary(jobs: Job[]) {
+  const hiresByLevel: Partial<Record<ClassLevel, number>> = {};
+  for (const level of new Set(jobs.map((j) => j.classAtTime))) {
+    hiresByLevel[level] = new Set(jobs.filter((j) => j.classAtTime === level).map((j) => j.memberId)).size;
+  }
+  return { levels: Object.keys(hiresByLevel) as ClassLevel[], hiresByLevel };
+}
 
 export function companyRows(data: PortalData): CompanyRow[] {
   return companyNames(data)
@@ -55,6 +69,8 @@ export function companyRows(data: PortalData): CompanyRow[] {
         latestYear: years.length ? Math.max(...years) : undefined,
         grade: firmGradeSummary(grades),
         threads: data.posts.filter((p) => p.company === name).length,
+        type: firmType(data.firms, name),
+        ...hireSummary(jobsAt(data.jobs, name)),
       };
     })
     .sort((a, b) => b.reports - a.reports || a.name.localeCompare(b.name));
@@ -216,7 +232,7 @@ export default function CompanyView() {
 
   return (
     <div>
-      <PageTitle title={name} back={{ href: "/portal/companies", label: "Companies" }} />
+      <PageTitle title={name} back={{ href: "/portal/companies", label: "Companies" }} sub={<CompanyTypeControl company={name} />} />
 
       <StatGroup className="md:grid-cols-5!">
         <Stat label="Grade" value={<GradeTile letter={grade.letter} size="md" className="my-0.5" />} sub={grade.graders ? `${grade.graders} ${grade.graders === 1 ? "member" : "members"}` : "Not graded yet"} />
@@ -228,7 +244,18 @@ export default function CompanyView() {
 
       <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <FirmGrades company={name} />
+          {/* Firms nobody has graded yet are often early-career employers; lead with who worked there. */}
+          {grade.count === 0 && jobsAt(data.jobs, name).length > 0 ? (
+            <>
+              <WorkedHereCard company={name} />
+              <FirmGrades company={name} />
+            </>
+          ) : (
+            <>
+              <FirmGrades company={name} />
+              <WorkedHereCard company={name} />
+            </>
+          )}
 
           <Card
             title="Interview reports"
@@ -283,7 +310,9 @@ export default function CompanyView() {
             )}
           </Card>
 
-          <Card title="Graphite applications" flush>
+          {/* Applications are private to each member and exec; everyone else sees only the counts above. */}
+          {isExec(me) && (
+          <Card title="Graphite applications" action="Visible to exec only" flush>
             {apps.length === 0 ? (
               <Empty>No members have tracked an application here yet.</Empty>
             ) : (
@@ -315,6 +344,7 @@ export default function CompanyView() {
               </div>
             )}
           </Card>
+          )}
 
           <Card
             title="Forum threads"

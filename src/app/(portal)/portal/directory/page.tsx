@@ -2,7 +2,8 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { usePortal } from "@/portal/store";
-import { classStanding, fullName, highestRole, isAlum, isExec, semestersCompleted } from "@/portal/logic";
+import { classAtTimeLabel, classStanding, companySlug, fullName, highestRole, isAlum, isExec, semestersCompleted } from "@/portal/logic";
+import Link from "@/components/app-link";
 import { ROLES, SCHOOLS, type Member, type Term } from "@/portal/types";
 import { Avatar, Badge, Button, Drawer, Empty, Input, PageTitle, Select, TableWrap, Tabs, Td, Th, rowCls } from "@/portal/ui";
 
@@ -260,6 +261,27 @@ export default function DirectoryPage() {
               <Row label="Membership">
                 Joined {termLabel(selected.joinedTerm)}, {semestersCompleted(selected.joinedTerm)} semester
                 {semestersCompleted(selected.joinedTerm) === 1 ? "" : "s"} completed
+              </Row>
+              <Row label="Experience">
+                {(() => {
+                  const jobs = data.jobs.filter((j) => j.memberId === selected.id).sort((a, b) => b.year - a.year);
+                  if (!jobs.length) return <span className="text-muted">None added yet</span>;
+                  return (
+                    <ul className="space-y-1.5">
+                      {jobs.map((j) => (
+                        <li key={j.id}>
+                          {j.role} at{" "}
+                          <Link href={`/portal/companies/${companySlug(j.company)}`} className="text-link hover:underline" onClick={() => setOpenId(null)}>
+                            {j.company}
+                          </Link>
+                          <span className="block text-[12px] text-muted">
+                            {classAtTimeLabel(j)} {j.year}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  );
+                })()}
               </Row>
               <Row label="Public website">{selected.showOnWebsite ? "Shown" : "Hidden"}</Row>
             </dl>

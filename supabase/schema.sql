@@ -274,6 +274,40 @@ create table firm_grades (
 create unique index firm_grades_one_per_cycle on firm_grades (member_id, lower(btrim(company)), lower(btrim(cycle)));
 create index firm_grades_company_idx on firm_grades (lower(btrim(company)));
 
+-- ---------------------------------------------------------------- firms and experience
+-- The type of each firm, set or corrected by any member, for filtering firms and people.
+create type company_type as enum (
+  'Consulting', 'Investment banking', 'Asset management', 'Private equity and venture capital',
+  'Quant and trading', 'Technology', 'Startups', 'Corporate', 'Nonprofit and government', 'Other'
+);
+create table firms (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  type company_type not null,
+  updated_by uuid references members (id) on delete set null,
+  updated_at timestamptz not null default now()
+);
+create unique index firms_name_uq on firms (lower(btrim(name)));
+
+-- Where members have worked, shared with every member so younger ones can see
+-- where Graphite has been hired and in which year of school. Applications stay
+-- private; this is what a member chooses to share.
+create type job_kind as enum ('Summer internship', 'Full-time', 'Part-time');
+-- For a summer internship, the year just finished (sophomore summer = Sophomore).
+create type class_level as enum ('Freshman', 'Sophomore', 'Junior', 'Senior', 'Alum');
+create table jobs (
+  id uuid primary key default gen_random_uuid(),
+  member_id uuid not null references members (id) on delete cascade,
+  company text not null,
+  role text not null check (length(btrim(role)) > 0),
+  kind job_kind not null,
+  year int not null check (year between 1990 and 2100),  -- the summer, or the start year
+  class_at_time class_level not null,
+  created_at timestamptz not null default now()
+);
+create index jobs_company_idx on jobs (lower(btrim(company)));
+create index jobs_level_idx on jobs (class_at_time);
+
 -- ---------------------------------------------------------------- forum
 create type forum_channel as enum ('recruiting', 'interview-prep', 'referrals', 'opportunities', 'offers', 'general');
 -- Who a thread is for. Every member and alum can read every space.
@@ -383,6 +417,8 @@ alter table contacts enable row level security;
 alter table outreach enable row level security;
 alter table comments enable row level security;
 alter table firm_grades enable row level security;
+alter table firms enable row level security;
+alter table jobs enable row level security;
 alter table forum_posts enable row level security;
 alter table forum_replies enable row level security;
 alter table forum_votes enable row level security;
@@ -445,6 +481,29 @@ create policy "own grades or exec" on firm_grades for select using (member_id = 
 create policy "write own grades" on firm_grades for insert with check (member_id = current_member_id());
 create policy "edit own grades" on firm_grades for update using (member_id = current_member_id()) with check (member_id = current_member_id());
 create policy "delete own grades or exec" on firm_grades for delete using (member_id = current_member_id() or is_exec());
+
+-- Firm types: any member reads, sets or corrects them.
+create policy "read firms" on firms for select using (current_member_id() is not null);
+create policy "members set firm types" on firms for insert with check (current_member_id() is not null and updated_by = current_member_id());
+create policy "members correct firm types" on firms for update using (current_member_id() is not null) with check (updated_by = current_member_id());
+
+-- Experience: every member reads; members manage their own; exec can remove any.
+create policy "read jobs" on jobs for select using (current_member_id() is not null);
+create policy "add own jobs" on jobs for insert with check (member_id = current_member_id());
+create policy "edit own jobs" on jobs for update using (member_id = current_member_id()) with check (member_id = current_member_id());
+create policy "delete own jobs or exec" on jobs for delete using (member_id = current_member_id() or is_exec());
+
+-- Applications are private to each member and exec, so company pages show
+-- only these per-firm counts.
+create view company_application_stats with (security_invoker = false) as
+select
+  lower(btrim(company)) as company_key,
+  min(company) as company,
+  count(distinct member_id) as applicants,
+  count(*) filter (where stage = 'Offer') as offers
+from applications
+where current_member_id() is not null
+group by lower(btrim(company));
 
 -- Forum: every member reads; authors edit and delete their own; exec moderates.
 create policy "read posts" on forum_posts for select using (current_member_id() is not null);

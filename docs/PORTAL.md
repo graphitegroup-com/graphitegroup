@@ -13,10 +13,10 @@ Built and clickable, running on sample data in the browser (`src/portal/store.ts
 | Forum | `/portal/forum` | Bookface-style threads split into All threads, Current members and Alumni, across six channels (Recruiting, Interview prep, Referrals and intros, Opportunities, Offers, General), with replies, "helpful" votes, search and sorting. Everyone can read every space. A thread can be tagged with a firm and then also shows on that company's page. Exec can pin threads and remove any post |
 | Directory | `/portal/directory` | Members and alumni with filters, showing personal emails. Class standing and alumni status are computed from graduation year; alumni show the highest role they held. Phone is visible only to the member and exec |
 | My Recruiting | `/portal/recruiting` | Three tabs: Applications (your pipeline by stage), My network (your outreach spreadsheet: add a person with their LinkedIn and current role and they join the shared Network; follow-up reminders after 7 days with no reply; one-click updates for replies, chats and thank-yous that feed the contact grades) and My interviews |
-| Companies | `/portal/companies` | Every firm members recruit with, graded by members on their recruiting process (communication, speed, fairness, interviewers, would they recommend applying), plus interview reports by year and forum threads about the firm |
-| Network | `/portal/network` | Shared contacts with an outreach grade built from the outreach log (response rate, reply speed, helpfulness), searchable by firm. Any member can move a contact to a new firm or title; earlier roles are kept |
+| Companies | `/portal/companies` | Every firm members recruit with or worked at. Filter by type of company and by "has hired a" freshman, sophomore, junior or senior, to find where members that age have been hired (summers count the year just finished). Each firm shows member grades of its recruiting process, who worked there and in which year, interview reports and forum threads. Application counts only; names are exec-only |
+| Network | `/portal/network` | Shared contacts with an outreach grade built from the outreach log (response rate, reply speed, helpfulness), searchable by firm and filterable by type of company. Any member can move a contact to a new firm or title; earlier roles are kept |
 | Projects | `/portal/projects` | Past engagements, what each team learned (tagged lessons that stack up by topic and are searchable across projects) and reusable templates |
-| Profile | `/portal/profile` | Name, emails, phone, school, grad year, practice, headshot |
+| Profile | `/portal/profile` | Name, emails, phone, school, grad year, practice, headshot, and Experience: internships and jobs with the year in school at the time, shared with every member. My recruiting offers to add an application here once it reaches Offer |
 | Members & Roles (exec) | `/portal/admin` | The full roster, current and alumni. Add members by email, see who has set up their sign-in, edit roles and exec titles, and approve the one automatic proposal: Associate Consultant to Consultant after two semesters. Alumni keep the highest role they held |
 | Recurring Tasks (exec) | `/portal/admin/tasks` | Exec sets each semester's first day of classes and length once a year; tasks are set as "week 3", "2 weeks before classes start" or "the last week" and date themselves, aimed at everyone, a role, or whoever holds an exec title |
 | Website (exec) | `/portal/admin/website` | Out of the sidebar while the public site stays on Webflow. Edits the public pages kept in this repo |
@@ -98,6 +98,9 @@ applications        member_id, company_id, role_title, cycle (e.g. 2026-27 SA),
                     stage_dates jsonb, notes
 interview_reports   company_id, member_id, year, round, format, questions, tips, difficulty
 comments            subject_type (contact|project), subject_id, author_id, body
+firms               name, type (consulting, banking, ... ), updated_by
+jobs                member_id, company, role, kind (summer internship|full-time|part-time),
+                    year, class_at_time (freshman|sophomore|junior|senior|alum)
 firm_grades         company, member_id, cycle, stage_reached, outcome, communication,
                     speed, fairness?, interviewers?, recommend, review, anonymous
 forum_posts         channel, member_id, title, body, company?, pinned, edited_at

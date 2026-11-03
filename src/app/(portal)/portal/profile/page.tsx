@@ -5,6 +5,7 @@ import { usePortal } from "@/portal/store";
 import { classStanding, fullName, isAlum, isExec, semestersCompleted } from "@/portal/logic";
 import { EXEC_TITLES, ROLES, SCHOOLS, type ExecTitle, type Member, type Practice, type Role, type School } from "@/portal/types";
 import { Avatar, Badge, Button, Card, Field, Input, PageTitle, Select } from "@/portal/ui";
+import { ExperienceCard } from "@/portal/jobs";
 
 const MAX_SIDE = 480;
 const JPEG_QUALITY = 0.82;
@@ -261,8 +262,11 @@ export default function ProfilePage() {
 
   return (
     <div>
-      <PageTitle title="My profile" sub="Keep your details current so the directory and payroll stay accurate." />
+      <PageTitle title="My profile" sub="Keep your details current so the directory stays accurate, and add where you've worked so younger members can see what's possible." />
       <ProfileForm key={me.id} me={me} exec={exec} onSave={onSave} />
+      <div className="mt-6 max-w-3xl">
+        <ExperienceCard />
+      </div>
     </div>
   );
 }

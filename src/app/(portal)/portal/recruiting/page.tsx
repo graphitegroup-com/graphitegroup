@@ -3,7 +3,8 @@
 import Link from "@/components/app-link";
 import { Fragment, useEffect, useState } from "react";
 import { usePortal } from "@/portal/store";
-import { byline, companySlug, fmtDate, followUpsDue, uid } from "@/portal/logic";
+import { byline, companySlug, fmtDate, followUpsDue, jobsAt, uid } from "@/portal/logic";
+import { JobForm } from "@/portal/jobs";
 import { MyNetwork, myOutreachAt } from "@/portal/outreach";
 import { STAGES, type Application, type Stage } from "@/portal/types";
 import { Badge, Button, Card, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, Tabs, Td, Textarea, Th, rowCls } from "@/portal/ui";
@@ -42,6 +43,7 @@ export default function RecruitingPage() {
   const [addingInterview, setAddingInterview] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [confirming, setConfirming] = useState<string | null>(null);
+  const [addingJob, setAddingJob] = useState<Application | null>(null);
 
   // Links like /portal/recruiting#network open the right tab, including from the same page.
   useEffect(() => {
@@ -197,6 +199,11 @@ export default function RecruitingPage() {
                               </option>
                             ))}
                           </select>
+                          {a.stage === "Offer" && !jobsAt(data.jobs, a.company).some((j) => j.memberId === me.id) && (
+                            <button type="button" onClick={() => setAddingJob(a)} className="mt-1 block text-[12px] text-link hover:underline">
+                              Add to my experience
+                            </button>
+                          )}
                         </Td>
                         <Td className="whitespace-nowrap text-muted">{fmtDate(a.updatedAt)}</Td>
                         <Td className="pr-0 text-right whitespace-nowrap">
@@ -229,6 +236,19 @@ export default function RecruitingPage() {
 
       )}
 
+      <Drawer open={!!addingJob} onClose={() => setAddingJob(null)} title="Add to my experience">
+        {addingJob && (
+          <JobForm
+            company={addingJob.company}
+            prefill={{
+              role: addingJob.position,
+              kind: /full[- ]?time/i.test(addingJob.cycle) ? "Full-time" : "Summer internship",
+              year: Number(addingJob.cycle.match(/\d{4}/)?.[0]) || undefined,
+            }}
+            onDone={() => setAddingJob(null)}
+          />
+        )}
+      </Drawer>
       <Drawer open={adding} onClose={() => setAdding(false)} title="Add application">
         <form onSubmit={save} className="space-y-4">
           <Field label="Company">

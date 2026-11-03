@@ -16,7 +16,7 @@ const VERSION_KEY = "gg-portal-version";
  * Bump when the sample data's shape changes. Browsers holding an older shape
  * start over from the seed instead of crashing on missing fields.
  */
-const DATA_VERSION = "5";
+const DATA_VERSION = "6";
 const SESSION_KEY = "gg-session";
 
 type Ctx = {

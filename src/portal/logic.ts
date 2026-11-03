@@ -7,7 +7,12 @@ import {
   FIRM_DIMENSIONS,
   STAGES_REACHED,
   type Audience,
+  type ClassLevel,
+  type CompanyType,
   type Contact,
+  type Firm,
+  type Job,
+  type JobKind,
   type FirmDimension,
   type FirmGrade,
   type ForumPost,
@@ -407,13 +412,49 @@ export const uid = () => Math.random().toString(36).slice(2, 10);
 export const companySlug = (c: string) => c.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
 /** Every company named anywhere members record recruiting: applications, reports, contacts, grades and forum threads. */
-export function companyNames(data: Pick<PortalData, "applications" | "reports" | "contacts" | "grades" | "posts">) {
+export function companyNames(data: Pick<PortalData, "applications" | "reports" | "contacts" | "grades" | "posts" | "jobs" | "firms">) {
   const names = new Set<string>();
-  for (const x of [...data.applications, ...data.reports, ...data.contacts, ...data.grades]) names.add(x.company.trim());
+  for (const x of [...data.applications, ...data.reports, ...data.contacts, ...data.grades, ...data.jobs]) names.add(x.company.trim());
+  for (const f of data.firms) names.add(f.name.trim());
   for (const p of data.posts) if (p.company) names.add(p.company.trim());
   names.delete("");
   return [...names];
 }
+
+/* ---------------------------------------------------------------- firms and jobs */
+
+/** A firm's type, if a member has set one. */
+export function firmType(firms: Firm[], company: string): CompanyType | undefined {
+  const slug = companySlug(company.trim());
+  return firms.find((f) => companySlug(f.name) === slug)?.type;
+}
+
+/**
+ * Year in school when someone held a job, from their graduation year. A
+ * summer internship counts the year just finished (the summer of 2026 for a
+ * 2028 graduate is their sophomore summer). Members can correct it.
+ */
+export function defaultClassAtTime(gradYear: number, kind: JobKind, year: number): ClassLevel {
+  if (kind === "Full-time") return year <= gradYear ? "Senior" : "Alum";
+  // Years from this one to graduation: 3 = freshman, 2 = sophomore, 1 = junior, 0 = senior.
+  const left = gradYear - year;
+  const levels: ClassLevel[] = ["Senior", "Junior", "Sophomore", "Freshman"];
+  // A summer in the graduation year comes after commencement; part-time work that spring is senior year.
+  if (left < 0 || (kind === "Summer internship" && left === 0)) return "Alum";
+  return levels[Math.min(left, 3)];
+}
+
+/** "Sophomore summer", "Full-time after graduating", "Part-time as a junior". */
+export function classAtTimeLabel(job: Pick<Job, "kind" | "classAtTime">) {
+  const c = job.classAtTime;
+  if (job.kind === "Summer internship") return c === "Alum" ? "Summer after graduating" : `${c} summer`;
+  if (job.kind === "Full-time") return c === "Senior" ? "Full-time out of college" : c === "Alum" ? "Full-time after graduating" : `Full-time as a ${c.toLowerCase()}`;
+  return c === "Alum" ? "Part-time after graduating" : `Part-time as a ${c.toLowerCase()}`;
+}
+
+/** Jobs members held at a firm, newest first. */
+export const jobsAt = (jobs: Job[], company: string) =>
+  jobs.filter((j) => companySlug(j.company.trim()) === companySlug(company.trim())).sort((a, b) => b.year - a.year || a.classAtTime.localeCompare(b.classAtTime));
 
 /** Finds the canonical spelling of a firm members typed ("bain & company" -> "Bain & Company"). */
 export function matchCompany(data: Parameters<typeof companyNames>[0], typed: string) {

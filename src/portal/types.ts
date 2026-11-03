@@ -262,6 +262,48 @@ export type Project = {
   lead: string;
 };
 
+/** The kinds of employer members recruit with, for filtering firms and people. */
+export const COMPANY_TYPES = [
+  "Consulting",
+  "Investment banking",
+  "Asset management",
+  "Private equity and venture capital",
+  "Quant and trading",
+  "Technology",
+  "Startups",
+  "Corporate",
+  "Nonprofit and government",
+  "Other",
+] as const;
+export type CompanyType = (typeof COMPANY_TYPES)[number];
+
+/** What members know about a firm itself. Any member can set or correct its type. */
+export type Firm = { name: string; type: CompanyType; updatedBy?: string; updatedAt?: string };
+
+export const JOB_KINDS = ["Summer internship", "Full-time", "Part-time"] as const;
+export type JobKind = (typeof JOB_KINDS)[number];
+
+/** Year in school when someone held a job; for a summer internship, the year just finished. */
+export const CLASS_LEVELS = ["Freshman", "Sophomore", "Junior", "Senior", "Alum"] as const;
+export type ClassLevel = (typeof CLASS_LEVELS)[number];
+
+/**
+ * A job a member held, shared with every member so younger ones can see where
+ * Graphite has been hired and at what year. Applications stay private; this
+ * is what a member chooses to share once they've worked somewhere.
+ */
+export type Job = {
+  id: string;
+  memberId: string;
+  company: string;
+  role: string;
+  kind: JobKind;
+  /** The summer's year for an internship; the start year otherwise. */
+  year: number;
+  classAtTime: ClassLevel;
+  createdAt: string;
+};
+
 /** Something a project team learned, kept so later teams can search it by topic. */
 export type Lesson = {
   id: string;
@@ -300,6 +342,8 @@ export type PortalData = {
   contacts: Contact[];
   outreach: Outreach[];
   grades: FirmGrade[];
+  firms: Firm[];
+  jobs: Job[];
   posts: ForumPost[];
   replies: ForumReply[];
   projects: Project[];

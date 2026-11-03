@@ -3,10 +3,10 @@
 import { useState } from "react";
 import Link from "@/components/app-link";
 import { usePortal } from "@/portal/store";
-import { MIN_GRADERS, companyNames, companySlug, contactGrade, findContact, isLinkedInUrl, matchCompany, pct, responseStats, uid, withProtocol } from "@/portal/logic";
+import { MIN_GRADERS, companyNames, companySlug, contactGrade, findContact, isLinkedInUrl, matchCompany, pct, responseStats, uid, withProtocol, firmType } from "@/portal/logic";
 import { FirmOptions } from "@/portal/outreach";
-import type { Contact } from "@/portal/types";
-import { Button, Drawer, Empty, Field, GradeTile, Input, PageTitle, Stat, StatGroup, TableWrap, Td, Textarea, Th, linkCls, rowCls } from "@/portal/ui";
+import { COMPANY_TYPES, type CompanyType, type Contact } from "@/portal/types";
+import { Button, Drawer, Empty, Field, GradeTile, Input, PageTitle, Stat, StatGroup, TableWrap, Td, Textarea, Th, linkCls, rowCls, Select } from "@/portal/ui";
 
 type ContactDraft = Omit<Contact, "id" | "addedBy" | "alumClass"> & { alumClass: string };
 const emptyContact: ContactDraft = { name: "", company: "", title: "", email: "", linkedin: "", isAlum: false, alumClass: "", preferences: "" };
@@ -28,6 +28,7 @@ export default function NetworkPage() {
   const [query, setQuery] = useState("");
   const [alumOnly, setAlumOnly] = useState(false);
   const [company, setCompany] = useState("");
+  const [type, setType] = useState<"" | CompanyType>("");
   const [adding, setAdding] = useState(false);
   const [contactDraft, setContactDraft] = useState<ContactDraft>(emptyContact);
   const [formError, setFormError] = useState("");
@@ -45,6 +46,7 @@ export default function NetworkPage() {
       (c) =>
         (!q || c.name.toLowerCase().includes(q) || c.company.toLowerCase().includes(q) || c.title.toLowerCase().includes(q)) &&
         (!alumOnly || c.isAlum) &&
+        (!type || firmType(data.firms, c.company) === type) &&
         atFirm(c),
     )
     .map((c) => ({ contact: c, stats: contactGrade(data.outreach.filter((o) => o.contactId === c.id)) }))
@@ -108,6 +110,14 @@ export default function NetworkPage() {
         <div className="w-full md:max-w-[15rem]">
           <Input type="search" list="network-firms" placeholder="Search companies" value={company} onChange={(e) => setCompany(e.target.value)} aria-label="Search companies" />
           <FirmOptions id="network-firms" names={companies} />
+        </div>
+        <div className="w-full md:w-56">
+          <Select
+            aria-label="Type of company they work at"
+            value={type}
+            onChange={(e) => setType(e.target.value as "" | CompanyType)}
+            options={[{ value: "", label: "All types of company" }, ...COMPANY_TYPES]}
+          />
         </div>
         <Check label="Graphite alumni only" checked={alumOnly} onChange={setAlumOnly} />
         <p className="text-[13px] text-muted tabular-nums md:ml-auto">
