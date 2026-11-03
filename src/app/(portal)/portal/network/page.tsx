@@ -3,11 +3,10 @@
 import { useState } from "react";
 import Link from "@/components/app-link";
 import { usePortal } from "@/portal/store";
-import { MIN_GRADERS, companySlug, contactGrade, pct, responseStats, uid } from "@/portal/logic";
+import { MIN_GRADERS, companyNames, companySlug, contactGrade, findContact, isLinkedInUrl, matchCompany, pct, responseStats, uid, withProtocol } from "@/portal/logic";
+import { FirmOptions } from "@/portal/outreach";
 import type { Contact } from "@/portal/types";
-import { Button, Drawer, Empty, Field, GradeTile, Input, PageTitle, Select, Stat, StatGroup, TableWrap, Td, Textarea, Th, linkCls, rowCls } from "@/portal/ui";
-
-const ALL = "All companies";
+import { Button, Drawer, Empty, Field, GradeTile, Input, PageTitle, Stat, StatGroup, TableWrap, Td, Textarea, Th, linkCls, rowCls } from "@/portal/ui";
 
 type ContactDraft = Omit<Contact, "id" | "addedBy" | "alumClass"> & { alumClass: string };
 const emptyContact: ContactDraft = { name: "", company: "", title: "", email: "", linkedin: "", isAlum: false, alumClass: "", preferences: "" };
@@ -28,36 +27,55 @@ export default function NetworkPage() {
   const { data, me, update } = usePortal();
   const [query, setQuery] = useState("");
   const [alumOnly, setAlumOnly] = useState(false);
-  const [company, setCompany] = useState(ALL);
+  const [company, setCompany] = useState("");
   const [adding, setAdding] = useState(false);
   const [contactDraft, setContactDraft] = useState<ContactDraft>(emptyContact);
+  const [formError, setFormError] = useState("");
 
   if (!me) return null;
 
   const org = responseStats(data.outreach);
   const companies = [...new Set(data.contacts.map((c) => c.company).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const q = query.trim().toLowerCase();
+  const firm = company.trim().toLowerCase();
+  // Typing part of a firm's name narrows the list; earlier employers count too.
+  const atFirm = (c: Contact) => !firm || c.company.toLowerCase().includes(firm) || !!c.history?.some((h) => h.company.toLowerCase().includes(firm));
   const rows = data.contacts
     .filter(
       (c) =>
         (!q || c.name.toLowerCase().includes(q) || c.company.toLowerCase().includes(q) || c.title.toLowerCase().includes(q)) &&
         (!alumOnly || c.isAlum) &&
-        (company === ALL || c.company === company),
+        atFirm(c),
     )
     .map((c) => ({ contact: c, stats: contactGrade(data.outreach.filter((o) => o.contactId === c.id)) }))
     .sort((a, b) => a.contact.name.localeCompare(b.contact.name));
 
+  const draftFirm = contactDraft.company.trim() ? matchCompany(data, contactDraft.company) : "";
+  const duplicate =
+    contactDraft.name.trim() && (contactDraft.linkedin.trim() || draftFirm)
+      ? findContact(data.contacts, { name: contactDraft.name, linkedin: contactDraft.linkedin, company: draftFirm })
+      : undefined;
+
+  const closeAdd = () => {
+    setAdding(false);
+    setFormError("");
+  };
+
   const saveContact = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!contactDraft.name.trim()) return;
+    if (!contactDraft.name.trim() || duplicate) return;
+    if (!isLinkedInUrl(contactDraft.linkedin)) {
+      setFormError("Paste their LinkedIn profile link, for example linkedin.com/in/their-name.");
+      return;
+    }
     const year = Number(contactDraft.alumClass);
     const c: Contact = {
       id: uid(),
       name: contactDraft.name.trim(),
-      company: contactDraft.company.trim(),
+      company: draftFirm,
       title: contactDraft.title.trim(),
       email: contactDraft.email.trim(),
-      linkedin: contactDraft.linkedin.trim(),
+      linkedin: withProtocol(contactDraft.linkedin),
       isAlum: contactDraft.isAlum,
       alumClass: contactDraft.isAlum && year > 0 ? year : undefined,
       preferences: contactDraft.preferences.trim(),
@@ -65,7 +83,7 @@ export default function NetworkPage() {
     };
     update((d) => ({ ...d, contacts: [...d.contacts, c] }));
     setContactDraft(emptyContact);
-    setAdding(false);
+    closeAdd();
   };
 
   return (
@@ -87,8 +105,9 @@ export default function NetworkPage() {
         <div className="w-full md:max-w-xs">
           <Input type="search" placeholder="Search name, company or title" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search contacts" />
         </div>
-        <div className="w-full md:max-w-[14rem]">
-          <Select options={[ALL, ...companies]} value={company} onChange={(e) => setCompany(e.target.value)} aria-label="Filter by company" />
+        <div className="w-full md:max-w-[15rem]">
+          <Input type="search" list="network-firms" placeholder="Search companies" value={company} onChange={(e) => setCompany(e.target.value)} aria-label="Search companies" />
+          <FirmOptions id="network-firms" names={companies} />
         </div>
         <Check label="Graphite alumni only" checked={alumOnly} onChange={setAlumOnly} />
         <p className="text-[13px] text-muted tabular-nums md:ml-auto">
@@ -149,25 +168,50 @@ export default function NetworkPage() {
         )}
       </TableWrap>
 
-      <Drawer open={adding} onClose={() => setAdding(false)} title="Add contact">
+      <Drawer open={adding} onClose={closeAdd} title="Add contact">
         <form onSubmit={saveContact} className="space-y-4">
           <Field label="Name">
             <Input required value={contactDraft.name} onChange={(e) => setContactDraft({ ...contactDraft, name: e.target.value })} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Company">
-              <Input value={contactDraft.company} onChange={(e) => setContactDraft({ ...contactDraft, company: e.target.value })} />
+              <Input required list="add-contact-firms" value={contactDraft.company} onChange={(e) => setContactDraft({ ...contactDraft, company: e.target.value })} />
+              <FirmOptions id="add-contact-firms" names={companyNames(data)} />
             </Field>
             <Field label="Title">
-              <Input value={contactDraft.title} onChange={(e) => setContactDraft({ ...contactDraft, title: e.target.value })} />
+              <Input required value={contactDraft.title} onChange={(e) => setContactDraft({ ...contactDraft, title: e.target.value })} />
             </Field>
           </div>
           <Field label="Email">
             <Input type="email" value={contactDraft.email} onChange={(e) => setContactDraft({ ...contactDraft, email: e.target.value })} />
           </Field>
-          <Field label="LinkedIn">
-            <Input type="url" placeholder="https://www.linkedin.com/in/" value={contactDraft.linkedin} onChange={(e) => setContactDraft({ ...contactDraft, linkedin: e.target.value })} />
+          <Field label="LinkedIn profile">
+            <Input
+              required
+              inputMode="url"
+              placeholder="linkedin.com/in/their-name"
+              value={contactDraft.linkedin}
+              onChange={(e) => {
+                setContactDraft({ ...contactDraft, linkedin: e.target.value });
+                setFormError("");
+              }}
+              aria-invalid={!!formError}
+            />
           </Field>
+          {formError && (
+            <p role="alert" className="-mt-2 text-[12.5px] text-[#a8261b]">
+              {formError}
+            </p>
+          )}
+          {duplicate && (
+            <p role="status" className="rounded-[3px] border border-edge bg-[#fbfbf7] px-3 py-2 text-[12.5px] text-ink-2">
+              {duplicate.name} is already in the Network.{" "}
+              <Link href={`/portal/network/${duplicate.id}`} className={linkCls} onClick={closeAdd}>
+                Open their page
+              </Link>{" "}
+              to log outreach or update their role.
+            </p>
+          )}
           <Check label="Graphite alum" checked={contactDraft.isAlum} onChange={(v) => setContactDraft({ ...contactDraft, isAlum: v })} />
           {contactDraft.isAlum && (
             <Field label="Class year">
@@ -178,8 +222,10 @@ export default function NetworkPage() {
             <Textarea value={contactDraft.preferences} onChange={(e) => setContactDraft({ ...contactDraft, preferences: e.target.value })} />
           </Field>
           <div className="flex gap-2 pt-2">
-            <Button type="submit">Save contact</Button>
-            <Button variant="secondary" onClick={() => setAdding(false)}>
+            <Button type="submit" disabled={!!duplicate}>
+              Save contact
+            </Button>
+            <Button variant="secondary" onClick={closeAdd}>
               Cancel
             </Button>
           </div>

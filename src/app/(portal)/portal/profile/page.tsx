@@ -142,9 +142,6 @@ function ProfileForm({ me, exec, onSave }: { me: Member; exec: boolean; onSave: 
             <Field label="Phone">
               <Input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
             </Field>
-            <Field label="Student ID">
-              <Input value={form.studentId} onChange={(e) => set("studentId", e.target.value)} />
-            </Field>
             <div className="sm:col-span-2">
               <Field label="LinkedIn URL">
                 <Input
@@ -158,7 +155,7 @@ function ProfileForm({ me, exec, onSave }: { me: Member; exec: boolean; onSave: 
           </div>
 
           <p className="text-[12.5px] text-muted">
-            Phone and student ID are visible only to you and the executive board. They are used for payroll.
+            Your phone number is visible only to you and the executive board.
           </p>
         </div>
       </Card>

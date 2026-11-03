@@ -3,12 +3,19 @@
 import Link from "@/components/app-link";
 import { useState } from "react";
 import { useGo } from "@/lib/use-go";
-import { companyNames, companySlug, fullName, matchCompany, threadActivity, timeAgo, uid } from "./logic";
+import { companyNames, companySlug, fullName, isAlum, matchCompany, threadActivity, timeAgo, uid } from "./logic";
 import { usePortal } from "./store";
-import { FORUM_CHANNELS, type ForumChannel, type ForumPost, type Member, type PortalData } from "./types";
+import { FORUM_CHANNELS, FORUM_SPACES, type ForumChannel, type ForumPost, type ForumSpace, type Member, type PortalData } from "./types";
 import { Avatar, Badge, Button, Field, Input, Select, Textarea, VoteButton, linkCls } from "./ui";
 
 export const channelLabel = (id: ForumChannel) => FORUM_CHANNELS.find((c) => c.id === id)?.label ?? "General";
+export const spaceLabel = (id: ForumSpace) => FORUM_SPACES.find((s) => s.id === id)?.label ?? "Everyone";
+
+/** Small marker for threads that are for one group; "Everyone" threads carry none. */
+export function SpaceBadge({ space }: { space: ForumSpace }) {
+  if (space === "everyone") return null;
+  return <Badge tone={space === "alumni" ? "amber" : "blue"}>{space === "alumni" ? "Alumni" : "Current members"}</Badge>;
+}
 
 /** Adds or removes a member from a vote list. */
 export const toggleVote = (votes: string[], memberId: string) => (votes.includes(memberId) ? votes.filter((v) => v !== memberId) : [...votes, memberId]);
@@ -30,7 +37,7 @@ export function CompanyOptions({ id, data }: { id: string; data: Parameters<type
   );
 }
 
-type PostDraft = { channel: ForumChannel; title: string; body: string; company: string };
+type PostDraft = { space: ForumSpace; channel: ForumChannel; title: string; body: string; company: string };
 
 /**
  * New thread, or an edit of one the member wrote. Mount it only while its
@@ -40,16 +47,20 @@ export function PostForm({
   initial,
   company,
   channel,
+  space,
   onDone,
 }: {
   initial?: ForumPost;
   company?: string;
   channel?: ForumChannel;
+  space?: ForumSpace;
   onDone: () => void;
 }) {
   const { data, me, update } = usePortal();
   const go = useGo();
   const [draft, setDraft] = useState<PostDraft>(() => ({
+    // Alumni start in the alumni space; everyone else posts to everyone unless they're in a space tab.
+    space: initial?.space ?? space ?? (me && isAlum(me) ? "alumni" : "everyone"),
     channel: initial?.channel ?? channel ?? "recruiting",
     title: initial?.title ?? "",
     body: initial?.body ?? "",
@@ -66,12 +77,12 @@ export function PostForm({
     if (initial) {
       update((d) => ({
         ...d,
-        posts: d.posts.map((p) => (p.id === initial.id ? { ...p, channel: draft.channel, title, body, company: firm, editedAt: new Date().toISOString() } : p)),
+        posts: d.posts.map((p) => (p.id === initial.id ? { ...p, space: draft.space, channel: draft.channel, title, body, company: firm, editedAt: new Date().toISOString() } : p)),
       }));
       onDone();
       return;
     }
-    const post: ForumPost = { id: uid(), channel: draft.channel, memberId: me.id, title, body, company: firm, createdAt: new Date().toISOString(), upvotes: [] };
+    const post: ForumPost = { id: uid(), space: draft.space, channel: draft.channel, memberId: me.id, title, body, company: firm, createdAt: new Date().toISOString(), upvotes: [] };
     update((d) => ({ ...d, posts: [post, ...d.posts] }));
     onDone();
     go(`/portal/forum/${post.id}`);
@@ -79,6 +90,9 @@ export function PostForm({
 
   return (
     <form onSubmit={save} className="space-y-4">
+      <Field label="Who it's for" hint={`${FORUM_SPACES.find((s) => s.id === draft.space)?.description}. Everyone in Graphite can still read it.`}>
+        <Select options={FORUM_SPACES.map((s) => ({ value: s.id, label: s.label }))} value={draft.space} onChange={(e) => set({ space: e.target.value as ForumSpace })} />
+      </Field>
       <Field label="Channel" hint={FORUM_CHANNELS.find((c) => c.id === draft.channel)?.description}>
         <Select options={FORUM_CHANNELS.map((c) => ({ value: c.id, label: c.label }))} value={draft.channel} onChange={(e) => set({ channel: e.target.value as ForumChannel })} />
       </Field>
@@ -121,6 +135,7 @@ export function ThreadRow({ post, data, me, now, onVote, showCompany = true }: {
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
           {post.pinned && <Badge tone="amber">Pinned</Badge>}
+          <SpaceBadge space={post.space} />
           <Link href={`/portal/forum/${post.id}`} className="text-[14.5px] leading-snug font-medium text-ink after:absolute after:inset-0 hover:underline">
             {post.title}
           </Link>
@@ -129,6 +144,7 @@ export function ThreadRow({ post, data, me, now, onVote, showCompany = true }: {
         <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12.5px] text-muted">
           <Avatar name={name} photo={author?.photo} size={16} />
           <span className="text-ink-2">{name}</span>
+          {author && isAlum(author) && <span className="text-faint">Alum &apos;{String(author.gradYear).slice(2)}</span>}
           {sep}
           <span>{channelLabel(post.channel)}</span>
           {showCompany && post.company && (

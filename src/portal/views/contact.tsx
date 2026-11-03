@@ -4,15 +4,16 @@ import { useState } from "react";
 import Link from "@/components/app-link";
 import { useRouteParam } from "@/lib/use-route-param";
 import { usePortal } from "@/portal/store";
-import { byline, companySlug, fmtDate, fullName, pct, responseStats, uid } from "@/portal/logic";
+import { byline, companySlug, fmtDate, fullName, localToday, outreachStage, pct, responseStats, uid } from "@/portal/logic";
 import { ContactGradeCard } from "@/portal/grades";
+import { MoveContactForm, StageChip } from "@/portal/outreach";
 import type { Comment, Outreach } from "@/portal/types";
-import { Avatar, Badge, Button, Card, Check, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, Td, Textarea, Th, linkCls, rowCls } from "@/portal/ui";
+import { Avatar, Button, Card, Check, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, Td, Textarea, Th, linkCls, rowCls } from "@/portal/ui";
 
 const CHANNELS: Outreach["channel"][] = ["Email", "LinkedIn", "Referral", "In person"];
 const RATINGS = ["Not rated", "1", "2", "3", "4", "5"] as const;
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => localToday();
 const days = (d: number) => `${d} ${d === 1 ? "day" : "days"}`;
 
 type OutreachDraft = {
@@ -42,6 +43,7 @@ export default function ContactView() {
   const id = useRouteParam("id");
   const { data, me, update } = usePortal();
   const [logging, setLogging] = useState(false);
+  const [moving, setMoving] = useState(false);
   const [draft, setDraft] = useState<OutreachDraft>(newOutreachDraft);
   const [comment, setComment] = useState("");
 
@@ -105,12 +107,18 @@ export default function ContactView() {
   };
 
   const role = [c.title, c.company].filter(Boolean);
+  const updatedBy = c.updatedBy ? member(c.updatedBy) : undefined;
 
   return (
     <div>
       <PageTitle
         back={{ href: "/portal/network", label: "Network" }}
         title={c.name}
+        actions={
+          <Button variant="secondary" onClick={() => setMoving(true)}>
+            Update role or company
+          </Button>
+        }
         sub={
           <>
             {role.length > 0 && (
@@ -149,18 +157,23 @@ export default function ContactView() {
             }
           >
             {log.length === 0 ? (
-              <Empty>No outreach logged yet. Be the first to record how it went.</Empty>
+              <Empty>
+                No outreach logged yet. Be the first to record how it went, or track it with reminders in{" "}
+                <Link href="/portal/recruiting#network" className={linkCls}>
+                  My network
+                </Link>
+                .
+              </Empty>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[960px]">
+              <div className="relative overflow-x-auto">
+                <table className="w-full min-w-[900px]">
                   <thead>
                     <tr>
                       <Th>Member</Th>
                       <Th>Date</Th>
                       <Th>Channel</Th>
-                      <Th>Response</Th>
+                      <Th>Stage</Th>
                       <Th>Reply time</Th>
-                      <Th>Chatted</Th>
                       <Th>Helpfulness</Th>
                       <Th>Referred</Th>
                       <Th>Notes</Th>
@@ -177,9 +190,10 @@ export default function ContactView() {
                         </Td>
                         <Td className="whitespace-nowrap text-muted tabular-nums">{fmtDate(o.date)}</Td>
                         <Td className="whitespace-nowrap">{o.channel}</Td>
-                        <Td>{o.responded ? <Badge tone="green">Responded</Badge> : <Badge>No reply</Badge>}</Td>
+                        <Td>
+                          <StageChip stage={outreachStage(o)} />
+                        </Td>
                         <Td className="whitespace-nowrap tabular-nums">{o.responseDays != null ? days(o.responseDays) : <span className="text-faint">None</span>}</Td>
-                        <Td>{o.chatted ? "Yes" : "No"}</Td>
                         <Td className="tabular-nums">{o.helpfulness != null ? `${o.helpfulness} of 5` : <span className="text-faint">None</span>}</Td>
                         <Td>{o.referred ? "Yes" : "No"}</Td>
                         <Td className="max-w-[28ch] text-[13px] text-muted">{o.notes}</Td>
@@ -235,6 +249,27 @@ export default function ContactView() {
             </p>
           </Card>
 
+          {(c.history?.length ?? 0) > 0 && (
+            <Card title="Previously" flush>
+              <ul className="divide-y divide-edge text-[13px]">
+                {c.history!.map((h, i) => (
+                  <li key={`${h.company}-${h.until}-${i}`} className="px-4 py-2.5">
+                    <span className="block text-ink-2">
+                      {h.title}
+                      {h.title && h.company && " at "}
+                      {h.company && (
+                        <Link href={`/portal/companies/${companySlug(h.company)}`} className={linkCls}>
+                          {h.company}
+                        </Link>
+                      )}
+                    </span>
+                    <span className="block text-[12px] text-muted">Until {fmtDate(h.until)}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
           <Card title="Details" flush>
             <dl className="divide-y divide-edge text-[13px]">
               {c.email && (
@@ -261,11 +296,23 @@ export default function ContactView() {
                 <dt className="shrink-0 text-muted">Added by</dt>
                 <dd className="min-w-0 text-right">{memberName(c.addedBy)}</dd>
               </div>
+              {c.updatedAt && (
+                <div className="flex items-baseline justify-between gap-3 px-4 py-2.5">
+                  <dt className="shrink-0 text-muted">Role updated</dt>
+                  <dd className="min-w-0 text-right">
+                    {fmtDate(c.updatedAt)}
+                    {updatedBy ? `, by ${fullName(updatedBy)}` : ""}
+                  </dd>
+                </div>
+              )}
             </dl>
           </Card>
         </div>
       </div>
 
+      <Drawer open={moving} onClose={() => setMoving(false)} title={`Update ${c.name}'s role`}>
+        {moving && <MoveContactForm contact={c} onDone={() => setMoving(false)} />}
+      </Drawer>
       <Drawer open={logging} onClose={() => setLogging(false)} title="Log outreach">
         <form onSubmit={saveOutreach} className="space-y-4">
           <p className="text-[13px] text-muted">

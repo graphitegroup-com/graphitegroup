@@ -2,9 +2,9 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { usePortal } from "@/portal/store";
-import { classStanding, fullName, isAlum, isExec, semestersCompleted } from "@/portal/logic";
+import { classStanding, fullName, highestRole, isAlum, isExec, semestersCompleted } from "@/portal/logic";
 import { ROLES, SCHOOLS, type Member, type Term } from "@/portal/types";
-import { Avatar, Badge, Drawer, Empty, Input, PageTitle, Select, TableWrap, Tabs, Td, Th, rowCls } from "@/portal/ui";
+import { Avatar, Badge, Button, Drawer, Empty, Input, PageTitle, Select, TableWrap, Tabs, Td, Th, rowCls } from "@/portal/ui";
 
 type View = "current" | "alumni" | "everyone";
 const VIEWS: { key: View; label: string }[] = [
@@ -82,6 +82,18 @@ export default function DirectoryPage() {
   if (!me) return null;
 
   const canSeePrivate = (m: Member) => isExec(me) || m.id === me.id;
+  // Alumni are listed with the most senior role they held.
+  const roleOf = (m: Member) => (isAlum(m) ? highestRole(m, data.roleChanges) : m.role);
+  // Personal email is the one that lasts; school email is the fallback until someone adds theirs.
+  const emailOf = (m: Member) => m.personalEmail || m.schoolEmail;
+  const filtered = school !== ALL || role !== ALL || practice !== ALL || year !== ALL || q.trim() !== "";
+  const clearFilters = () => {
+    setSchool(ALL);
+    setRole(ALL);
+    setPractice(ALL);
+    setYear(ALL);
+    setQ("");
+  };
 
   return (
     <div>
@@ -93,6 +105,16 @@ export default function DirectoryPage() {
         <span className="mr-2">
           <span className="font-medium tabular-nums">{activeCount}</span> <span className="text-muted">active members</span>
         </span>
+        <button
+          type="button"
+          onClick={() => setSchool(ALL)}
+          aria-pressed={school === ALL}
+          className={`h-7 rounded-[3px] px-2 transition-colors ${
+            school === ALL ? "bg-stone font-medium text-ink shadow-[inset_0_0_0_1px_var(--color-edge)]" : "text-ink-2 hover:bg-stone hover:text-ink"
+          }`}
+        >
+          All schools <span className="text-faint tabular-nums">{inView.length}</span>
+        </button>
         {bySchool.map((s) => (
           <button
             key={s.school}
@@ -130,11 +152,24 @@ export default function DirectoryPage() {
         <div className="w-28">
           <Select aria-label="Class year" value={year} onChange={(e) => setYear(e.target.value)} options={[{ value: ALL, label: "All years" }, ...years]} />
         </div>
+        {filtered && (
+          <Button variant="ghost" onClick={clearFilters}>
+            Clear filters
+          </Button>
+        )}
+        <span className="text-[12.5px] text-muted tabular-nums sm:ml-auto">
+          {rows.length} of {inView.length}
+        </span>
       </div>
 
       <TableWrap>
         {rows.length === 0 ? (
-          <Empty>No members match these filters.</Empty>
+          <Empty>
+            No members match these filters.{" "}
+            <button type="button" onClick={clearFilters} className="text-link hover:underline">
+              Show everyone
+            </button>
+          </Empty>
         ) : (
           <table className="w-full min-w-[860px]">
             <thead>
@@ -144,7 +179,7 @@ export default function DirectoryPage() {
                 <Th>School</Th>
                 <Th>Class</Th>
                 <Th>Practice</Th>
-                <Th>School email</Th>
+                <Th>Email</Th>
               </tr>
             </thead>
             <tbody>
@@ -157,8 +192,8 @@ export default function DirectoryPage() {
                     </span>
                   </Td>
                   <Td>
-                    <span className="block whitespace-nowrap">{m.execTitle ?? m.role}</span>
-                    {m.execTitle && <span className="block text-[12.5px] text-muted">{m.role}</span>}
+                    <span className="block whitespace-nowrap">{m.execTitle ?? roleOf(m)}</span>
+                    {m.execTitle && <span className="block text-[12.5px] text-muted">{roleOf(m)}</span>}
                   </Td>
                   <Td className="whitespace-nowrap">{m.school}</Td>
                   <Td>
@@ -167,8 +202,8 @@ export default function DirectoryPage() {
                   </Td>
                   <Td className="text-ink-2">{m.practice}</Td>
                   <Td>
-                    <a href={`mailto:${m.schoolEmail}`} onClick={(e) => e.stopPropagation()} className="text-ink-2 hover:underline">
-                      {m.schoolEmail}
+                    <a href={`mailto:${emailOf(m)}`} onClick={(e) => e.stopPropagation()} className="text-ink-2 hover:underline">
+                      {emailOf(m)}
                     </a>
                   </Td>
                 </tr>
@@ -187,7 +222,7 @@ export default function DirectoryPage() {
               <div className="min-w-0">
                 <p className="font-semibold">{fullName(selected)}</p>
                 <p className="text-[13px] text-muted">
-                  {selected.execTitle ?? selected.role}, {selected.practice}
+                  {selected.execTitle ?? roleOf(selected)}, {selected.practice}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   <StandingBadge gradYear={selected.gradYear} />
@@ -199,27 +234,19 @@ export default function DirectoryPage() {
               <Row label="School">{selected.school}</Row>
               <Row label="Class year">{selected.gradYear}</Row>
               <Row label="Practice">{selected.practice}</Row>
-              <Row label="Role">{selected.role}</Row>
+              <Row label={isAlum(selected) ? "Final role" : "Role"}>{roleOf(selected)}</Row>
               {selected.execTitle && <Row label="Exec title">{selected.execTitle}</Row>}
-              <Row label="School email">
-                <a href={`mailto:${selected.schoolEmail}`} className="text-link hover:underline">
-                  {selected.schoolEmail}
-                </a>
-              </Row>
-              <Row label="Personal email">
-                <a href={`mailto:${selected.personalEmail}`} className="text-link hover:underline">
-                  {selected.personalEmail}
-                </a>
+              <Row label="Email">
+                {emailOf(selected) ? (
+                  <a href={`mailto:${emailOf(selected)}`} className="text-link hover:underline">
+                    {emailOf(selected)}
+                  </a>
+                ) : (
+                  <span className="text-muted">Not provided</span>
+                )}
               </Row>
               <Row label="Phone">
                 {canSeePrivate(selected) ? selected.phone || "Not provided" : <span className="text-muted">Visible to exec only</span>}
-              </Row>
-              <Row label="Student ID">
-                {canSeePrivate(selected) ? (
-                  selected.studentId || "Not provided"
-                ) : (
-                  <span className="text-muted">Visible to exec only</span>
-                )}
               </Row>
               <Row label="LinkedIn">
                 {selected.linkedin ? (

@@ -5,9 +5,10 @@ import Link from "@/components/app-link";
 import { usePortal } from "@/portal/store";
 import { fullName, isExec, uid } from "@/portal/logic";
 import type { Practice, Project, Template } from "@/portal/types";
-import { Button, Card, Drawer, Empty, Field, Input, PageTitle, Segmented, Select, Tabs, TableWrap, Td, Textarea, Th, fieldCls, rowCls } from "@/portal/ui";
+import { LessonItem, lessonHaystack, lessonTags } from "@/portal/lessons";
+import { Badge, Button, Card, Drawer, Empty, Field, Input, PageTitle, Segmented, Select, Tabs, TableWrap, Td, Textarea, Th, fieldCls, rowCls } from "@/portal/ui";
 
-type Tab = "archive" | "templates";
+type Tab = "projects" | "lessons" | "templates";
 const ALL_CATEGORIES = "All categories";
 const ALL_YEARS = "All years";
 const PRACTICES = ["All", "Strategy", "Digital"] as const;
@@ -31,7 +32,9 @@ const PRACTICE_OPTIONS = PRACTICES.map((p) => ({ value: p, label: p }));
 
 export default function ProjectsPage() {
   const { data, me, update } = usePortal();
-  const [tab, setTab] = useState<Tab>("archive");
+  const [tab, setTab] = useState<Tab>("projects");
+  const [lessonQ, setLessonQ] = useState("");
+  const [lessonTag, setLessonTag] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [practice, setPractice] = useState<(typeof PRACTICES)[number]>("All");
   const [category, setCategory] = useState(ALL_CATEGORIES);
@@ -49,7 +52,9 @@ export default function ProjectsPage() {
     return data.projects
       .filter((p) => {
         if (needle) {
-          const hay = `${p.client} ${p.summary} ${p.sector} ${p.categories.join(" ")}`.toLowerCase();
+          // Lessons count too, so searching "survey" finds every project that learned something about surveys.
+          const lessons = data.lessons.filter((l) => l.projectId === p.id).map(lessonHaystack).join(" ");
+          const hay = `${p.client} ${p.summary} ${p.sector} ${p.categories.join(" ")} ${lessons}`.toLowerCase();
           if (!hay.includes(needle)) return false;
         }
         if (practice !== "All" && p.practice !== practice) return false;
@@ -58,7 +63,7 @@ export default function ProjectsPage() {
         return true;
       })
       .sort((a, b) => b.year - a.year || (a.term === b.term ? 0 : a.term === "Fall" ? -1 : 1));
-  }, [data.projects, q, practice, category, year]);
+  }, [data.projects, data.lessons, q, practice, category, year]);
 
   const templateGroups = useMemo(() => {
     const groups = new Map<string, Template[]>();
@@ -123,10 +128,14 @@ export default function ProjectsPage() {
     <div>
       <PageTitle
         title="Projects"
-        sub="Every past engagement and the templates that came out of them. Summaries will be generated from the Google Drive project folders once Drive is connected."
+        sub="Every past engagement, what each team learned, and the templates that came out of them. Search finds a topic across summaries and lessons."
         actions={
           exec &&
-          (tab === "archive" ? <Button onClick={() => setAddingProject(true)}>Add project</Button> : <Button onClick={() => setAddingTemplate(true)}>Add template</Button>)
+          (tab === "projects" ? (
+            <Button onClick={() => setAddingProject(true)}>Add project</Button>
+          ) : tab === "templates" ? (
+            <Button onClick={() => setAddingTemplate(true)}>Add template</Button>
+          ) : undefined)
         }
       />
 
@@ -134,12 +143,15 @@ export default function ProjectsPage() {
         value={tab}
         onChange={setTab}
         options={[
-          { value: "archive", label: "Archive", count: data.projects.length },
+          { value: "projects", label: "Projects", count: data.projects.length },
+          { value: "lessons", label: "What we learned", count: data.lessons.length },
           { value: "templates", label: "Templates", count: data.templates.length },
         ]}
       />
 
-      {tab === "archive" && (
+      {tab === "lessons" && <LessonsTab q={lessonQ} setQ={setLessonQ} tag={lessonTag} setTag={setLessonTag} />}
+
+      {tab === "projects" && (
         <>
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <Input
@@ -340,6 +352,64 @@ export default function ProjectsPage() {
           </div>
         </form>
       </Drawer>
+    </div>
+  );
+}
+
+/** Lessons from every project, stacked by topic and searchable. */
+function LessonsTab({ q, setQ, tag, setTag }: { q: string; setQ: (v: string) => void; tag: string | null; setTag: (t: string | null) => void }) {
+  const { data } = usePortal();
+  const tags = lessonTags(data.lessons);
+  const needle = q.trim().toLowerCase();
+  const shown = data.lessons
+    .filter((l) => (!tag || l.tags.includes(tag)) && (!needle || lessonHaystack(l).includes(needle) || (data.projects.find((p) => p.id === l.projectId)?.client ?? "").toLowerCase().includes(needle)))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  return (
+    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_240px]">
+      <div className="min-w-0">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="w-full max-w-xs">
+            <Input type="search" placeholder="Search lessons" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search lessons" />
+          </div>
+          {tag && (
+            <Button variant="ghost" onClick={() => setTag(null)}>
+              Clear topic: {tag}
+            </Button>
+          )}
+          <span className="text-[12.5px] text-muted tabular-nums sm:ml-auto">
+            {shown.length} of {data.lessons.length}
+          </span>
+        </div>
+        <Card flush>
+          {shown.length === 0 ? (
+            <Empty>No lessons match. Lessons are added on each project&apos;s page under &ldquo;What we learned&rdquo;.</Empty>
+          ) : (
+            <ul className="divide-y divide-edge">
+              {shown.map((l) => (
+                <LessonItem key={l.id} lesson={l} data={data} showProject onTag={setTag} />
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+      <Card title="Topics" flush>
+        <ul className="divide-y divide-edge">
+          {tags.map(([t, n]) => (
+            <li key={t}>
+              <button
+                type="button"
+                aria-pressed={tag === t}
+                onClick={() => setTag(tag === t ? null : t)}
+                className={`flex w-full items-center justify-between gap-3 px-4 py-2 text-left text-[13.5px] hover:bg-[#fbfbf7] ${tag === t ? "bg-stone font-medium" : ""}`}
+              >
+                <span className="truncate">{t}</span>
+                <Badge>{n}</Badge>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Card>
     </div>
   );
 }

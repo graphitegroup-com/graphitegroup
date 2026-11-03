@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { classStanding, currentTerm, fmtDate, fullName, isAlum, promotionSuggestions, uid } from "@/portal/logic";
+import { AC_SEMESTERS, classStanding, currentTerm, fmtDate, fullName, highestRole, isAlum, memberByEmail, promotionSuggestions, uid } from "@/portal/logic";
 import { ExecOnly } from "@/portal/exec-only";
 import { usePortal } from "@/portal/store";
 import { EXEC_TITLES, ROLES, SCHOOLS, type ExecTitle, type Member, type Role, type School } from "@/portal/types";
-import { Avatar, Button, Card, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, Td, Th, rowCls } from "@/portal/ui";
+import { Avatar, Badge, Button, Card, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, Td, Th, rowCls } from "@/portal/ui";
 
 export default function AdminMembersPage() {
   return (
@@ -47,7 +47,7 @@ function AdminMembers() {
     <div>
       <PageTitle
         title="Members & roles"
-        sub="Class standing and alumni status update automatically from graduation year. Promotions are proposed each term and take effect when you approve them."
+        sub={`Everyone in Graphite, current and alumni. Only people added here can set up a sign-in. Associate Consultants are proposed for Consultant after ${AC_SEMESTERS} semesters; alumni keep the highest role they held.`}
         actions={<Button onClick={() => setInviteOpen(true)}>Add member</Button>}
       />
 
@@ -55,7 +55,7 @@ function AdminMembers() {
         <Stat label="Active members" value={active.length} />
         <Stat label="Seniors" value={seniors.length} sub="Move to alumni on June 1" />
         <Stat label="Alumni in system" value={alumni.length} />
-        <Stat label="Pending promotions" value={promos.length} />
+        <Stat label="Not signed in yet" value={data.members.filter((m) => !data.accounts[m.id]).length} sub="Added, no password set" />
       </StatGroup>
 
       <Card
@@ -65,7 +65,7 @@ function AdminMembers() {
         flush
       >
         {promos.length === 0 ? (
-          <Empty>No promotions to review this term.</Empty>
+          <Empty>No Associate Consultants have finished {AC_SEMESTERS} semesters yet.</Empty>
         ) : (
           <ul className="divide-y divide-edge">
             {promos.map((p) => (
@@ -102,7 +102,7 @@ function AdminMembers() {
         }
         flush
       >
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full min-w-[860px]">
             <thead>
               <tr>
@@ -111,6 +111,7 @@ function AdminMembers() {
                 <Th>Class</Th>
                 <Th>Role</Th>
                 <Th>Exec title</Th>
+                <Th>Sign-in</Th>
                 <Th>On website</Th>
               </tr>
             </thead>
@@ -124,7 +125,7 @@ function AdminMembers() {
                         <Avatar name={fullName(m)} photo={m.photo} size={24} />
                         <span>
                           <span className="block font-medium">{fullName(m)}</span>
-                          <span className="block text-[12.5px] text-muted">{m.schoolEmail}</span>
+                          <span className="block text-[12.5px] text-muted">{[m.schoolEmail, m.personalEmail].filter(Boolean).join(" · ")}</span>
                         </span>
                       </span>
                     </Td>
@@ -135,17 +136,26 @@ function AdminMembers() {
                       </span>
                     </Td>
                     <Td>
-                      <Select
-                        aria-label={`Role for ${fullName(m)}`}
-                        options={ROLES}
-                        value={m.role}
-                        disabled={standing === "Alumni"}
-                        onChange={(e) => changeRole(m, e.target.value as Role)}
-                        className="!h-7 !w-48 text-[13px]"
-                      />
+                      {standing === "Alumni" ? (
+                        // Alumni keep the most senior role they held; it no longer changes.
+                        <span className="whitespace-nowrap">
+                          {highestRole(m, data.roleChanges)}
+                          <span className="block text-[12px] text-faint">Final role</span>
+                        </span>
+                      ) : (
+                        <Select
+                          aria-label={`Role for ${fullName(m)}`}
+                          options={ROLES}
+                          value={m.role}
+                          onChange={(e) => changeRole(m, e.target.value as Role)}
+                          className="!h-7 !w-48 text-[13px]"
+                        />
+                      )}
                     </Td>
                     <Td>
-                      {m.role === "Executive Board" ? (
+                      {standing === "Alumni" ? (
+                        <span className="text-[13px]">{m.execTitle ?? <span className="text-faint">None</span>}</span>
+                      ) : m.role === "Executive Board" ? (
                         <Select
                           aria-label={`Exec title for ${fullName(m)}`}
                           options={EXEC_TITLES}
@@ -156,6 +166,9 @@ function AdminMembers() {
                       ) : (
                         <span className="text-faint">-</span>
                       )}
+                    </Td>
+                    <Td>
+                      {data.accounts[m.id] ? <Badge tone="green">Set up</Badge> : <Badge tone="amber">Not yet</Badge>}
                     </Td>
                     <Td>
                       <input
@@ -198,6 +211,7 @@ function AdminMembers() {
 
       <InviteDrawer
         open={inviteOpen}
+        members={data.members}
         onClose={() => setInviteOpen(false)}
         onAdd={(m) => update((d) => ({ ...d, members: [...d.members, m] }))}
       />
@@ -206,10 +220,21 @@ function AdminMembers() {
   );
 }
 
-function InviteDrawer({ open, onClose, onAdd }: { open: boolean; onClose: () => void; onAdd: (m: Member) => void }) {
-  const blank = { firstName: "", lastName: "", schoolEmail: "", school: "Pomona" as School, gradYear: new Date().getFullYear() + 4, practice: "Strategy" as Member["practice"], role: "Associate Consultant" as Role };
+function InviteDrawer({ open, members, onClose, onAdd }: { open: boolean; members: Member[]; onClose: () => void; onAdd: (m: Member) => void }) {
+  const blank = {
+    firstName: "",
+    lastName: "",
+    schoolEmail: "",
+    personalEmail: "",
+    school: "Pomona" as School,
+    gradYear: new Date().getFullYear() + 4,
+    practice: "Strategy" as Member["practice"],
+    role: "Associate Consultant" as Role,
+  };
   const [f, setF] = useState(blank);
-  const valid = f.firstName && f.lastName && f.schoolEmail.includes("@");
+  const emails = [f.schoolEmail, f.personalEmail].map((e) => e.trim()).filter(Boolean);
+  const taken = emails.map((e) => memberByEmail(members, e)).find(Boolean);
+  const valid = f.firstName.trim() && f.lastName.trim() && emails.length > 0 && emails.every((e) => e.includes("@")) && !taken;
   return (
     <Drawer open={open} onClose={onClose} title="Add member">
       <form
@@ -220,9 +245,11 @@ function InviteDrawer({ open, onClose, onAdd }: { open: boolean; onClose: () => 
           onAdd({
             id: `m${uid()}`,
             ...f,
-            personalEmail: "",
+            firstName: f.firstName.trim(),
+            lastName: f.lastName.trim(),
+            schoolEmail: f.schoolEmail.trim(),
+            personalEmail: f.personalEmail.trim(),
             phone: "",
-            studentId: "",
             joinedTerm: currentTerm(),
             showOnWebsite: true,
           });
@@ -230,7 +257,10 @@ function InviteDrawer({ open, onClose, onAdd }: { open: boolean; onClose: () => 
           onClose();
         }}
       >
-        <p className="text-[13px] text-muted">They&apos;ll be asked to complete the rest of their profile at first login.</p>
+        <p className="text-[13px] text-muted">
+          Only people added here can use the portal. Once added, they open the sign-in page, choose &ldquo;Set up your account&rdquo; with either email, set a
+          password and fill in their details.
+        </p>
         <div className="grid grid-cols-2 gap-3">
           <Field label="First name">
             <Input value={f.firstName} onChange={(e) => setF({ ...f, firstName: e.target.value })} required />
@@ -240,8 +270,16 @@ function InviteDrawer({ open, onClose, onAdd }: { open: boolean; onClose: () => 
           </Field>
         </div>
         <Field label="School email">
-          <Input type="email" value={f.schoolEmail} onChange={(e) => setF({ ...f, schoolEmail: e.target.value })} required />
+          <Input type="email" value={f.schoolEmail} onChange={(e) => setF({ ...f, schoolEmail: e.target.value })} placeholder="name@cmc.edu" />
         </Field>
+        <Field label="Personal email" hint="Add at least one. Alumni sign in with this once their school email closes.">
+          <Input type="email" value={f.personalEmail} onChange={(e) => setF({ ...f, personalEmail: e.target.value })} placeholder="name@gmail.com" />
+        </Field>
+        {taken && (
+          <p role="alert" className="text-[12.5px] text-[#a8261b]">
+            {fullName(taken)} already uses that email.
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <Field label="School">
             <Select options={SCHOOLS} value={f.school} onChange={(e) => setF({ ...f, school: e.target.value as School })} />
@@ -256,6 +294,7 @@ function InviteDrawer({ open, onClose, onAdd }: { open: boolean; onClose: () => 
             <Select options={ROLES} value={f.role} onChange={(e) => setF({ ...f, role: e.target.value as Role })} />
           </Field>
         </div>
+        <p className="text-[12.5px] text-muted">They can correct school, year, practice, role and start term when they set up their account.</p>
         <div className="flex gap-2 pt-2">
           <Button type="submit" disabled={!valid}>
             Add member

@@ -4,10 +4,11 @@ import { useState } from "react";
 import { fullName, threadActivity } from "@/portal/logic";
 import { PostForm, ThreadRow, useThreadVote } from "@/portal/forum";
 import { usePortal } from "@/portal/store";
-import { FORUM_CHANNELS, type ForumChannel, type ForumPost } from "@/portal/types";
-import { Avatar, Button, Drawer, Empty, Input, Label, PageTitle, Segmented, Select } from "@/portal/ui";
+import { FORUM_CHANNELS, FORUM_SPACES, type ForumChannel, type ForumPost, type ForumSpace } from "@/portal/types";
+import { Avatar, Button, Drawer, Empty, Input, Label, PageTitle, Segmented, Select, Tabs } from "@/portal/ui";
 
 type ChannelFilter = "all" | ForumChannel;
+type SpaceFilter = "all" | Exclude<ForumSpace, "everyone">;
 type Sort = "active" | "new" | "top";
 
 const SORTS = [
@@ -19,6 +20,7 @@ const SORTS = [
 export default function ForumPage() {
   const { data, me } = usePortal();
   const vote = useThreadVote();
+  const [space, setSpace] = useState<SpaceFilter>("all");
   const [channel, setChannel] = useState<ChannelFilter>("all");
   const [sort, setSort] = useState<Sort>("active");
   const [query, setQuery] = useState("");
@@ -28,7 +30,14 @@ export default function ForumPage() {
 
   const now = new Date();
   const q = query.trim().toLowerCase();
-  const counts = Object.fromEntries(FORUM_CHANNELS.map((c) => [c.id, data.posts.filter((p) => p.channel === c.id).length])) as Record<ForumChannel, number>;
+  // "All threads" shows every space; the other tabs show threads written for that group.
+  const inSpace = data.posts.filter((p) => space === "all" || p.space === space);
+  const counts = Object.fromEntries(FORUM_CHANNELS.map((c) => [c.id, inSpace.filter((p) => p.channel === c.id).length])) as Record<ForumChannel, number>;
+  const spaceTabs = [
+    { value: "all" as const, label: "All threads", count: data.posts.length },
+    ...FORUM_SPACES.filter((s) => s.id !== "everyone").map((s) => ({ value: s.id as SpaceFilter, label: s.label, count: data.posts.filter((p) => p.space === s.id).length })),
+  ];
+  const spaceMeta = FORUM_SPACES.find((s) => s.id === space);
 
   const activity = (p: ForumPost) => threadActivity(p, data.replies);
   const order: Record<Sort, (a: ForumPost, b: ForumPost) => number> = {
@@ -37,7 +46,7 @@ export default function ForumPage() {
     top: (a, b) => b.upvotes.length - a.upvotes.length || activity(b).localeCompare(activity(a)),
   };
 
-  const matches = data.posts
+  const matches = inSpace
     .filter((p) => channel === "all" || p.channel === channel)
     .filter((p) => !q || `${p.title} ${p.body} ${p.company ?? ""}`.toLowerCase().includes(q))
     .sort(order[sort]);
@@ -51,15 +60,17 @@ export default function ForumPage() {
     <div>
       <PageTitle
         title="Forum"
-        sub="Ask and answer questions about recruiting, interviews, referrals and offers. Only members and alumni can see it."
+        sub="Ask and answer questions about recruiting, interviews, referrals and offers, and keep in touch with alumni. Only members and alumni can see it."
         actions={<Button onClick={() => setComposing(true)}>New thread</Button>}
       />
+
+      <Tabs value={space} options={spaceTabs} onChange={setSpace} />
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[208px_1fr]">
         <nav aria-label="Channels" className="hidden lg:block">
           <Label className="px-2 pb-1.5">Channels</Label>
           <ul className="space-y-px">
-            {[{ id: "all" as const, label: "All threads", count: data.posts.length }, ...FORUM_CHANNELS.map((c) => ({ id: c.id, label: c.label, count: counts[c.id] }))].map((c) => {
+            {[{ id: "all" as const, label: "All channels", count: inSpace.length }, ...FORUM_CHANNELS.map((c) => ({ id: c.id, label: c.label, count: counts[c.id] }))].map((c) => {
               const on = channel === c.id;
               return (
                 <li key={c.id}>
@@ -85,7 +96,7 @@ export default function ForumPage() {
             <div className="lg:hidden">
               <Select
                 aria-label="Channel"
-                options={[{ value: "all", label: "All threads" }, ...FORUM_CHANNELS.map((c) => ({ value: c.id, label: `${c.label} (${counts[c.id]})` }))]}
+                options={[{ value: "all", label: "All channels" }, ...FORUM_CHANNELS.map((c) => ({ value: c.id, label: `${c.label} (${counts[c.id]})` }))]}
                 value={channel}
                 onChange={(e) => setChannel(e.target.value as ChannelFilter)}
               />
@@ -106,10 +117,18 @@ export default function ForumPage() {
             >
               <Avatar name={fullName(me)} photo={me.photo} size={32} />
               <span className="flex h-9 flex-1 items-center rounded-[3px] border border-[#d6d6cb] bg-white px-3 text-[13.5px] text-faint">
-                {channelMeta ? `Ask about ${channelMeta.label.toLowerCase()}` : "Ask Graphite a question about recruiting, interviews or offers"}
+                {space === "alumni"
+                  ? "Post to alumni: where you landed, a meetup, an open role"
+                  : channelMeta
+                    ? `Ask about ${channelMeta.label.toLowerCase()}`
+                    : "Ask Graphite a question about recruiting, interviews or offers"}
               </span>
             </button>
-            {channelMeta && <p className="border-b border-edge bg-[#fbfbf7] px-4 py-2 text-[12.5px] text-muted">{channelMeta.description}</p>}
+            {(spaceMeta || channelMeta) && (
+              <p className="border-b border-edge bg-[#fbfbf7] px-4 py-2 text-[12.5px] text-muted">
+                {[spaceMeta?.description, channelMeta?.description].filter(Boolean).join(". ")}.
+              </p>
+            )}
             {threads.length === 0 ? (
               <Empty>{q ? "No threads match your search." : "No threads here yet. Start one; someone in Graphite has been through it."}</Empty>
             ) : (
@@ -124,7 +143,7 @@ export default function ForumPage() {
       </div>
 
       <Drawer open={composing} onClose={() => setComposing(false)} title="New thread">
-        {composing && <PostForm channel={channel === "all" ? undefined : channel} onDone={() => setComposing(false)} />}
+        {composing && <PostForm space={space === "all" ? undefined : space} channel={channel === "all" ? undefined : channel} onDone={() => setComposing(false)} />}
       </Drawer>
     </div>
   );

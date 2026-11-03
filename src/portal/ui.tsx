@@ -279,7 +279,8 @@ export function Td({ children, className = "" }: { children?: ReactNode; classNa
 
 /** Standalone bordered table container (when not inside a Card). */
 export function TableWrap({ children }: { children: ReactNode }) {
-  return <div className="overflow-x-auto rounded-[3px] border border-edge bg-white">{children}</div>;
+  // relative: screen-reader-only text inside a scroll box otherwise widens the whole page on phones.
+  return <div className="relative overflow-x-auto rounded-[3px] border border-edge bg-white">{children}</div>;
 }
 
 /** Row class for table bodies: hairline divider and hover tint. */

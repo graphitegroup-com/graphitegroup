@@ -3,7 +3,26 @@
  * browser preview and in a nightly database job.
  */
 
-import { FIRM_DIMENSIONS, STAGES_REACHED, type StageReached, type Audience, type FirmDimension, type FirmGrade, type ForumPost, type ForumReply, type Member, type Outreach, type PortalData, type Role, type TaskTemplate, type Term } from "./types";
+import {
+  FIRM_DIMENSIONS,
+  STAGES_REACHED,
+  type Audience,
+  type Contact,
+  type FirmDimension,
+  type FirmGrade,
+  type ForumPost,
+  type ForumReply,
+  type Member,
+  type Outreach,
+  type PortalData,
+  type Role,
+  type RoleChange,
+  type SemesterDates,
+  type StageReached,
+  type TaskTemplate,
+  type TaskWhen,
+  type Term,
+} from "./types";
 
 /** Academic years roll over on July 1. Returns the starting calendar year. */
 export function academicYear(now = new Date()) {
@@ -39,23 +58,40 @@ export function semestersCompleted(joined: Term, now = new Date()) {
 
 export type Promotion = { member: Member; to: Role; reason: string };
 
+/** Semesters an Associate Consultant serves before exec is asked to promote them. */
+export const AC_SEMESTERS = 2;
+
 /**
  * Proposed promotions for exec to approve. Nothing changes without approval.
- *  Associate Consultant -> Consultant after one completed semester.
- *  Consultant -> eligible for Team Lead after two completed semesters (flag only).
+ * The only automatic proposal: Associate Consultant to Consultant after two
+ * completed semesters. Every other role change is exec's call.
  */
 export function promotionSuggestions(members: Member[], now = new Date()): Promotion[] {
   const out: Promotion[] = [];
   for (const m of members) {
-    if (isAlum(m, now)) continue;
+    if (isAlum(m, now) || m.role !== "Associate Consultant") continue;
     const sem = semestersCompleted(m.joinedTerm, now);
-    if (m.role === "Associate Consultant" && sem >= 1) {
-      out.push({ member: m, to: "Consultant", reason: `${sem} semester${sem > 1 ? "s" : ""} completed` });
-    } else if (m.role === "Consultant" && sem >= 2) {
-      out.push({ member: m, to: "Team Lead", reason: `Eligible to lead: ${sem} semesters completed` });
-    }
+    if (sem >= AC_SEMESTERS) out.push({ member: m, to: "Consultant", reason: `${sem} semesters completed` });
   }
   return out;
+}
+
+/** Seniority for "highest role". Advisor sits outside the ladder. */
+const ROLE_RANK: Record<Role, number> = { Advisor: 0, "Associate Consultant": 1, Consultant: 2, "Team Lead": 3, "Executive Board": 4 };
+
+/**
+ * The most senior role a member ever held, from their current role and role
+ * history. Alumni are shown with this and it no longer changes.
+ */
+export function highestRole(m: Member, changes: RoleChange[]): Role {
+  return [m.role, ...changes.filter((c) => c.memberId === m.id).flatMap((c) => [c.from, c.to])].reduce((best, r) => (ROLE_RANK[r] > ROLE_RANK[best] ? r : best));
+}
+
+/** Finds the member an email belongs to, school or personal, ignoring case and spaces. */
+export function memberByEmail(members: Member[], email: string) {
+  const e = email.trim().toLowerCase();
+  if (!e.includes("@")) return undefined;
+  return members.find((m) => m.schoolEmail.trim().toLowerCase() === e || m.personalEmail.trim().toLowerCase() === e);
 }
 
 export function matchesAudience(a: Audience, m: Member) {
@@ -73,21 +109,133 @@ export function audienceLabel(a: Audience) {
 export type TaskInstance = {
   key: string;
   template: TaskTemplate;
+  term: Term;
+  semester: "Fall" | "Spring";
   due: Date;
   done?: string;
 };
 
-/** Generates this academic year's tasks for a member from the recurring templates. */
-export function tasksFor(member: Member, data: Pick<PortalData, "taskTemplates" | "taskDone">, now = new Date()) {
-  const year = academicYear(now);
+const DAY_MS = 86_400_000;
+const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+
+/** Monday of the week the semester starts in, so weeks line up even if classes begin midweek. */
+export function weekOneMonday(sem: SemesterDates) {
+  const start = toDate(sem.start);
+  return addDays(start, -((start.getDay() + 6) % 7));
+}
+
+/** The Friday a task is due, from the semester's first day and length. */
+export function taskDueDate(sem: SemesterDates, when: TaskWhen) {
+  const week = when.anchor === "before" ? 1 - when.n : when.anchor === "week" ? when.n : sem.weeks - when.n;
+  return addDays(weekOneMonday(sem), (week - 1) * 7 + 4);
+}
+
+/** Last day of the semester's final week (its Friday). */
+export const semesterEnd = (sem: SemesterDates) => taskDueDate(sem, { anchor: "end", n: 0 });
+
+export function whenLabel(when: TaskWhen) {
+  const weeks = (n: number) => `${n} ${n === 1 ? "week" : "weeks"}`;
+  if (when.anchor === "before") return `${weeks(when.n)} before classes start`;
+  if (when.anchor === "week") return `Week ${when.n}`;
+  return when.n === 0 ? "Last week" : `${weeks(when.n)} before the last week`;
+}
+
+/** The semesters a template runs in for the calendar's academic year. */
+export function templateTerms(t: TaskTemplate, calendar: PortalData["settings"]["calendar"]) {
+  const out: { semester: "Fall" | "Spring"; term: Term; dates: SemesterDates }[] = [];
+  if (t.semester !== "Spring") out.push({ semester: "Fall", term: `F${calendar.year}`, dates: calendar.fall });
+  if (t.semester !== "Fall") out.push({ semester: "Spring", term: `S${calendar.year + 1}`, dates: calendar.spring });
+  return out;
+}
+
+/** This academic year's tasks for a member, dated from exec's semester calendar. */
+export function tasksFor(member: Member, data: Pick<PortalData, "taskTemplates" | "taskDone" | "settings">) {
+  const { calendar } = data.settings;
   return data.taskTemplates
     .filter((t) => matchesAudience(t.audience, member))
-    .map<TaskInstance>((t) => {
-      const calYear = t.month >= 7 ? year : year + 1;
-      const key = `${t.id}:${year}:${member.id}`;
-      return { key, template: t, due: new Date(calYear, t.month - 1, t.day), done: data.taskDone[key] };
-    })
+    .flatMap((t) =>
+      templateTerms(t, calendar).map<TaskInstance>(({ semester, term, dates }) => {
+        const key = `${t.id}:${term}:${member.id}`;
+        return { key, template: t, term, semester, due: taskDueDate(dates, t.when), done: data.taskDone[key] };
+      }),
+    )
     .sort((a, b) => a.due.getTime() - b.due.getTime());
+}
+
+/* ---------------------------------------------------------------- outreach */
+
+/** Days without a reply before the portal suggests a follow-up. */
+export const FOLLOW_UP_DAYS = 7;
+/** After this many follow-ups with no reply, it suggests moving on. */
+export const MAX_FOLLOW_UPS = 2;
+
+export const daysBetween = (from: Date | string, to: Date | string) => Math.floor((toDate(to).getTime() - toDate(from).getTime()) / DAY_MS);
+
+export type OutreachStage = "Reached out" | "Followed up" | "Replied" | "Chatted";
+
+export function outreachStage(o: Outreach): OutreachStage {
+  if (o.chatted) return "Chatted";
+  if (o.responded) return "Replied";
+  return o.followUps?.length ? "Followed up" : "Reached out";
+}
+
+export type NextStep = {
+  kind: "follow-up" | "schedule" | "thank" | "rate" | "move-on" | "wait" | "done";
+  label: string;
+  /** Something the member should do now. */
+  due: boolean;
+};
+
+/** What a member should do next with one outreach, from how it stands today. */
+export function nextStep(o: Outreach, now = new Date()): NextStep {
+  if (o.chatted) {
+    if (!o.thanked) return { kind: "thank", label: "Send a thank-you note", due: true };
+    if (o.helpfulness == null) return { kind: "rate", label: "Rate how helpful the chat was", due: true };
+    return { kind: "done", label: "Done", due: false };
+  }
+  if (o.responded) return { kind: "schedule", label: "Schedule the chat", due: true };
+  const last = [o.date, ...(o.followUps ?? [])].sort().at(-1)!;
+  const waited = daysBetween(last, now);
+  const sent = o.followUps?.length ?? 0;
+  if (waited < FOLLOW_UP_DAYS) {
+    const left = FOLLOW_UP_DAYS - waited;
+    return { kind: "wait", label: `Follow up in ${left} ${left === 1 ? "day" : "days"} if no reply`, due: false };
+  }
+  if (sent >= MAX_FOLLOW_UPS) return { kind: "move-on", label: `No reply after ${sent + 1} messages. Try someone else.`, due: false };
+  return { kind: "follow-up", label: sent ? "Follow up again" : "Follow up", due: true };
+}
+
+/** One member's outreach that needs action now, oldest first. */
+export function followUpsDue(memberId: string, outreach: Outreach[], now = new Date()) {
+  return outreach
+    .filter((o) => o.memberId === memberId)
+    .map((o) => ({ outreach: o, step: nextStep(o, now) }))
+    .filter((x) => x.step.due)
+    .sort((a, b) => a.outreach.date.localeCompare(b.outreach.date));
+}
+
+/** Marks a reply, counting days from the first message. */
+export const withReply = (o: Outreach, on: string): Outreach => ({ ...o, responded: true, respondedOn: on, responseDays: Math.max(0, daysBetween(o.date, on)) });
+
+/** "https://www.linkedin.com/in/jane-doe/?x=1" -> "linkedin.com/in/jane-doe" */
+export const normalizeLinkedIn = (url: string) =>
+  url
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/[?#].*$/, "")
+    .replace(/\/+$/, "");
+
+/** An existing contact for this person: same LinkedIn profile, or same name at the same firm. */
+export function findContact(contacts: Contact[], who: { name: string; linkedin: string; company: string }) {
+  const li = normalizeLinkedIn(who.linkedin);
+  const name = who.name.trim().toLowerCase();
+  const firm = companySlug(who.company.trim());
+  return (
+    (li ? contacts.find((c) => c.linkedin && normalizeLinkedIn(c.linkedin) === li) : undefined) ??
+    contacts.find((c) => c.name.trim().toLowerCase() === name && companySlug(c.company.trim()) === firm)
+  );
 }
 
 export function responseStats(items: Outreach[]) {
@@ -272,3 +420,31 @@ export function matchCompany(data: Parameters<typeof companyNames>[0], typed: st
   const t = typed.trim();
   return companyNames(data).find((n) => companySlug(n) === companySlug(t)) ?? t;
 }
+
+/* ---- networking (fork) ---- */
+
+/** Today as a local calendar date, YYYY-MM-DD (toISOString would give UTC, a day off in the evening). */
+export function localToday(now = new Date()) {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+/** Latest date anything happened on an outreach: first message, a follow-up or the reply. */
+export const lastActivity = (o: Outreach) => [o.date, ...(o.followUps ?? []), o.respondedOn ?? ""].sort().at(-1)!;
+
+/**
+ * A contact after they move to a new firm or title. The old company and title
+ * go to the top of their history, so outreach grades stay with the person.
+ */
+export function movedContact(c: Contact, next: { company: string; title: string }, by: string, on = localToday()): Contact {
+  const company = next.company.trim();
+  const title = next.title.trim();
+  if (company === c.company.trim() && title === c.title.trim()) return c;
+  const history = c.company.trim() || c.title.trim() ? [{ company: c.company, title: c.title, until: on }, ...(c.history ?? [])] : c.history;
+  return { ...c, company, title, history, updatedAt: new Date().toISOString(), updatedBy: by };
+}
+
+/** "linkedin.com/in/jane" -> "https://linkedin.com/in/jane", so saved links open. */
+export const withProtocol = (url: string) => (/^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`);
+
+/** Whether a pasted link points at a LinkedIn profile. */
+export const isLinkedInUrl = (url: string) => /^linkedin\.com\/(in|pub)\/[^/]+/.test(normalizeLinkedIn(url));

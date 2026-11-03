@@ -1,6 +1,8 @@
 -- Graphite Group member portal: production schema (Supabase / Postgres).
 -- Mirrors src/portal/types.ts and src/lib/site-content.ts. Run in the Supabase
--- SQL editor, then enable Google sign-in restricted to 5C domains.
+-- SQL editor. Sign-in is email + password, invite-only: exec adds a member's
+-- school and/or personal email, and only those emails can create an account
+-- (see "sign-in" below and docs/PORTAL.md).
 
 create extension if not exists "pgcrypto";
 
@@ -22,11 +24,11 @@ create type app_stage as enum (
 -- ---------------------------------------------------------------- members
 create table members (
   id uuid primary key default gen_random_uuid(),
-  auth_user_id uuid unique references auth.users (id) on delete set null,
   first_name text not null,
   last_name text not null,
+  -- Either email signs in. Alumni keep the personal one after school email closes.
   personal_email text,
-  school_email text not null unique,
+  school_email text,
   school school not null,
   grad_year int not null check (grad_year between 2015 and 2100),
   practice practice not null default 'Strategy',
@@ -36,26 +38,72 @@ create table members (
   linkedin text,
   photo_url text,                          -- Supabase Storage public URL
   show_on_website boolean not null default true,
+  setup_completed_at timestamptz,          -- set when they finish account setup
   created_at timestamptz not null default now(),
-  constraint exec_title_only_for_exec check (exec_title is null or role = 'Executive Board')
+  constraint exec_title_only_for_exec check (exec_title is null or role = 'Executive Board'),
+  constraint has_an_email check (coalesce(btrim(personal_email), '') <> '' or coalesce(btrim(school_email), '') <> '')
 );
+create unique index members_school_email_uq on members (lower(btrim(school_email))) where school_email is not null;
+create unique index members_personal_email_uq on members (lower(btrim(personal_email))) where personal_email is not null;
 
--- Access helpers for the views and policies below.
+-- Access helpers for the views and policies below. A signed-in account belongs
+-- to the member whose school or personal email it uses.
+create or replace function member_for_email(e text) returns uuid
+language sql stable security definer set search_path = public as $$
+  select id from members
+  where lower(btrim(school_email)) = lower(btrim(e)) or lower(btrim(personal_email)) = lower(btrim(e))
+  limit 1
+$$;
+
 create or replace function current_member_id() returns uuid
 language sql stable security definer set search_path = public as $$
-  select id from members where auth_user_id = auth.uid()
+  select member_for_email(auth.jwt() ->> 'email')
 $$;
 
 create or replace function is_exec() returns boolean
 language sql stable security definer set search_path = public as $$
-  select exists (select 1 from members where auth_user_id = auth.uid() and role = 'Executive Board')
+  select exists (select 1 from members where id = current_member_id() and role = 'Executive Board')
 $$;
+
+-- ---------------------------------------------------------------- sign-in
+-- Only emails on the roster can create an account or switch to a new email.
+-- Supabase shows the sign-up as failed; the app explains why.
+create or replace function auth_roster_only() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.email is null or member_for_email(new.email) is null then
+    raise exception 'This email is not on the Graphite roster. Ask the executive board to add it.';
+  end if;
+  return new;
+end $$;
+create trigger auth_users_roster_only
+  before insert or update of email on auth.users
+  for each row execute function auth_roster_only();
+
+-- Members can't promote themselves. During account setup they may set their
+-- role once (anything but Executive Board); after that only exec changes
+-- role, exec title and website visibility.
+create or replace function guard_member_self_update() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if is_exec() then return new; end if;
+  if new.exec_title is distinct from old.exec_title or new.show_on_website is distinct from old.show_on_website then
+    raise exception 'Only the executive board can change titles or website visibility';
+  end if;
+  if new.role is distinct from old.role and (old.setup_completed_at is not null or new.role = 'Executive Board') then
+    raise exception 'Only the executive board can change your role';
+  end if;
+  if old.setup_completed_at is not null and new.setup_completed_at is distinct from old.setup_completed_at then
+    raise exception 'Account setup is already complete';
+  end if;
+  return new;
+end $$;
+create trigger members_guard_self_update before update on members for each row execute function guard_member_self_update();
 
 -- Private fields live in their own table so row-level security can hide them.
 create table member_private (
   member_id uuid primary key references members (id) on delete cascade,
-  phone text,
-  student_id text
+  phone text
 );
 
 -- Alumni status and class standing are derived, never stored.
@@ -82,6 +130,8 @@ create table role_changes (
 );
 
 -- ---------------------------------------------------------------- tasks
+-- Due dates are relative to the semester calendar exec sets each year
+-- (settings 'calendar'), and land on the Friday of the chosen week.
 create table task_templates (
   id uuid primary key default gen_random_uuid(),
   title text not null,
@@ -89,18 +139,20 @@ create table task_templates (
   audience_kind text not null check (audience_kind in ('all', 'role', 'title')),
   audience_role member_role,
   audience_title exec_title,
-  due_month int not null check (due_month between 1 and 12),
-  due_day int not null check (due_day between 1 and 31),
+  semester text not null check (semester in ('Fall', 'Spring', 'Every semester')),
+  -- before: n weeks before classes start; week: week n; end: n weeks before the last week
+  when_anchor text not null check (when_anchor in ('before', 'week', 'end')),
+  when_weeks int not null check (when_weeks between 0 and 30),
   created_by uuid references members (id),
   created_at timestamptz not null default now()
 );
 
 create table task_completions (
   template_id uuid references task_templates (id) on delete cascade,
-  academic_year int not null,               -- starting year, e.g. 2026 for 2026-27
+  term text not null check (term ~ '^[FS][0-9]{4}$'),  -- 'F2026', 'S2027'
   member_id uuid references members (id) on delete cascade,
   completed_at timestamptz not null default now(),
-  primary key (template_id, academic_year, member_id)
+  primary key (template_id, term, member_id)
 );
 
 -- ---------------------------------------------------------------- recruiting
@@ -127,6 +179,7 @@ create table interview_reports (
   tips text,
   difficulty int check (difficulty between 1 and 5),
   outcome text check (outcome in ('Advanced', 'Offer', 'Rejected', 'Unknown')),
+  anonymous boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -141,8 +194,13 @@ create table contacts (
   alum_class int,
   preferences text,
   added_by uuid references members (id) on delete set null,
+  -- Earlier roles, newest first: [{company, title, until}]. Any member can move a contact.
+  history jsonb not null default '[]',
+  updated_by uuid references members (id) on delete set null,
+  updated_at timestamptz,
   created_at timestamptz not null default now()
 );
+create unique index contacts_linkedin_uq on contacts (lower(regexp_replace(linkedin, '^https?://(www\.)?|/+$', '', 'g'))) where coalesce(linkedin, '') <> '';
 
 create table outreach (
   id uuid primary key default gen_random_uuid(),
@@ -156,7 +214,10 @@ create table outreach (
   helpfulness int check (helpfulness between 1 and 5),
   referred boolean not null default false,
   notes text not null default '',
-  anonymous boolean not null default false   -- hidden from other members; self and exec still see it
+  anonymous boolean not null default false,  -- hidden from other members; self and exec still see it
+  follow_ups date[] not null default '{}',   -- follow-up messages after the first
+  responded_on date,                         -- response_days is counted from date to this
+  thanked boolean not null default false     -- sent a thank-you after the chat
 );
 
 create view contact_stats as
@@ -215,9 +276,12 @@ create index firm_grades_company_idx on firm_grades (lower(btrim(company)));
 
 -- ---------------------------------------------------------------- forum
 create type forum_channel as enum ('recruiting', 'interview-prep', 'referrals', 'opportunities', 'offers', 'general');
+-- Who a thread is for. Every member and alum can read every space.
+create type forum_space as enum ('everyone', 'members', 'alumni');
 
 create table forum_posts (
   id uuid primary key default gen_random_uuid(),
+  space forum_space not null default 'everyone',
   channel forum_channel not null default 'general',
   member_id uuid references members (id) on delete set null,
   title text not null check (length(btrim(title)) between 1 and 140),
@@ -269,6 +333,20 @@ create table projects (
 );
 create index projects_search_idx on projects using gin (search);
 
+-- What project teams learned, tagged by topic so later teams can search across projects.
+create table lessons (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects (id) on delete cascade,
+  member_id uuid references members (id) on delete set null,
+  body text not null check (length(btrim(body)) > 0),
+  tags text[] not null default '{}',
+  created_at timestamptz not null default now(),
+  -- Text search on the lesson; topics have their own array index (array_to_string isn't immutable).
+  search tsvector generated always as (to_tsvector('english', body)) stored
+);
+create index lessons_search_idx on lessons using gin (search);
+create index lessons_tags_idx on lessons using gin (tags);
+
 create table templates (
   id uuid primary key default gen_random_uuid(),
   title text not null,
@@ -283,7 +361,7 @@ create table settings (
   key text primary key,
   value jsonb not null
 );
--- settings: 'archive' -> {deckUrl, note}
+-- settings: 'calendar' -> {year, fall: {start, weeks}, spring: {start, weeks}}, set by exec each year
 
 -- One row: the JSON shape of SiteContent (src/lib/site-content.ts).
 create table site_content (
@@ -310,6 +388,7 @@ alter table forum_replies enable row level security;
 alter table forum_votes enable row level security;
 alter table projects enable row level security;
 alter table templates enable row level security;
+alter table lessons enable row level security;
 alter table settings enable row level security;
 alter table site_content enable row level security;
 
@@ -337,19 +416,27 @@ create policy "own applications" on applications for all
   using (member_id = current_member_id() or is_exec())
   with check (member_id = current_member_id());
 
-create policy "read shared" on interview_reports for select using (current_member_id() is not null);
+-- Reports can be anonymous, so members read them through interview_reports_visible (below).
+create policy "own reports or exec" on interview_reports for select using (member_id = current_member_id() or is_exec());
 create policy "write own reports" on interview_reports for insert with check (member_id = current_member_id());
 create policy "read contacts" on contacts for select using (current_member_id() is not null);
 create policy "add contacts" on contacts for insert with check (current_member_id() is not null);
+create policy "members update contacts" on contacts for update using (current_member_id() is not null) with check (current_member_id() is not null);
 -- Outreach rows can be anonymous, so members read them through outreach_visible (below).
 create policy "own outreach or exec" on outreach for select using (member_id = current_member_id() or is_exec());
 create policy "log own outreach" on outreach for insert with check (member_id = current_member_id());
+create policy "update own outreach" on outreach for update using (member_id = current_member_id()) with check (member_id = current_member_id());
+create policy "delete own outreach" on outreach for delete using (member_id = current_member_id());
 create policy "read comments" on comments for select using (current_member_id() is not null);
 create policy "post own comments" on comments for insert with check (member_id = current_member_id());
 create policy "read projects" on projects for select using (current_member_id() is not null);
 create policy "exec manage projects" on projects for all using (is_exec()) with check (is_exec());
 create policy "read templates" on templates for select using (current_member_id() is not null);
 create policy "exec manage templates" on templates for all using (is_exec()) with check (is_exec());
+create policy "read lessons" on lessons for select using (current_member_id() is not null);
+create policy "write own lessons" on lessons for insert with check (member_id = current_member_id());
+create policy "edit own lessons or exec" on lessons for update using (member_id = current_member_id() or is_exec()) with check (member_id = current_member_id() or is_exec());
+create policy "delete own lessons or exec" on lessons for delete using (member_id = current_member_id() or is_exec());
 create policy "read settings" on settings for select using (current_member_id() is not null);
 create policy "exec manage settings" on settings for all using (is_exec()) with check (is_exec());
 
@@ -410,9 +497,16 @@ where current_member_id() is not null;
 create view outreach_visible with (security_invoker = false) as
 select
   o.id, o.contact_id, o.date, o.channel, o.responded, o.response_days, o.chatted,
-  o.helpfulness, o.referred, o.notes, o.anonymous,
+  o.helpfulness, o.referred, o.notes, o.anonymous, o.follow_ups, o.responded_on, o.thanked,
   case when not o.anonymous or o.member_id = current_member_id() or is_exec() then o.member_id end as member_id
 from outreach o
+where current_member_id() is not null;
+
+create view interview_reports_visible with (security_invoker = false) as
+select
+  r.id, r.company, r.year, r.position, r.round, r.format, r.questions, r.tips, r.difficulty, r.outcome, r.anonymous, r.created_at,
+  case when not r.anonymous or r.member_id = current_member_id() or is_exec() then r.member_id end as member_id
+from interview_reports r
 where current_member_id() is not null;
 
 -- The public website reads site_content anonymously; only exec can change it.

@@ -4,24 +4,24 @@ Goal: institutional memory that doesn't graduate. Everything members learn (who'
 
 ## Status
 
-Built and clickable, running on sample data in the browser (`src/portal/store.tsx`). Log in from the **Login** button at the top right of the site. The login page offers three preview personas: Managing Director, Consultant and new Associate Consultant.
+Built and clickable, running on sample data in the browser (`src/portal/store.tsx`). In the preview build, the sign-in page lists sample people to try it as (Managing Director, Team Lead, Consultant, Associate Consultant, alum, and a new member who hasn't set up an account), and any password works.
 
 | Module | Route | What it does |
 | --- | --- | --- |
-| Home | `/portal` | Action items generated from exec's recurring tasks, the most active forum threads, a recruiting snapshot and (for exec) items that need approval |
-| Forum | `/portal/forum` | Bookface-style threads in six channels (Recruiting, Interview prep, Referrals and intros, Opportunities, Offers, General), with replies, "helpful" votes, search and sorting. A thread can be tagged with a firm and then also shows on that company's page. Exec can pin threads and remove any post |
-| Directory | `/portal/directory` | Members and alumni with filters. Class standing and alumni status are computed from graduation year. Phone and student ID are visible only to the member and exec |
-| My Recruiting | `/portal/recruiting` | Personal application pipeline by stage, plus your coffee chats |
+| Sign-in | `/login` | Invite-only. Exec adds a member's school and/or personal email; the member chooses "Set up your account", sets a password and confirms their details (school, class, start term, practice, role other than Executive Board). Either email signs in afterwards |
+| Home | `/portal` | This semester's tasks, follow-ups due from your network, the most active forum threads, your applications and (for exec) items that need approval |
+| Forum | `/portal/forum` | Bookface-style threads split into All threads, Current members and Alumni, across six channels (Recruiting, Interview prep, Referrals and intros, Opportunities, Offers, General), with replies, "helpful" votes, search and sorting. Everyone can read every space. A thread can be tagged with a firm and then also shows on that company's page. Exec can pin threads and remove any post |
+| Directory | `/portal/directory` | Members and alumni with filters, showing personal emails. Class standing and alumni status are computed from graduation year; alumni show the highest role they held. Phone is visible only to the member and exec |
+| My Recruiting | `/portal/recruiting` | Three tabs: Applications (your pipeline by stage), My network (your outreach spreadsheet: add a person with their LinkedIn and current role and they join the shared Network; follow-up reminders after 7 days with no reply; one-click updates for replies, chats and thank-yous that feed the contact grades) and My interviews |
 | Companies | `/portal/companies` | Every firm members recruit with, graded by members on their recruiting process (communication, speed, fairness, interviewers, would they recommend applying), plus interview reports by year and forum threads about the firm |
-| Network | `/portal/network` | Shared contacts with an outreach grade built from the outreach log (response rate, reply speed, helpfulness), plus referrals and how to approach them |
-| Projects | `/portal/projects` | Searchable archive of past engagements and reusable templates |
-| Archive | `/portal/archive` | Link to the historical slide deck (set by exec) |
-| Profile | `/portal/profile` | Onboarding fields: name, emails, phone, school, student ID, grad year, practice, role, headshot |
-| Members & Roles (exec) | `/portal/admin` | Approve proposed promotions, edit roles and exec titles, add members, role history |
-| Recurring Tasks (exec) | `/portal/admin/tasks` | Yearly task calendar aimed at everyone, a role, or whoever holds an exec title |
-| Website (exec) | `/portal/admin/website` | Edit the public site with no code changes: stats, Our People roster with headshots (or sync it from the directory), case studies, recruiting status and testimonials |
+| Network | `/portal/network` | Shared contacts with an outreach grade built from the outreach log (response rate, reply speed, helpfulness), searchable by firm. Any member can move a contact to a new firm or title; earlier roles are kept |
+| Projects | `/portal/projects` | Past engagements, what each team learned (tagged lessons that stack up by topic and are searchable across projects) and reusable templates |
+| Profile | `/portal/profile` | Name, emails, phone, school, grad year, practice, headshot |
+| Members & Roles (exec) | `/portal/admin` | The full roster, current and alumni. Add members by email, see who has set up their sign-in, edit roles and exec titles, and approve the one automatic proposal: Associate Consultant to Consultant after two semesters. Alumni keep the highest role they held |
+| Recurring Tasks (exec) | `/portal/admin/tasks` | Exec sets each semester's first day of classes and length once a year; tasks are set as "week 3", "2 weeks before classes start" or "the last week" and date themselves, aimed at everyone, a role, or whoever holds an exec title |
+| Website (exec) | `/portal/admin/website` | Out of the sidebar while the public site stays on Webflow. Edits the public pages kept in this repo |
 
-The automation rules are pure functions in `src/portal/logic.ts` (academic year, class standing, alumni cutoff, promotion proposals, task generation, response stats, grades), so the same code can run in a nightly job.
+The automation rules are pure functions in `src/portal/logic.ts` (academic year, class standing, alumni cutoff, promotion proposals, highest role, semester task dates, follow-up reminders, response stats, grades), so the same code can run in a nightly job.
 
 ### Grades
 
@@ -38,9 +38,11 @@ The portal mirrors Bookface on a plain white page: panels with hairline borders 
 
 ## Going live
 
-1. Create a Supabase project and run `supabase/schema.sql`.
-2. Enable Google sign-in and restrict it to 5C domains.
-3. Replace the browser store in `src/portal/store.tsx` and `src/lib/use-site-content.ts` with Supabase queries. The data shapes already match the tables. Read grades from `firm_grades_visible` and outreach from `outreach_visible`, never the base tables, and store forum votes as rows in `forum_votes`.
+1. Create a Supabase project under a club-owned account and run `supabase/schema.sql`.
+2. In Authentication, keep email + password sign-in and **email confirmation on** (otherwise anyone who knows a member's email could claim their account before they do). The `auth_users_roster_only` trigger already rejects emails that aren't on the roster.
+3. Connect an email sender (Authentication, SMTP settings). Supabase writes and sends the confirmation and password-reset emails itself, but its built-in sender only delivers to your Supabase team's own addresses, a few an hour. A free option: a shared club Gmail account with an app password as the SMTP server. GitHub doesn't send email for apps.
+4. Import the real roster into `members` from a spreadsheet (Table editor, Import CSV). Real member data goes in the database only, never into this repo.
+5. Replace the browser store in `src/portal/store.tsx` and `src/lib/use-site-content.ts` with Supabase queries. The data shapes already match the tables. Read grades from `firm_grades_visible`, outreach from `outreach_visible` and interview reports from `interview_reports_visible`, never the base tables, and store forum votes as rows in `forum_votes`.
 4. Move headshots to Supabase Storage (the preview stores them as resized data URLs).
 5. Add a daily scheduled job for alumni transitions, task generation on July 1 and promotion proposals each term.
 6. Turn on Supabase Realtime for `forum_posts` and `forum_replies` so new threads and replies appear without a refresh. Direct messages between members are the next step after the forum and would use the same channel.
@@ -49,31 +51,30 @@ The portal mirrors Bookface on a plain white page: panels with hairline borders 
 
 Everything runs on free tiers.
 
-- **Next.js** (this repo), members only. `/` opens the portal; the public site stays on WordPress, so add a "Members" link there pointing at the portal's address. Portal routes live under `src/app/(portal)/` with their own layout and sidebar.
-- **Hosting.** Vercel's free Hobby plan is limited to non-commercial personal use, and Graphite does client work, so confirm with Vercel before relying on it. There's a simpler free option: the portal runs entirely in the browser, and its security comes from Supabase's row-level security, not a server. That means it can be exported as static files (as `npm run build:preview` already does) and served from Cloudflare Pages or GitHub Pages.
+- **Next.js** (this repo), members only. `/` opens the portal; the public site stays on Webflow, so add a "Members" link there pointing at the portal's address. Portal routes live under `src/app/(portal)/` with their own layout and sidebar.
+- **Hosting: GitHub Pages.** The portal runs entirely in the browser and its security comes from Supabase's row-level security, not a server, so it ships as static files (as `npm run build:preview` already does). GitHub's free plan publishes Pages only from a public repo; the code, schema and fictional sample data are safe to show, and real member data lives only in Supabase. Vercel's free Hobby plan is the alternative, but it is limited to non-commercial personal use and only deploys commits authored by the account owner on private repos.
 - **Supabase**: Postgres, Auth and file storage in one place. The free plan (500 MB database, 1 GB file storage, 50,000 monthly active users) is far more than a club needs.
   - **Pausing:** free projects pause after 7 days with no activity and must be restored by hand, which would happen every winter and summer break. Add a free daily GitHub Actions job that makes one small query to keep the project awake.
-  - **Sign-in:** Google, limited to 5C email domains (`pomona.edu`, `mymail.pomona.edu`, `cmc.edu`, `hmc.edu`, `g.hmc.edu`, `scrippscollege.edu`, `pitzer.edu`, `students.pitzer.edu`). Alumni keep access through a personal-email magic link once their school address is closed.
-  - **Row Level Security** keeps sensitive fields (phone, student ID, payroll) visible only to the member themself and to exec.
+  - **Sign-in:** email and password, invite-only. A signed-in account belongs to whichever member has that school or personal email (`member_for_email`), so either email works and alumni keep access after their school address closes.
+  - **Row Level Security** keeps phone numbers visible only to the member themself and to exec, and a trigger stops members changing their own role, exec title or website visibility.
   - **`pg_cron`** runs the yearly rollovers (below).
 
 ## Modules (sidebar)
 
 1. **Home**: action items for you, chosen by your role and the time of year.
 2. **Directory**: everyone, filterable by school, year, practice and role.
-3. **My Recruiting**: your applications and coffee chats.
-4. **Forum**: questions and answers about recruiting, interviews, referrals and offers.
+3. **My Recruiting**: your applications, your network tracker and your interviews.
+4. **Forum**: questions and answers about recruiting, interviews, referrals and offers, plus an alumni space.
 5. **Companies**: member grades and interview intel by firm and year.
 6. **Network**: alumni and contacts, with outreach grades.
-7. **Projects**: a searchable archive of every engagement, plus templates.
-8. **Archive**: a link to the historical slide deck (the URL is a setting).
+7. **Projects**: every engagement, what each team learned, and templates.
 
 ## Data model (first pass)
 
 ```
 members
-  id, auth_user_id, first_name, last_name, personal_email, school_email,
-  phone*, student_id*, school (pomona|cmc|hmc|scripps|pitzer), grad_year,
+  id, first_name, last_name, personal_email, school_email,
+  phone*, school (pomona|cmc|hmc|scripps|pitzer), grad_year,
   practice (strategy|digital), joined_term, linkedin, photo_url,
   status (active|alumni|inactive)        -- derived, see automation
   * restricted columns: self + exec only
@@ -116,18 +117,16 @@ templates           title, category, source_project_id, file link, description
 ## Automation
 
 - **Class year and aging out.** Standing is computed from `grad_year` and the current academic year (rolling over July 1). A nightly job moves anyone past commencement to `alumni` and sends a reminder to update their personal email first.
-- **Role maturation.** Each term, the system proposes promotions (e.g. Associate → Consultant after 2 semesters, Consultant → eligible for Team Lead). Exec approves them in one batch, and approvals write to `member_roles`. Nothing changes silently.
+- **Role maturation.** The one automatic proposal: Associate Consultant to Consultant after two completed semesters. Exec approves it (one at a time or all at once) and approvals write to `role_changes`. Nothing changes silently. Once someone graduates, their highest role is fixed.
 - **Exec handoff.** When the new exec board's terms start, task templates re-target to the new title holders automatically, so "book the recruiting room by Aug 25" reaches whoever is Director of Recruiting that year.
-- **Recurring tasks.** On July 1, `tasks` are generated for the academic year from `task_templates`. Home shows what is overdue, due this week and coming up.
+- **Recurring tasks.** Each summer exec enters the fall and spring first days of classes and lengths; every template's due date (a week relative to the start or the end of the semester, due that Friday) follows from them. Home shows what is overdue and coming up.
 - **Public site sync.** `/team` reads current members and roles from the database, so the website roster stays up to date on its own.
 
-## Project archive ingestion
+## Project archive ingestion (Google Drive)
 
-With Drive access: crawl the projects folder, extract text from decks and docs, then generate a summary, sector, categories and deliverable types for each project. Exec reviews the results, then they're indexed for full-text search. Templates are tagged from the strongest past deliverables per category.
+With Drive access: crawl the projects folder, extract text from decks and docs, then draft a summary, sector, categories, deliverables and lessons learned for each project. Exec reviews the drafts, then they're indexed for full-text search. Templates are tagged from the strongest past deliverables per category.
 
 ## Decisions needed
 
-- Supabase OK as the backend? (Alternatives: Neon + Clerk; Firebase.)
-- Who is "exec" for permissions: the current five director titles, or a configurable list?
-- Payroll: what fields are actually needed (student ID only, or also employee ID / pay rate), and who sees them?
-- Should alumni see the Network and Companies modules? (Recommended: yes, read and contribute.)
+- Who is "exec" for permissions: anyone with the Executive Board role (current), or a configurable list?
+- Should the Current members and Alumni forum spaces be readable by everyone (current) or only by that group? It's one policy change either way.

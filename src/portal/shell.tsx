@@ -19,7 +19,6 @@ const ICONS = {
   network: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20a6.5 6.5 0 0 1 13 0M16 4.3a3.5 3.5 0 0 1 0 6.4M18.5 14a6.5 6.5 0 0 1 3 6",
   directory: "M5 3.5h14v17H5zM12 12a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5zM8 17.5a4 4 0 0 1 8 0",
   projects: "M3.5 6.5a1.5 1.5 0 0 1 1.5-1.5h4l2 2h8a1.5 1.5 0 0 1 1.5 1.5v9.5a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z",
-  archive: "M3.5 4.5h17v4h-17zM5 8.5v11h14v-11M10 12.5h4",
   members: "M12 3.5 4.5 6.5v5.5c0 4.2 3.2 7.6 7.5 8.5 4.3-.9 7.5-4.3 7.5-8.5V6.5z",
   tasks: "M4.5 12a7.5 7.5 0 0 1 13-5.1L19.5 9M19.5 4v5h-5M19.5 12a7.5 7.5 0 0 1-13 5.1L4.5 15M4.5 20v-5h5",
   website: "M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17zM3.5 12h17M12 3.5c2.3 2.3 3.5 5.2 3.5 8.5s-1.2 6.2-3.5 8.5c-2.3-2.3-3.5-5.2-3.5-8.5s1.2-6.2 3.5-8.5z",
@@ -56,7 +55,6 @@ const NAV: { section?: string; items: NavItem[] }[] = [
     items: [
       { href: "/portal/directory", label: "Directory", icon: "directory" },
       { href: "/portal/projects", label: "Projects", icon: "projects" },
-      { href: "/portal/archive", label: "Archive", icon: "archive" },
     ],
   },
   {

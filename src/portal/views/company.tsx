@@ -3,11 +3,12 @@
 import Link from "@/components/app-link";
 import { useState } from "react";
 import { usePortal } from "@/portal/store";
-import { companyNames, companySlug, contactGrade, firmGradeSummary, fmtDate, fullName, matchCompany, pct, threadActivity, uid } from "@/portal/logic";
+import { byline, companyNames, companySlug, contactGrade, firmGradeSummary, fmtDate, fullName, matchCompany, nextStep, outreachStage, pct, threadActivity, uid } from "@/portal/logic";
+import { AddPersonForm, StageChip, StepPing, myOutreachAt } from "@/portal/outreach";
 import type { InterviewReport, PortalData, Stage } from "@/portal/types";
 import { PostForm, ThreadRow, useThreadVote } from "@/portal/forum";
 import { FirmGrades } from "@/portal/grades";
-import { Badge, Button, Card, Drawer, Empty, Field, GradeTile, Input, PageTitle, Select, Stat, StatGroup, Td, Textarea, Th, linkCls, rowCls } from "@/portal/ui";
+import { Badge, Button, Card, Check, Drawer, Empty, Field, GradeTile, Input, PageTitle, Select, Stat, StatGroup, Td, Textarea, Th, linkCls, rowCls } from "@/portal/ui";
 import { useRouteParam } from "@/lib/use-route-param";
 
 type Outcome = InterviewReport["outcome"];
@@ -69,6 +70,7 @@ type ReportDraft = {
   tips: string;
   difficulty: string;
   outcome: Outcome;
+  anonymous: boolean;
 };
 
 const newReportDraft = (company = ""): ReportDraft => ({
@@ -81,6 +83,7 @@ const newReportDraft = (company = ""): ReportDraft => ({
   tips: "",
   difficulty: "3",
   outcome: "Unknown",
+  anonymous: false,
 });
 
 /**
@@ -109,6 +112,7 @@ export function ReportForm({ company, onDone }: { company?: string; onDone: () =
       tips: draft.tips.trim(),
       difficulty: Number(draft.difficulty) as InterviewReport["difficulty"],
       outcome: draft.outcome,
+      anonymous: draft.anonymous || undefined,
     };
     update((d) => ({ ...d, reports: [report, ...d.reports] }));
     onDone();
@@ -151,6 +155,12 @@ export function ReportForm({ company, onDone }: { company?: string; onDone: () =
           <Select options={OUTCOMES} value={draft.outcome} onChange={(e) => set({ outcome: e.target.value as Outcome })} />
         </Field>
       </div>
+      <Check
+        label="Post anonymously"
+        checked={draft.anonymous}
+        onChange={(v) => set({ anonymous: v })}
+        hint="Other members see “Anonymous member”. You and exec still see your name. If few members interviewed here, people may still guess."
+      />
       <div className="flex gap-2 pt-2">
         <Button type="submit">Save report</Button>
         <Button variant="secondary" onClick={onDone}>
@@ -167,6 +177,7 @@ export default function CompanyView() {
   const vote = useThreadVote();
   const [adding, setAdding] = useState(false);
   const [posting, setPosting] = useState(false);
+  const [reaching, setReaching] = useState(false);
 
   if (!me) return null;
 
@@ -245,7 +256,10 @@ export default function CompanyView() {
                           </div>
                           {r.format && <p className="mt-0.5 text-[13px] text-ink-2">{r.format}</p>}
                           <p className="mt-0.5 text-[12.5px] text-muted">
-                            {memberName(r.memberId)}
+                            {(() => {
+                              const by = byline(r.memberId, r.anonymous, me, data.members);
+                              return by.note ? `${by.name} (${by.note})` : by.name;
+                            })()}
                             <span className="mx-1.5 text-faint">/</span>
                             Difficulty {r.difficulty} of 5
                           </p>
@@ -273,7 +287,7 @@ export default function CompanyView() {
             {apps.length === 0 ? (
               <Empty>No members have tracked an application here yet.</Empty>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="relative overflow-x-auto">
                 <table className="w-full min-w-[620px]">
                   <thead>
                     <tr>
@@ -323,11 +337,14 @@ export default function CompanyView() {
           </Card>
         </div>
 
+        <div className="space-y-6">
+        <YourHistory company={name} onReach={() => setReaching(true)} />
+
         <Card title="People to talk to" flush>
           {contacts.length === 0 ? (
             <Empty>
               No contacts here yet. Add one in the{" "}
-              <Link href="/portal/network" className="text-ink hover:underline">
+              <Link href="/portal/network" className={linkCls}>
                 network
               </Link>
               .
@@ -355,8 +372,12 @@ export default function CompanyView() {
             </ul>
           )}
         </Card>
+        </div>
       </div>
 
+      <Drawer open={reaching} onClose={() => setReaching(false)} title={`Reach out to someone at ${name}`}>
+        {reaching && <AddPersonForm company={name} onDone={() => setReaching(false)} />}
+      </Drawer>
       <Drawer open={adding} onClose={() => setAdding(false)} title="Add interview report">
         {adding && <ReportForm company={name} onDone={() => setAdding(false)} />}
       </Drawer>
@@ -364,5 +385,119 @@ export default function CompanyView() {
         {posting && <PostForm company={name} onDone={() => setPosting(false)} />}
       </Drawer>
     </div>
+  );
+}
+
+/** Only you see this: your applications, outreach and interviews at one firm. */
+function YourHistory({ company, onReach }: { company: string; onReach: () => void }) {
+  const { data, me } = usePortal();
+  if (!me) return null;
+
+  const apps = data.applications.filter((a) => a.memberId === me.id && a.company.trim() === company).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const outreach = myOutreachAt(data, me.id, company);
+  const reports = data.reports.filter((r) => r.memberId === me.id && r.company.trim() === company).sort((a, b) => b.year - a.year);
+  const contact = (id: string) => data.contacts.find((c) => c.id === id);
+  const empty = !apps.length && !outreach.length && !reports.length;
+  const section = "border-b border-edge bg-[#fbfbf7] px-4 py-1.5 text-[11.5px] font-medium tracking-[0.05em] text-muted uppercase";
+
+  return (
+    <Card
+      title={`Your history at ${company}`}
+      flush
+      action={
+        <Button variant="ghost" onClick={onReach}>
+          Log outreach
+        </Button>
+      }
+    >
+      {empty ? (
+        <Empty>
+          Nothing tracked here yet. Log outreach to someone at {company}, or add an application in{" "}
+          <Link href="/portal/recruiting" className={linkCls}>
+            My recruiting
+          </Link>
+          .
+        </Empty>
+      ) : (
+        <>
+          {apps.length > 0 && (
+            <>
+              <p className={section}>Applications</p>
+              <ul className="divide-y divide-edge">
+                {apps.map((a) => (
+                  <li key={a.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
+                    <span className="min-w-0">
+                      <span className="block font-medium">{a.position}</span>
+                      <span className="block text-[12.5px] text-muted">{a.cycle || "No cycle set"}</span>
+                    </span>
+                    <Badge tone={stageTone(a.stage)}>{a.stage}</Badge>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {outreach.length > 0 && (
+            <>
+              <p className={`${section} ${apps.length ? "border-t" : ""}`}>People you reached out to</p>
+              <ul className="divide-y divide-edge">
+                {outreach.map((o) => {
+                  const c = contact(o.contactId);
+                  const step = nextStep(o);
+                  return (
+                    <li key={o.id} className="px-4 py-2.5">
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="min-w-0">
+                          {c ? (
+                            <Link href={`/portal/network/${c.id}`} className={`font-medium ${linkCls}`}>
+                              {c.name}
+                            </Link>
+                          ) : (
+                            <span className="text-muted">Contact removed</span>
+                          )}
+                          <span className="block text-[12.5px] text-muted">
+                            {c?.title}
+                            {c && c.company.trim() !== company && ` (now at ${c.company})`}
+                            {c?.title ? ", " : ""}
+                            {fmtDate(o.date)}
+                          </span>
+                        </span>
+                        <StageChip stage={outreachStage(o)} />
+                      </div>
+                      <div className="mt-1 text-[12.5px]">
+                        {o.chatted && o.helpfulness != null ? (
+                          <span className="text-ink-2">
+                            Helpfulness {o.helpfulness} of 5{o.referred ? ", referred you" : ""}
+                          </span>
+                        ) : (
+                          <StepPing step={step} />
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+          {reports.length > 0 && (
+            <>
+              <p className={`${section} ${apps.length || outreach.length ? "border-t" : ""}`}>Your interviews</p>
+              <ul className="divide-y divide-edge">
+                {reports.map((r) => (
+                  <li key={r.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
+                    <span className="min-w-0">
+                      <span className="block font-medium">{[r.position, r.round].filter(Boolean).join(", ")}</span>
+                      <span className="block text-[12.5px] text-muted">
+                        {r.year}, difficulty {r.difficulty} of 5{r.anonymous ? ", anonymous to others" : ""}
+                      </span>
+                    </span>
+                    <Badge tone={outcomeTone(r.outcome)}>{r.outcome}</Badge>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </>
+      )}
+    </Card>
   );
 }

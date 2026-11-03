@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { site } from "@/content/site";
 import "./globals.css";
 
-// This app is the members-only portal. The public site stays on WordPress for now;
+// This app is the members-only portal. The public site stays on Webflow for now;
 // its pages are kept, unrouted, in src/app/_public-site (see README).
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),

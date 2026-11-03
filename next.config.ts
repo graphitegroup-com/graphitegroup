@@ -11,7 +11,7 @@ const nextConfig: NextConfig = preview
       images: { loader: "custom", loaderFile: "./src/lib/preview-image-loader.ts" },
     }
   : {
-      // Members-only for now: the public site stays on WordPress, so "/" opens the portal.
+      // Members-only for now: the public site stays on Webflow, so "/" opens the portal.
       // The old Webflow redirects live in git history for when the public pages move here.
       async redirects() {
         return [

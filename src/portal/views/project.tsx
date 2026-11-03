@@ -6,6 +6,7 @@ import { useRouteParam } from "@/lib/use-route-param";
 import { usePortal } from "@/portal/store";
 import { fmtDate, fullName, uid } from "@/portal/logic";
 import type { Comment } from "@/portal/types";
+import { LessonForm, LessonItem } from "@/portal/lessons";
 import { Avatar, Badge, Button, Card, Empty, PageTitle, Textarea } from "@/portal/ui";
 
 export default function ProjectView() {
@@ -23,7 +24,7 @@ export default function ProjectView() {
         <p className="text-[13.5px] text-muted">
           This project may have been removed, or the link is incomplete.{" "}
           <Link href="/portal/projects" className="text-ink hover:underline">
-            Return to the archive
+            Return to projects
           </Link>
           .
         </p>
@@ -34,6 +35,7 @@ export default function ProjectView() {
   const subject = `project:${p.id}`;
   const thread = data.comments.filter((c) => c.subject === subject).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const templates = data.templates.filter((t) => t.sourceProjectId === p.id);
+  const lessons = data.lessons.filter((l) => l.projectId === p.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const lead = data.members.find((m) => m.id === p.lead);
   const leadName = lead ? fullName(lead) : "Former member";
 
@@ -60,6 +62,19 @@ export default function ProjectView() {
             <p className="max-w-[70ch] py-3 leading-relaxed text-ink-2">
               {p.summary || <span className="text-muted">No summary yet. It will be generated from the project folder once Drive is connected.</span>}
             </p>
+          </Card>
+
+          <Card title="What we learned" flush>
+            {lessons.length === 0 ? (
+              <Empty>No lessons yet. If you worked on {p.client}, add what the next team should know.</Empty>
+            ) : (
+              <ul className="divide-y divide-edge">
+                {lessons.map((l) => (
+                  <LessonItem key={l.id} lesson={l} data={data} />
+                ))}
+              </ul>
+            )}
+            <LessonForm project={p} />
           </Card>
 
           <Card title="Deliverables" flush>

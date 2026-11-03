@@ -2,7 +2,7 @@
 
 The members-only portal for Graphite Group: a forum, grades for firms and contacts, interview reports, the directory and exec tools. Next.js 16 (App Router), Tailwind CSS 4. `/` opens the portal.
 
-The public site stays on WordPress for now, so members who don't code can keep editing it. This repo also holds a public site modeled on ycombinator.com, switched off: its pages sit in `src/app/_public-site/`, and Next.js doesn't route folders that start with `_`. To serve them from here again, rename that folder back to `src/app/(site)` and replace the `/` redirect in `next.config.ts`.
+The public site stays on Webflow for now, so members who don't code can keep editing it. This repo also holds a public site modeled on ycombinator.com, switched off: its pages sit in `src/app/_public-site/`, and Next.js doesn't route folders that start with `_`. To serve them from here again, rename that folder back to `src/app/(site)` and replace the `/` redirect in `next.config.ts`.
 
 ## Run it
 

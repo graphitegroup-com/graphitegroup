@@ -11,6 +11,12 @@ import { seed } from "./seed";
 import type { Member, PortalData } from "./types";
 
 const DATA_KEY = "gg-portal-data";
+const VERSION_KEY = "gg-portal-version";
+/**
+ * Bump when the sample data's shape changes. Browsers holding an older shape
+ * start over from the seed instead of crashing on missing fields.
+ */
+const DATA_VERSION = "4";
 const SESSION_KEY = "gg-session";
 
 type Ctx = {
@@ -52,6 +58,11 @@ export function setSession(id: string | null) {
 
 function load(): PortalData {
   try {
+    if (localStorage.getItem(VERSION_KEY) !== DATA_VERSION) {
+      localStorage.removeItem(DATA_KEY);
+      localStorage.setItem(VERSION_KEY, DATA_VERSION);
+      return seed;
+    }
     const raw = localStorage.getItem(DATA_KEY);
     if (raw) return { ...seed, ...(JSON.parse(raw) as PortalData) };
   } catch {}

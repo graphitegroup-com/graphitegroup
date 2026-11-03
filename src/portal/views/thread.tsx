@@ -4,7 +4,7 @@ import Link from "@/components/app-link";
 import { useState } from "react";
 import { useGo } from "@/lib/use-go";
 import { useRouteParam } from "@/lib/use-route-param";
-import { channelLabel, PostForm, ThreadRow, toggleVote, useThreadVote } from "@/portal/forum";
+import { channelLabel, PostForm, SpaceBadge, ThreadRow, toggleVote, useThreadVote } from "@/portal/forum";
 import { companySlug, firmGradeSummary, fmtDate, fullName, isExec, memberLine, threadActivity, timeAgo, uid } from "@/portal/logic";
 import { usePortal } from "@/portal/store";
 import type { ForumReply, Member } from "@/portal/types";
@@ -104,6 +104,7 @@ export default function ThreadView() {
         sub={
           <span className="flex flex-wrap items-center gap-2">
             {post.pinned && <Badge tone="amber">Pinned</Badge>}
+            <SpaceBadge space={post.space} />
             <Badge>{channelLabel(post.channel)}</Badge>
             {post.company && (
               <Link href={`/portal/companies/${companySlug(post.company)}`} className={linkCls}>

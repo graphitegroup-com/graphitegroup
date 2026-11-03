@@ -24,11 +24,11 @@ export type Member = {
   id: string;
   firstName: string;
   lastName: string;
+  /** Members can sign in with either email; alumni keep the personal one after school email closes. */
   personalEmail: string;
   schoolEmail: string;
   phone: string; // private: self + exec
   school: School;
-  studentId: string; // private: self + exec
   gradYear: number;
   practice: Practice;
   role: Role;
@@ -46,16 +46,30 @@ export type Audience =
   | { kind: "role"; role: Role }
   | { kind: "title"; title: ExecTitle };
 
+export const TASK_SEMESTERS = ["Fall", "Spring", "Every semester"] as const;
+export type TaskSemester = (typeof TASK_SEMESTERS)[number];
+
+/**
+ * When a recurring task falls, relative to the semester calendar exec sets:
+ *  before: n weeks before classes start (n >= 1)
+ *  week:   week n of the semester (1 = the first week of classes)
+ *  end:    n weeks before the last week (0 = the last week)
+ * Due dates land on the Friday of that week.
+ */
+export type TaskWhen = { anchor: "before" | "week" | "end"; n: number };
+
 export type TaskTemplate = {
   id: string;
   title: string;
   body: string;
   audience: Audience;
-  /** Due every academic year on this month/day (1-12, 1-31). */
-  month: number;
-  day: number;
+  semester: TaskSemester;
+  when: TaskWhen;
   createdBy: string;
 };
+
+/** First day of classes (YYYY-MM-DD) and length in weeks. */
+export type SemesterDates = { start: string; weeks: number };
 
 export type Stage =
   | "Researching"
@@ -100,6 +114,8 @@ export type InterviewReport = {
   tips: string;
   difficulty: 1 | 2 | 3 | 4 | 5;
   outcome: "Advanced" | "Offer" | "Rejected" | "Unknown";
+  /** Hidden from other members; the member and exec still see who wrote it. */
+  anonymous?: boolean;
 };
 
 export type Comment = {
@@ -121,6 +137,10 @@ export type Contact = {
   alumClass?: number;
   preferences: string;
   addedBy: string;
+  /** Earlier roles, newest first, kept when a member moves the contact to a new company or title. */
+  history?: { company: string; title: string; until: string }[];
+  updatedAt?: string;
+  updatedBy?: string;
 };
 
 export type Outreach = {
@@ -137,6 +157,12 @@ export type Outreach = {
   notes: string;
   /** Hidden from other members; the member and exec still see who logged it. */
   anonymous?: boolean;
+  /** Dates (YYYY-MM-DD) of follow-up messages after the first one. */
+  followUps?: string[];
+  /** When they replied; responseDays is counted from `date` to this. */
+  respondedOn?: string;
+  /** Sent a thank-you after the chat. */
+  thanked?: boolean;
 };
 
 export type Score = 1 | 2 | 3 | 4 | 5;
@@ -190,8 +216,17 @@ export const FORUM_CHANNELS = [
 ] as const;
 export type ForumChannel = (typeof FORUM_CHANNELS)[number]["id"];
 
+/** Who a thread is for. Everyone can read every space; the split is for finding your people. */
+export const FORUM_SPACES = [
+  { id: "everyone", label: "Everyone", description: "Members and alumni together" },
+  { id: "members", label: "Current members", description: "Questions among current members" },
+  { id: "alumni", label: "Alumni", description: "Alumni keeping in touch and offering help" },
+] as const;
+export type ForumSpace = (typeof FORUM_SPACES)[number]["id"];
+
 export type ForumPost = {
   id: string;
+  space: ForumSpace;
   channel: ForumChannel;
   memberId: string;
   title: string;
@@ -227,6 +262,16 @@ export type Project = {
   lead: string;
 };
 
+/** Something a project team learned, kept so later teams can search it by topic. */
+export type Lesson = {
+  id: string;
+  projectId: string;
+  memberId: string;
+  body: string;
+  tags: string[];
+  createdAt: string;
+};
+
 export type Template = {
   id: string;
   title: string;
@@ -237,16 +282,18 @@ export type Template = {
 };
 
 export type Settings = {
-  archiveDeckUrl: string;
-  archiveNote: string;
+  /** Set by exec each academic year; recurring task due dates are computed from it. */
+  calendar: { year: number; fall: SemesterDates; spring: SemesterDates };
 };
 
 export type PortalData = {
   members: Member[];
   roleChanges: RoleChange[];
   taskTemplates: TaskTemplate[];
-  /** `${templateId}:${academicYear}:${memberId}` -> ISO completion time */
+  /** `${templateId}:${term}:${memberId}` -> ISO completion time, term like "F2026" */
   taskDone: Record<string, string>;
+  /** Preview stand-in for sign-in accounts: member id -> when they set up their password. */
+  accounts: Record<string, string>;
   applications: Application[];
   reports: InterviewReport[];
   comments: Comment[];
@@ -256,6 +303,7 @@ export type PortalData = {
   posts: ForumPost[];
   replies: ForumReply[];
   projects: Project[];
+  lessons: Lesson[];
   templates: Template[];
   settings: Settings;
 };

@@ -78,7 +78,7 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
       />
 
       <p role="note" className="mb-5 rounded-[3px] border border-[#ecd9a8] bg-[#fbf1da] px-3 py-2 text-[13px] text-[#5c4300]">
-        The public site is on WordPress for now, so edits here don&apos;t change it. They apply to the site pages kept in this repo, if those are
+        The public site is on Webflow for now, so edits here don&apos;t change it. They apply to the site pages kept in this repo, if those are
         switched back on.
       </p>
 
@@ -110,7 +110,7 @@ function WebsiteEditor({ initial }: { initial: SiteContent }) {
             ))}
           </div>
           <p className="-mx-4 -mb-1 border-t border-edge bg-stone px-4 py-2 text-[12.5px] text-muted">
-            For reference: {data.projects.length} projects are in the portal archive and {data.members.filter((m) => !isAlum(m)).length} members are active.
+            For reference: {data.projects.length} projects are in the portal and {data.members.filter((m) => !isAlum(m)).length} members are active.
           </p>
         </Card>
       )}
