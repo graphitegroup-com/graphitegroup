@@ -1,0 +1,37 @@
+# Daily: one small read so Supabase's free plan doesn't pause the project
+# after 7 quiet days, and a heartbeat commit if the repo has been quiet long
+# enough that GitHub would switch scheduled jobs off (60 days in a public repo).
+# Skips cleanly until SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are set.
+name: Keep Supabase awake
+
+on:
+  schedule:
+    - cron: "17 15 * * *" # every day at 15:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-awake
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Ping Supabase
+        run: bash scripts/ops/keep-awake.sh
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+
+  heartbeat:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # only to push the heartbeat commit
+    steps:
+      - uses: actions/checkout@v7
+      - name: Keep scheduled jobs switched on
+        run: bash scripts/ops/heartbeat.sh

@@ -45,6 +45,10 @@ Tokens and type classes (`t-hero`, `t-display`, `t-h2`, `t-h3`, `eyebrow`, `chip
 
 `npm run build:preview` writes a static copy to `preview-dist/`, with every page as a top-level `.html` file and relative paths. While the public pages are off it opens straight to sign-in; with them on, it starts at `scripts/preview-hub.html`. The portal uses sample data there.
 
+## Publishing and backups
+
+GitHub Actions publishes the portal to GitHub Pages on every merge into `main`, keeps the free Supabase project from pausing, and makes a weekly encrypted database backup. Setup, the yearly handover and restoring a backup are in [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
+
 ## Member portal
 
 Built on sample data; see [`docs/PORTAL.md`](docs/PORTAL.md) for the modules and the steps to connect Supabase (`supabase/schema.sql`).

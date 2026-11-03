@@ -44,3 +44,6 @@ next-env.d.ts
 # static preview build
 /.next-preview/
 /preview-dist/
+
+# encrypted database backups made locally (scripts/ops/backup.sh)
+/backup/

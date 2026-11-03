@@ -1,0 +1,58 @@
+# Weekly encrypted backup of the Supabase database, kept 90 days as a
+# downloadable file on the workflow run. The repo is public, so backups are
+# never committed and only ever leave the runner encrypted.
+# Skips cleanly until the SUPABASE_DB_URL and BACKUP_PASSPHRASE secrets are set.
+# Restore: scripts/ops/restore.sh (see docs/OPERATIONS.md).
+name: Back up database
+
+on:
+  schedule:
+    - cron: "41 9 * * 0" # Sundays at 09:41 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Secrets can't be tested in `if:` directly, so check them here.
+      - name: Check the backup secrets
+        id: check
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -n "$SUPABASE_DB_URL" ] && [ -n "$BACKUP_PASSPHRASE" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::SUPABASE_DB_URL or BACKUP_PASSPHRASE isn't set yet, so there's nothing to back up."
+          fi
+
+      - uses: supabase/setup-cli@v1
+        if: steps.check.outputs.ready == 'true'
+        with:
+          version: latest
+
+      - name: Dump and encrypt
+        id: dump
+        if: steps.check.outputs.ready == 'true'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: bash scripts/ops/backup.sh
+
+      - uses: actions/upload-artifact@v7
+        if: steps.check.outputs.ready == 'true'
+        with:
+          name: graphite-backup-${{ steps.dump.outputs.date }}
+          path: backup/*.gpg
+          retention-days: 90 # the longest GitHub allows for public repos
+          if-no-files-found: error

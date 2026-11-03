@@ -45,7 +45,8 @@ The portal mirrors Bookface on a plain white page: panels with hairline borders 
 5. Replace the browser store in `src/portal/store.tsx` and `src/lib/use-site-content.ts` with Supabase queries. The data shapes already match the tables. Read grades from `firm_grades_visible`, outreach from `outreach_visible` and interview reports from `interview_reports_visible`, never the base tables, and store forum votes as rows in `forum_votes`.
 4. Move headshots to Supabase Storage (the preview stores them as resized data URLs).
 5. Add a daily scheduled job for alumni transitions, task generation on July 1 and promotion proposals each term.
-6. Turn on Supabase Realtime for `forum_posts` and `forum_replies` so new threads and replies appear without a refresh. Direct messages between members are the next step after the forum and would use the same channel.
+6. Follow [`OPERATIONS.md`](OPERATIONS.md) to switch on GitHub Pages and add the keep-awake and backup settings.
+7. Turn on Supabase Realtime for `forum_posts` and `forum_replies` so new threads and replies appear without a refresh. Direct messages between members are the next step after the forum and would use the same channel.
 
 ## Stack
 

@@ -1,0 +1,60 @@
+# Builds the member portal as static files and publishes it to GitHub Pages
+# whenever main changes. One-time setup: Settings > Pages > Source: GitHub
+# Actions. See docs/OPERATIONS.md.
+name: Deploy portal
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One publish at a time; a newer push waits instead of cancelling one midway.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      # Static export with relative paths, so it works at any address
+      # (org.github.io/repo/ or a custom domain).
+      - name: Build the portal
+        run: npm run build:preview
+        env:
+          # Read once the portal is connected to Supabase. Both are safe to
+          # publish; never put the secret key here.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: preview-dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
