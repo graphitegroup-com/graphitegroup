@@ -30,7 +30,7 @@ import {
 } from "./logic";
 import { usePortal } from "./store";
 import type { Contact, Outreach, PortalData } from "./types";
-import { Badge, Button, Card, Check, Drawer, Empty, Field, Input, Select, Td, Textarea, Th, rowCls, type Tone } from "./ui";
+import { Badge, Button, Card, Check, Drawer, Empty, Field, Input, Select, Td, Textarea, Th, rowCls, type Tone, PRIVATE_HINT, PrivateNote } from "./ui";
 
 export const CHANNELS: Outreach["channel"][] = ["Email", "LinkedIn", "Referral", "In person"];
 export const OUTREACH_STAGES: OutreachStage[] = ["Reached out", "Followed up", "Replied", "Chatted"];
@@ -67,6 +67,27 @@ export function FirmOptions({ id, names }: { id: string; names: string[] }) {
   );
 }
 
+/** Existing Network contacts for a name field's type-ahead, labelled with who they are and where. */
+export function ContactOptions({ id, contacts }: { id: string; contacts: Contact[] }) {
+  return (
+    <datalist id={id}>
+      {[...contacts]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((c) => (
+          <option key={c.id} value={c.name} label={[c.title, c.company].filter(Boolean).join(" at ")} />
+        ))}
+    </datalist>
+  );
+}
+
+/** The one contact with exactly this name (ignoring case and spacing), if there's exactly one. */
+export function contactNamed(contacts: Contact[], name: string) {
+  const n = name.trim().replace(/\s+/g, " ").toLowerCase();
+  if (!n) return undefined;
+  const hits = contacts.filter((c) => c.name.trim().replace(/\s+/g, " ").toLowerCase() === n);
+  return hits.length === 1 ? hits[0] : undefined;
+}
+
 /** One-click updates to an outreach row. */
 export function useOutreachActions() {
   const { update } = usePortal();
@@ -84,7 +105,7 @@ export function useOutreachActions() {
   };
 }
 
-type PersonDraft = { name: string; linkedin: string; company: string; title: string; channel: Outreach["channel"]; date: string; notes: string; anonymous: boolean };
+type PersonDraft = { name: string; linkedin: string; company: string; title: string; channel: Outreach["channel"]; date: string; notes: string; privateNotes: string; anonymous: boolean };
 
 /**
  * Add someone you reached out to. Links to their existing Network record when
@@ -93,7 +114,7 @@ type PersonDraft = { name: string; linkedin: string; company: string; title: str
  */
 export function AddPersonForm({ company, onDone }: { company?: string; onDone: () => void }) {
   const { data, me, update } = usePortal();
-  const [d, setD] = useState<PersonDraft>({ name: "", linkedin: "", company: company ?? "", title: "", channel: "Email", date: localToday(), notes: "", anonymous: false });
+  const [d, setD] = useState<PersonDraft>({ name: "", linkedin: "", company: company ?? "", title: "", channel: "Email", date: localToday(), notes: "", privateNotes: "", anonymous: false });
   const [error, setError] = useState("");
   const set = (patch: Partial<PersonDraft>) => setD((x) => ({ ...x, ...patch }));
 
@@ -125,6 +146,7 @@ export function AddPersonForm({ company, onDone }: { company?: string; onDone: (
       chatted: false,
       referred: false,
       notes: d.notes.trim(),
+      privateNotes: d.privateNotes.trim() || undefined,
       anonymous: d.anonymous || undefined,
     };
     update((x) => ({
@@ -137,8 +159,21 @@ export function AddPersonForm({ company, onDone }: { company?: string; onDone: (
 
   return (
     <form onSubmit={save} className="space-y-4">
-      <Field label="Name">
-        <Input required value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Alexandra Mills" />
+      <Field label="Name" hint="Start typing to pick someone already in the Network.">
+        <Input
+          required
+          list="person-names"
+          autoComplete="off"
+          value={d.name}
+          onChange={(e) => {
+            // Picking a known contact fills in who they are and where; edit company or title if they've moved.
+            const known = contactNamed(data.contacts, e.target.value);
+            set(known ? { name: e.target.value, linkedin: known.linkedin || d.linkedin, company: known.company, title: known.title } : { name: e.target.value });
+            setError("");
+          }}
+          placeholder="e.g. Alexandra Mills"
+        />
+        <ContactOptions id="person-names" contacts={data.contacts} />
       </Field>
       <Field label="LinkedIn profile" hint="Used to match them with anyone else in Graphite who's reached out.">
         <Input
@@ -184,8 +219,11 @@ export function AddPersonForm({ company, onDone }: { company?: string; onDone: (
           <Select options={CHANNELS} value={d.channel} onChange={(e) => set({ channel: e.target.value as Outreach["channel"] })} />
         </Field>
       </div>
-      <Field label="Notes" hint="What you asked for, how you know them, anything you'll want later.">
+      <Field label="Public notes" hint="Shown on their Network page so the next member knows how it went. Your name shows unless you log anonymously.">
         <Textarea value={d.notes} onChange={(e) => set({ notes: e.target.value })} />
+      </Field>
+      <Field label="Private notes" hint={PRIVATE_HINT}>
+        <Textarea value={d.privateNotes} onChange={(e) => set({ privateNotes: e.target.value })} placeholder="What you asked for, how you know them, anything you'll want later" />
       </Field>
       <Check
         label="Log anonymously"
@@ -214,7 +252,7 @@ export function EditOutreachForm({ outreach, contact, onDone }: { outreach: Outr
 
   const save = (e: React.FormEvent) => {
     e.preventDefault();
-    let next: Outreach = { ...o, notes: o.notes.trim(), followUps: (o.followUps ?? []).filter(Boolean).sort() };
+    let next: Outreach = { ...o, notes: o.notes.trim(), privateNotes: o.privateNotes?.trim() || undefined, followUps: (o.followUps ?? []).filter(Boolean).sort() };
     if (next.responded) next = withReply(next, next.respondedOn || localToday());
     else next = { ...next, respondedOn: undefined, responseDays: undefined, chatted: false };
     if (!next.chatted) next = { ...next, thanked: false, helpfulness: undefined };
@@ -278,8 +316,11 @@ export function EditOutreachForm({ outreach, contact, onDone }: { outreach: Outr
           onChange={(e) => set({ helpfulness: e.target.value ? (Number(e.target.value) as Outreach["helpfulness"]) : undefined })}
         />
       </Field>
-      <Field label="Notes">
-        <Textarea rows={4} value={o.notes} onChange={(e) => set({ notes: e.target.value })} />
+      <Field label="Public notes" hint="Shown on their Network page. Your name shows unless you log anonymously.">
+        <Textarea rows={3} value={o.notes} onChange={(e) => set({ notes: e.target.value })} />
+      </Field>
+      <Field label="Private notes" hint={PRIVATE_HINT}>
+        <Textarea rows={3} value={o.privateNotes ?? ""} onChange={(e) => set({ privateNotes: e.target.value })} />
       </Field>
       <Check label="Log anonymously" checked={!!o.anonymous} onChange={(v) => set({ anonymous: v || undefined })} hint="Other members see “Anonymous member”; you and exec see your name." />
       <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -529,6 +570,7 @@ export function MyNetwork({ adding, setAdding }: { adding: boolean; setAdding: (
                     Edit
                   </Button>
                 </div>
+                <PrivateNote text={o.privateNotes} />
               </li>
             ))}
           </ul>
@@ -596,6 +638,7 @@ export function MyNetwork({ adding, setAdding }: { adding: boolean; setAdding: (
                       <Button variant="ghost" onClick={() => setEditing(o)} aria-label={`Edit outreach to ${c?.name ?? "contact"}`}>
                         Edit
                       </Button>
+                      <PrivateNote text={o.privateNotes} />
                     </Td>
                   </tr>
                 ))}

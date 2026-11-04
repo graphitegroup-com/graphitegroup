@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "@/components/app-link";
+import { useEffect, useState } from "react";
+import { useGo } from "@/lib/use-go";
 import { academicYearLabel, classStanding, companySlug, fmtDate, followUpsDue, isAlum, isExec, promotionSuggestions, tasksFor, threadActivity, whenLabel, type TaskInstance } from "@/portal/logic";
 import { ThreadRow, useThreadVote } from "@/portal/forum";
 import { usePortal } from "@/portal/store";
@@ -12,7 +14,16 @@ const DAY = 86_400_000;
 export default function PortalHome() {
   const { data, me, update } = usePortal();
   const vote = useThreadVote();
-  if (!me) return null;
+  const go = useGo();
+  const [showDone, setShowDone] = useState(false);
+  const alum = !!me && isAlum(me);
+
+  // Alumni have no tasks or recruiting to track; their home is the forum.
+  useEffect(() => {
+    if (alum) go("/portal/forum", { replace: true });
+  }, [alum, go]);
+
+  if (!me || alum) return null;
 
   const now = new Date();
   const tasks = tasksFor(me, data);
@@ -45,11 +56,11 @@ export default function PortalHome() {
     <div>
       <PageTitle title="Home" sub={`${dateLine}. ${me.execTitle ?? me.role}, ${me.practice}, academic year ${academicYearLabel()}.`} />
 
-      <StatGroup>
+      <StatGroup className={isExec(me) ? "" : "md:grid-cols-3!"}>
         <Stat label="Open tasks" value={open.length} sub={overdue.length ? `${overdue.length} overdue` : "Nothing overdue"} />
         <Stat label="Active applications" value={activeApps.length} sub={`${myApps.length} tracked`} />
         <Stat label="Follow-ups due" value={due.length} sub={`${new Set(myChats.map((o) => o.contactId)).size} people in your network`} />
-        <Stat label="Active members" value={active.length} sub={`${seniors.length} seniors this year`} />
+        {isExec(me) && <Stat label="Active members" value={active.length} sub={`${seniors.length} seniors this year`} />}
       </StatGroup>
 
       <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
@@ -58,7 +69,18 @@ export default function PortalHome() {
             {open.length === 0 && done.length === 0 && <Empty>No tasks for you this year.</Empty>}
             <TaskList label="Overdue" tasks={overdue} onToggle={toggle} now={now} />
             <TaskList label="Coming up" tasks={upcoming} onToggle={toggle} now={now} />
-            <TaskList label="Done" tasks={done} onToggle={toggle} now={now} />
+            {open.length === 0 && done.length > 0 && !showDone && <Empty>All caught up.</Empty>}
+            {done.length > 0 && (
+              <button
+                type="button"
+                aria-expanded={showDone}
+                onClick={() => setShowDone(!showDone)}
+                className="block w-full border-t border-edge px-4 py-2 text-left text-[12.5px] text-link hover:bg-[#fbfbf7]"
+              >
+                {showDone ? "Hide completed" : `Show completed (${done.length})`}
+              </button>
+            )}
+            {showDone && <TaskList label="Done" tasks={done} onToggle={toggle} now={now} />}
           </Card>
 
           <Card

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "@/components/app-link";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { letterLabel } from "./logic";
 
 /*
@@ -266,9 +266,9 @@ export function Avatar({ name, photo, size = 28 }: { name: string; photo?: strin
 }
 
 /** Table header cell. Tables go in a `flush` Card or a `TableWrap`. */
-export function Th({ children, className = "" }: { children?: ReactNode; className?: string }) {
+export function Th({ children, className = "", ...rest }: { children?: ReactNode; className?: string } & Omit<React.ThHTMLAttributes<HTMLTableCellElement>, "className" | "children">) {
   return (
-    <th className={`h-9 border-b border-edge bg-[#fbfbf7] px-3 text-left text-[11.5px] font-medium tracking-[0.05em] whitespace-nowrap text-muted uppercase first:pl-4 last:pr-4 ${className}`}>
+    <th {...rest} className={`h-9 border-b border-edge bg-[#fbfbf7] px-3 text-left text-[11.5px] font-medium tracking-[0.05em] whitespace-nowrap text-muted uppercase first:pl-4 last:pr-4 ${className}`}>
       {children}
     </th>
   );
@@ -425,3 +425,19 @@ export function VoteButton({ count, voted, onToggle, label, disabled }: { count:
     </button>
   );
 }
+
+/** Private notes, folded away behind "See private notes" so they aren't on screen when someone looks over your shoulder. */
+export function PrivateNote({ text }: { text?: string }) {
+  const [open, setOpen] = useState(false);
+  if (!text?.trim()) return null;
+  return (
+    <span className="mt-0.5 block">
+      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="text-[12px] text-link hover:underline">
+        {open ? "Hide private notes" : "See private notes"}
+      </button>
+      {open && <span className="mt-1 block rounded-[3px] bg-stone px-2 py-1.5 text-[12.5px] whitespace-pre-line text-ink-2">{text}</span>}
+    </span>
+  );
+}
+
+export const PRIVATE_HINT = "Only you see these. Not other members, not exec.";

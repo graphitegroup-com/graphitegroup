@@ -150,12 +150,12 @@ export const seed: PortalData = {
   // Company discussion moved to the forum (posts with a `company`).
   comments: [],
   contacts: [
-    { id: "p1", name: "Alexandra Mills", company: "McKinsey & Company", title: "Engagement Manager", email: "", linkedin: "", isAlum: true, alumClass: 2021, preferences: "Prefers a short email with a specific ask. Responds on weekends.", addedBy: "m18" },
+    { id: "p1", name: "Alexandra Mills", company: "McKinsey & Company", title: "Engagement Manager", email: "", linkedin: "", isAlum: true, alumClass: 2021, isSchoolAlum: true, alumSchool: "CMC", schoolClass: 2021, preferences: "Prefers a short email with a specific ask. Responds on weekends.", addedBy: "m18" },
     { id: "p2", name: "David Cho", company: "Goldman Sachs", title: "Associate, TMT", email: "", linkedin: "https://www.linkedin.com/in/david-cho-sample", isAlum: false, preferences: "LinkedIn only.", addedBy: "m1", history: [{ company: "Goldman Sachs", title: "Analyst, TMT", until: "2025-07-01" }] },
     { id: "p3", name: "Rachel Stein", company: "Bain & Company", title: "Consultant", email: "", linkedin: "", isAlum: true, alumClass: 2023, preferences: "Very generous with time; will do mock cases.", addedBy: "m21" },
-    { id: "p4", name: "Kevin Brooks", company: "Jane Street", title: "Trader", email: "", linkedin: "", isAlum: false, preferences: "", addedBy: "m20" },
+    { id: "p4", name: "Kevin Brooks", company: "Jane Street", title: "Trader", email: "", linkedin: "", isAlum: false, isSchoolAlum: true, alumSchool: "Harvey Mudd", schoolClass: 2016, preferences: "", addedBy: "m20" },
     { id: "p5", name: "Nina Alvarez", company: "Palantir", title: "Deployment Strategist", email: "", linkedin: "", isAlum: true, alumClass: 2024, preferences: "Prefers text after the first email.", addedBy: "m19" },
-    { id: "p6", name: "Tom Becker", company: "BlackRock", title: "Analyst", email: "", linkedin: "https://www.linkedin.com/in/tom-becker-sample", isAlum: false, preferences: "", addedBy: "m10", history: [{ company: "J.P. Morgan", title: "Summer Analyst", until: "2025-08-15" }], updatedAt: "2026-06-02T12:00:00Z", updatedBy: "m10" },
+    { id: "p6", name: "Tom Becker", company: "BlackRock", title: "Analyst", email: "", linkedin: "https://www.linkedin.com/in/tom-becker-sample", isAlum: false, isSchoolAlum: true, alumSchool: "Pomona", schoolClass: 2019, preferences: "", addedBy: "m10", history: [{ company: "J.P. Morgan", title: "Summer Analyst", until: "2025-08-15" }], updatedAt: "2026-06-02T12:00:00Z", updatedBy: "m10" },
   ],
   outreach: [
     { id: "o1", contactId: "p1", memberId: "m1", date: "2026-08-10", channel: "Email", responded: true, respondedOn: "2026-08-12", responseDays: 2, chatted: true, helpfulness: 5, referred: true, thanked: true, notes: "Referred me to the BA recruiter." },

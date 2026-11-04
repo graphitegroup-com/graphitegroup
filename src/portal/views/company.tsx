@@ -3,10 +3,10 @@
 import Link from "@/components/app-link";
 import { useState } from "react";
 import { usePortal } from "@/portal/store";
-import { byline, isExec, companyNames, companySlug, contactGrade, firmGradeSummary, fmtDate, matchCompany, nextStep, outreachStage, pct, threadActivity, uid, firmType, jobsAt, visibleApplications, isShared, appYear, appOutcome, stageRank, logInterview, questionRound, reachedLabel, firmNotes, noteByline } from "@/portal/logic";
+import { byline, isExec, companyNames, companySlug, contactGrade, firmGradeSummary, fmtDate, matchCompany, nextStep, outreachStage, pct, threadActivity, uid, firmType, jobsAt, visibleApplications, isShared, appYear, appOutcome, stageRank, logInterview, questionRound, reachedLabel, firmNotes, firmStats, noteByline } from "@/portal/logic";
 import { AddPersonForm, StageChip, StepPing, myOutreachAt } from "@/portal/outreach";
 import { QUESTION_ROUNDS, type ClassLevel, type CompanyType, type InterviewReport, type Job, type PortalData, type QuestionRound, type Stage } from "@/portal/types";
-import { PostForm, ThreadRow, useThreadVote } from "@/portal/forum";
+import { CompanyOptions, PostForm, ThreadRow, useThreadVote } from "@/portal/forum";
 import { FirmGrades } from "@/portal/grades";
 import { Badge, Button, Card, Check, Drawer, Empty, Field, GradeTile, Input, PageTitle, Select, Stat, StatGroup, Td, Textarea, Th, linkCls, rowCls } from "@/portal/ui";
 import { CompanyTypeControl, WorkedHereCard } from "@/portal/jobs";
@@ -55,6 +55,7 @@ export function companyRows(data: PortalData): CompanyRow[] {
   return companyNames(data)
     .map((name) => {
       const apps = data.applications.filter((a) => a.company.trim() === name);
+      const stats = firmStats(data, name);
       const reps = data.reports.filter((r) => r.company.trim() === name);
       const grades = data.grades.filter((g) => g.company.trim() === name);
       const years = [...reps.map((r) => r.year), ...apps.map((a) => Number(a.updatedAt.slice(0, 4))), ...grades.map((g) => Number(g.createdAt.slice(0, 4)))].filter(
@@ -64,8 +65,8 @@ export function companyRows(data: PortalData): CompanyRow[] {
         name,
         slug: companySlug(name),
         reports: reps.length,
-        applicants: new Set(apps.map((a) => a.memberId)).size,
-        offers: apps.filter((a) => a.stage === "Offer").length + reps.filter((r) => r.outcome === "Offer").length,
+        applicants: stats.applicants,
+        offers: stats.offers + reps.filter((r) => r.outcome === "Offer").length,
         latestYear: years.length ? Math.max(...years) : undefined,
         grade: firmGradeSummary(grades),
         threads: data.posts.filter((p) => p.company === name).length,
@@ -157,7 +158,10 @@ export function ReportForm({ company, prefill, onDone }: { company?: string; pre
           {company ? (
             <Input value={company} readOnly />
           ) : (
-            <Input required value={draft.company} onChange={(e) => set({ company: e.target.value })} placeholder="e.g. Bain & Company" />
+            <>
+              <Input required list="report-companies" autoComplete="off" value={draft.company} onChange={(e) => set({ company: e.target.value })} placeholder="e.g. Bain & Company" />
+              <CompanyOptions id="report-companies" data={data} />
+            </>
           )}
         </Field>
         <div className="grid grid-cols-2 gap-3">
@@ -276,22 +280,27 @@ export default function CompanyView() {
   const reports = data.reports.filter((r) => r.company.trim() === name);
   const years = [...new Set(reports.map((r) => r.year))].sort((a, b) => b - a);
   const apps = data.applications.filter((a) => a.company.trim() === name).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  const applicants = new Set(apps.map((a) => a.memberId)).size;
+  const stats = firmStats(data, name);
+  const applicants = stats.applicants;
   // Different members with an offer, whether it came from a tracked application or an interview report.
-  const offers = new Set([...apps.filter((a) => a.stage === "Offer").map((a) => a.memberId), ...reports.filter((r) => r.outcome === "Offer").map((r) => r.memberId)]).size;
+  // Live data counts application offers in the database, so the two can't be merged by person there.
+  const reportOffers = reports.filter((r) => r.outcome === "Offer").map((r) => r.memberId);
+  const offers = data.appStats
+    ? Math.max(stats.offers, new Set(reportOffers).size)
+    : new Set([...apps.filter((a) => a.stage === "Offer").map((a) => a.memberId), ...reportOffers]).size;
   // Others see an application once it reaches a first round; exec and the member see all of theirs.
   const shownApps = visibleApplications(apps, me).sort((a, b) => appYear(b) - appYear(a) || stageRank(b.furthest) - stageRank(a.furthest));
   const sharedApps = apps.filter(isShared);
   const offerYears = [...new Set(sharedApps.filter((a) => a.stage === "Offer").map(appYear))].sort();
   const bank = data.questions.filter((q) => companySlug(q.company.trim()) === companySlug(name));
-  const notes = firmNotes(data.applications, name);
+  const notes = firmNotes(data, name);
   const bankGroups = QUESTION_ROUNDS.map((round) => ({ round, items: bank.filter((q) => q.round === round).sort((a, b) => a.question.localeCompare(b.question)) })).filter(
     (g) => g.items.length > 0,
   );
   const avgDifficulty = reports.length ? reports.reduce((s, r) => s + r.difficulty, 0) / reports.length : undefined;
   // Averaged over every application here, shared or not.
-  const efforts = apps.filter((a) => a.effort != null);
-  const avgEffort = efforts.length ? efforts.reduce((s, a) => s + (a.effort ?? 0), 0) / efforts.length : undefined;
+  const avgEffort = stats.avgEffort;
+  const effortRatings = stats.effortRatings;
   const contacts = data.contacts.filter((c) => c.company.trim() === name).sort((a, b) => a.name.localeCompare(b.name));
   const grade = firmGradeSummary(data.grades.filter((g) => g.company.trim() === name));
   const threads = data.posts.filter((p) => p.company === name).sort((a, b) => threadActivity(b, data.replies).localeCompare(threadActivity(a, data.replies)));
@@ -309,7 +318,7 @@ export default function CompanyView() {
         <Stat
           label="Application effort"
           value={avgEffort != null ? avgEffort.toFixed(1) : "None"}
-          sub={avgEffort != null ? `Out of 5, ${efforts.length} ${efforts.length === 1 ? "rating" : "ratings"}` : "Not rated yet"}
+          sub={avgEffort != null ? `Out of 5, ${effortRatings} ${effortRatings === 1 ? "rating" : "ratings"}` : "Not rated yet"}
         />
       </StatGroup>
 
@@ -421,13 +430,13 @@ export default function CompanyView() {
             ) : (
               <ul className="divide-y divide-edge">
                 {notes.map((a) => {
-                  const by = noteByline(a, me, data.members);
+                  const by = noteByline(a, me, data);
                   return (
                     <li key={a.id} className="px-4 py-2.5">
                       <p className="text-[13.5px] whitespace-pre-line text-ink-2">{a.notes}</p>
                       <p className="mt-0.5 text-[12px] text-muted">
                         <span className="font-medium text-ink-2">{by.name}</span>
-                        <span className="text-faint"> · {a.cycle || appYear(a)}</span>
+                        <span className="text-faint"> · {a.cycle || "No cycle given"}</span>
                         {by.note && <span className="text-faint"> · {by.note}</span>}
                       </p>
                     </li>

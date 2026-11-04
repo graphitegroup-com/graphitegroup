@@ -117,6 +117,26 @@ export type Application = {
    */
   notes: string;
   notesAnonymous?: boolean;
+  /** Only the member ever sees these, exec included. */
+  privateNotes?: string;
+};
+
+/**
+ * One application's notes as the firm page shows them. In the demo they come
+ * from the applications themselves; live, from application_notes_visible,
+ * which carries no application id.
+ */
+/** Totals over every member's applications at one firm, shared or not. */
+export type FirmAppStats = { applicants: number; offers: number; effortRatings: number; avgEffort?: number };
+
+export type AppNote = {
+  id: string;
+  company: string;
+  cycle: string;
+  notes: string;
+  memberId: string;
+  /** Shown as "Anonymous member", because the member chose it or the application hasn't reached a first round. */
+  anonymous: boolean;
 };
 
 export type InterviewReport = {
@@ -162,8 +182,13 @@ export type Contact = {
   title: string;
   email: string;
   linkedin: string;
+  /** A Graphite alum, and their class year. */
   isAlum: boolean;
   alumClass?: number;
+  /** An alum of one of the Claremont Colleges, which school and class year. */
+  isSchoolAlum?: boolean;
+  alumSchool?: School;
+  schoolClass?: number;
   preferences: string;
   addedBy: string;
   /** Earlier roles, newest first, kept when a member moves the contact to a new company or title. */
@@ -183,7 +208,10 @@ export type Outreach = {
   chatted: boolean;
   helpfulness?: 1 | 2 | 3 | 4 | 5;
   referred: boolean;
+  /** Shown to members on the contact's page, with the member's name unless anonymous. */
   notes: string;
+  /** Only the member who logged it ever sees these, exec included. */
+  privateNotes?: string;
   /** Hidden from other members; the member and exec still see who logged it. */
   anonymous?: boolean;
   /** Dates (YYYY-MM-DD) of follow-up messages after the first one. */
@@ -233,6 +261,8 @@ export type FirmGrade = {
   /** Hidden from other members; the member and exec still see who wrote it. */
   anonymous: boolean;
   createdAt: string;
+  /** Live data only: whether the grader also tracked an application or interview there (computed by the database). */
+  tracked?: boolean;
 };
 
 export const FORUM_CHANNELS = [
@@ -368,6 +398,10 @@ export type PortalData = {
   applications: Application[];
   reports: InterviewReport[];
   questions: InterviewQuestion[];
+  /** Live data only: every member's application notes, from application_notes_visible. */
+  appNotes?: AppNote[];
+  /** Live data only: per-firm totals over every application (company_application_stats), keyed by company slug. */
+  appStats?: Record<string, FirmAppStats>;
   comments: Comment[];
   contacts: Contact[];
   outreach: Outreach[];

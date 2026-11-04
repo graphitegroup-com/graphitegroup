@@ -40,6 +40,10 @@ function downscaleImage(file: File): Promise<string> {
 
 function ProfileForm({ me, exec, onSave }: { me: Member; exec: boolean; onSave: (m: Member) => void }) {
   const [form, setForm] = useState<Member>(() => ({ ...me }));
+  // Live: changing the email this account signs in with would cut it off from the roster.
+  const { auth } = usePortal();
+  const signedInWith = auth?.email?.trim().toLowerCase();
+  const locked = !signedInWith ? null : me.schoolEmail.trim().toLowerCase() === signedInWith ? "school" : me.personalEmail.trim().toLowerCase() === signedInWith ? "personal" : null;
   const [saved, setSaved] = useState(false);
   const [photoError, setPhotoError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -134,11 +138,11 @@ function ProfileForm({ me, exec, onSave }: { me: Member; exec: boolean; onSave: 
             <Field label="Last name">
               <Input required value={form.lastName} onChange={(e) => set("lastName", e.target.value)} />
             </Field>
-            <Field label="Personal email">
-              <Input type="email" value={form.personalEmail} onChange={(e) => set("personalEmail", e.target.value)} />
+            <Field label="Personal email" hint={locked === "personal" ? "You sign in with this one, so only exec can change it." : undefined}>
+              <Input type="email" value={form.personalEmail} readOnly={locked === "personal"} onChange={(e) => set("personalEmail", e.target.value)} />
             </Field>
-            <Field label="School email">
-              <Input type="email" value={form.schoolEmail} onChange={(e) => set("schoolEmail", e.target.value)} />
+            <Field label="School email" hint={locked === "school" ? "You sign in with this one, so only exec can change it." : undefined}>
+              <Input type="email" value={form.schoolEmail} readOnly={locked === "school"} onChange={(e) => set("schoolEmail", e.target.value)} />
             </Field>
             <Field label="Phone">
               <Input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
