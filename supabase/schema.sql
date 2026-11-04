@@ -60,9 +60,13 @@ language sql stable security definer set search_path = public as $$
   select member_for_email(auth.jwt() ->> 'email')
 $$;
 
+-- Executive board access ends at graduation; alumni keep the role for the record only.
 create or replace function is_exec() returns boolean
 language sql stable security definer set search_path = public as $$
-  select exists (select 1 from members where id = current_member_id() and role = 'Executive Board')
+  select exists (
+    select 1 from members
+    where id = current_member_id() and role = 'Executive Board' and now() < make_date(grad_year, 6, 1)
+  )
 $$;
 
 -- ---------------------------------------------------------------- sign-in
@@ -177,6 +181,8 @@ create table applications (
   fit int check (fit between 1 and 5),
   notes text not null default '',
   notes_anonymous boolean not null default false,
+  -- Only the member reads this table, so private notes can live here.
+  private_notes text not null default '',
   updated_at timestamptz not null default now()
 );
 create index applications_company_idx on applications (lower(btrim(company)));
@@ -242,6 +248,10 @@ create table contacts (
   linkedin text,
   is_alum boolean not null default false,
   alum_class int,
+  -- Went to one of the Claremont Colleges.
+  is_school_alum boolean not null default false,
+  alum_school school,
+  school_class int check (school_class between 1900 and 2100),
   preferences text,
   added_by uuid references members (id) on delete set null,
   -- Earlier roles, newest first: [{company, title, until}]. Any member can move a contact.
@@ -268,6 +278,14 @@ create table outreach (
   follow_ups date[] not null default '{}',   -- follow-up messages after the first
   responded_on date,                         -- response_days is counted from date to this
   thanked boolean not null default false     -- sent a thank-you after the chat
+);
+
+-- Private notes on your own outreach. Exec can read outreach rows, so these
+-- live in their own table that only the author can read.
+create table outreach_private_notes (
+  outreach_id uuid primary key references outreach (id) on delete cascade,
+  member_id uuid not null references members (id) on delete cascade,
+  notes text not null default ''
 );
 
 create view contact_stats as
@@ -466,6 +484,7 @@ alter table interview_reports enable row level security;
 alter table interview_questions enable row level security;
 alter table contacts enable row level security;
 alter table outreach enable row level security;
+alter table outreach_private_notes enable row level security;
 alter table comments enable row level security;
 alter table firm_grades enable row level security;
 alter table firms enable row level security;
@@ -523,6 +542,12 @@ create policy "own outreach or exec" on outreach for select using (member_id = c
 create policy "log own outreach" on outreach for insert with check (member_id = current_member_id());
 create policy "update own outreach" on outreach for update using (member_id = current_member_id()) with check (member_id = current_member_id());
 create policy "delete own outreach" on outreach for delete using (member_id = current_member_id());
+create policy "own private notes" on outreach_private_notes for all
+  using (member_id = current_member_id())
+  with check (
+    member_id = current_member_id()
+    and exists (select 1 from outreach o where o.id = outreach_id and o.member_id = current_member_id())
+  );
 create policy "read comments" on comments for select using (current_member_id() is not null);
 create policy "post own comments" on comments for insert with check (member_id = current_member_id());
 create policy "read projects" on projects for select using (current_member_id() is not null);

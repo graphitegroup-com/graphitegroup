@@ -78,7 +78,7 @@ function TasksAdmin() {
         actions={
           <Button
             onClick={() =>
-              setEditing({ id: `t${uid()}`, title: "", body: "", audience: { kind: "all" }, semester: "Every semester", when: { anchor: "week", n: 1 }, createdBy: me.id })
+              setEditing({ id: uid(), title: "", body: "", audience: { kind: "all" }, semester: "Every semester", when: { anchor: "week", n: 1 }, createdBy: me.id })
             }
           >
             New recurring task

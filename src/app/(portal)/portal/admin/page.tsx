@@ -243,7 +243,7 @@ function InviteDrawer({ open, members, onClose, onAdd }: { open: boolean; member
           e.preventDefault();
           if (!valid) return;
           onAdd({
-            id: `m${uid()}`,
+            id: uid(),
             ...f,
             firstName: f.firstName.trim(),
             lastName: f.lastName.trim(),

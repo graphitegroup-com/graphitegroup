@@ -6,8 +6,10 @@
 import {
   FIRM_DIMENSIONS,
   STAGES_REACHED,
+  type AppNote,
   type Application,
   type Audience,
+  type FirmAppStats,
   type InterviewQuestion,
   type InterviewReport,
   type QuestionRound,
@@ -401,7 +403,8 @@ export function byline(authorId: string, anonymous: boolean | undefined, viewer:
 
 export const fullName = (m: Pick<Member, "firstName" | "lastName">) => `${m.firstName} ${m.lastName}`;
 
-export const isExec = (m?: Member) => m?.role === "Executive Board";
+/** Current executive board. Alumni keep their highest role for the record, but not the access that came with it. */
+export const isExec = (m?: Member, now = new Date()) => m?.role === "Executive Board" && !isAlum(m, now);
 
 export const pct = (n: number) => `${Math.round(n * 100)}%`;
 
@@ -412,7 +415,14 @@ export const toDate = (d: Date | string) =>
 export const fmtDate = (d: Date | string) =>
   toDate(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
-export const uid = () => Math.random().toString(36).slice(2, 10);
+/** A new record id. UUIDs, so the same ids work as primary keys in the database. */
+export const uid = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        return (c === "x" ? r : (r & 3) | 8).toString(16);
+      });
 
 export const companySlug = (c: string) => c.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
@@ -516,18 +526,43 @@ export function logInterview(
  * itself is shared (a first round), unless the member posted the notes
  * anonymously; before that they're anonymous like the application.
  */
-export function noteByline(a: Application, viewer: Member, members: Member[]): Byline {
-  const anonymous = !!a.notesAnonymous || !isShared(a);
-  const by = byline(a.memberId, anonymous, viewer, members);
-  if (a.memberId === viewer.id && anonymous && !a.notesAnonymous) return { ...by, note: "Your name shows once you reach a first round" };
-  return by;
+export function noteByline(n: AppNote, viewer: Member, data: Pick<PortalData, "members" | "applications">): Byline {
+  const by = byline(n.memberId, n.anonymous, viewer, data.members);
+  if (n.memberId !== viewer.id || !n.anonymous) return by;
+  // Your own note shows as anonymous for one of two reasons; say which.
+  const app = data.applications.find((a) => a.memberId === viewer.id && a.company.trim() === n.company.trim() && a.cycle === n.cycle && a.notes === n.notes);
+  return app && !app.notesAnonymous ? { ...by, note: "Your name shows once you reach a first round" } : by;
 }
 
-/** Every member's notes on their applications at a firm, newest cycle first. */
-export const firmNotes = (apps: Application[], company: string) =>
-  apps
-    .filter((a) => companySlug(a.company.trim()) === companySlug(company.trim()) && a.notes.trim())
-    .sort((a, b) => appYear(b) - appYear(a));
+/** Every member's notes on their applications at a firm, newest cycle first. Live data brings them from application_notes_visible. */
+export function firmNotes(data: Pick<PortalData, "applications" | "appNotes">, company: string): AppNote[] {
+  const at = (c: string) => companySlug(c.trim()) === companySlug(company.trim());
+  const all: AppNote[] =
+    data.appNotes ??
+    data.applications
+      .filter((a) => a.notes.trim())
+      .map((a) => ({ id: a.id, company: a.company, cycle: a.cycle, notes: a.notes, memberId: a.memberId, anonymous: !!a.notesAnonymous || !isShared(a) }));
+  const year = (n: AppNote) => Number(n.cycle.match(/\d{4}/)?.[0]) || 0;
+  return all.filter((n) => at(n.company) && n.notes.trim()).sort((a, b) => year(b) - year(a));
+}
+
+/**
+ * Totals over every member's applications at a firm, shared or not. Live,
+ * other members' early applications never reach the browser, so these come
+ * from the database's company_application_stats.
+ */
+export function firmStats(data: Pick<PortalData, "applications" | "appStats">, company: string): FirmAppStats {
+  const fromDb = data.appStats?.[companySlug(company.trim())];
+  if (data.appStats) return fromDb ?? { applicants: 0, offers: 0, effortRatings: 0 };
+  const apps = data.applications.filter((a) => companySlug(a.company.trim()) === companySlug(company.trim()));
+  const efforts = apps.filter((a) => a.effort != null);
+  return {
+    applicants: new Set(apps.map((a) => a.memberId)).size,
+    offers: new Set(apps.filter((a) => a.stage === "Offer").map((a) => a.memberId)).size,
+    effortRatings: efforts.length,
+    avgEffort: efforts.length ? efforts.reduce((s, a) => s + (a.effort ?? 0), 0) / efforts.length : undefined,
+  };
+}
 
 /* ---------------------------------------------------------------- similar members */
 

@@ -4,7 +4,12 @@ Goal: institutional memory that doesn't graduate. Everything members learn (who'
 
 ## Status
 
-Built and clickable, running on sample data in the browser (`src/portal/store.tsx`). In the preview build, the sign-in page lists sample people to try it as (Managing Director, Team Lead, Consultant, Associate Consultant, alum, and a new member who hasn't set up an account), and any password works.
+Two modes, one codebase (`src/portal/store.tsx`):
+
+- **Live**, when the build has `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (the deploy job passes the repo's `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` Variables): real sign-in and the club's data in Supabase. `src/portal/live/` loads what the signed-in member may see (`load.ts`), maps rows to the portal's types (`rows.ts`) and turns every change into the matching inserts, updates and deletes (`sync.ts`). The database's access rules decide what's allowed; anything refused shows a banner and the page reloads from what's saved.
+- **Demo**, without those settings: fictional sample data in the browser. The preview's sign-in page lists sample people to try it as, and any password works.
+
+Who sees what: alumni land on the forum and don't get tasks or My recruiting. Current members see their tasks, applications and follow-ups; only exec sees member counts. Executive board access ends at graduation even though alumni keep their highest role.
 
 | Module | Route | What it does |
 | --- | --- | --- |
@@ -46,15 +51,25 @@ The portal mirrors Bookface on a plain white page: panels with hairline borders 
 
 ## Going live
 
-1. Create a Supabase project under a club-owned account and run `supabase/schema.sql`.
-2. In Authentication, keep email + password sign-in and **email confirmation on** (otherwise anyone who knows a member's email could claim their account before they do). The `auth_users_roster_only` trigger already rejects emails that aren't on the roster.
-3. Connect an email sender (Authentication, SMTP settings). Supabase writes and sends the confirmation and password-reset emails itself, but its built-in sender only delivers to your Supabase team's own addresses, a few an hour. A free option: a shared club Gmail account with an app password as the SMTP server. GitHub doesn't send email for apps.
-4. Import the real roster into `members` from a spreadsheet (Table editor, Import CSV). Real member data goes in the database only, never into this repo.
-5. Replace the browser store in `src/portal/store.tsx` and `src/lib/use-site-content.ts` with Supabase queries. The data shapes already match the tables. Read grades from `firm_grades_visible`, outreach from `outreach_visible`, interview reports from `interview_reports_visible`, other members' applications from `applications_visible` and notes from `application_notes_visible`, never the base tables. Save interviews with the `log_interview` function (never by inserting rows), load Similar members from `similar_members()`, and store forum votes as rows in `forum_votes`.
-4. Move headshots to Supabase Storage (the preview stores them as resized data URLs).
-5. Add a daily scheduled job for alumni transitions, task generation on July 1 and promotion proposals each term.
-6. Follow [`OPERATIONS.md`](OPERATIONS.md) to switch on GitHub Pages and add the keep-awake and backup settings.
-7. Turn on Supabase Realtime for `forum_posts` and `forum_replies` so new threads and replies appear without a refresh. Direct messages between members are the next step after the forum and would use the same channel.
+1. Create a Supabase project under a club-owned account and run `supabase/schema.sql` in the SQL editor. A project that ran an earlier version runs each file in `supabase/migrations/` once, in order; each is safe to run twice.
+2. Optional: run `supabase/starter-tasks.sql` for the club's usual recurring tasks. Exec can edit them in Recurring tasks.
+3. Add the first Managing Director by hand, since only exec can add members and there's no exec yet (SQL editor):
+   ```sql
+   insert into members (first_name, last_name, school_email, personal_email, school, grad_year, role, exec_title, joined_term)
+   values ('First', 'Last', 'name@cmc.edu', 'name@gmail.com', 'CMC', 2027, 'Executive Board', 'Managing Director', 'F2024');
+   ```
+4. Authentication settings:
+   - **Sign In / Providers → Email:** keep **Confirm email** on, so nobody can claim a member's account by knowing their email. The `auth_users_roster_only` trigger already rejects emails that aren't on the roster.
+   - **URL Configuration:** set **Site URL** to the portal's sign-in page (for example `https://graphitegroup-com.github.io/graphitegroup/login.html`) and add the site with `/**` (for example `https://graphitegroup-com.github.io/graphitegroup/**`) under **Redirect URLs**. Confirmation and password-reset links land there.
+   - **Emails → SMTP Settings:** connect a sender. Supabase's built-in one only delivers to your Supabase team's own addresses, a few an hour, so members wouldn't get their confirmation emails. A free option is the club Gmail with an app password (host `smtp.gmail.com`, port 465).
+5. Add the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` Variables and the deploy builds the live portal (see [`OPERATIONS.md`](OPERATIONS.md)).
+6. The Managing Director opens the portal, chooses **Set up your account**, confirms the email and fills in their details. Then they add everyone else in **Members and roles** (or import a spreadsheet into `members` in the Table editor). Real member data goes in the database only, never into this repo.
+
+Later:
+- Move headshots to Supabase Storage (they're stored as resized data URLs for now).
+- Add a daily scheduled job for alumni transitions and promotion proposals each term.
+- Turn on Supabase Realtime for `forum_posts` and `forum_replies` so new threads appear without a refresh; for now the portal reloads when you come back to the tab.
+- Members can't be deleted from the portal; remove them in Supabase's Table editor.
 
 ## Stack
 

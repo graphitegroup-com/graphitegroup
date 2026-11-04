@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "@/components/app-link";
-import { appOutcome, appYear, companySlug, firmType, fullName, memberLine, reachedLabel, similarMembers, stageRank, suggestedFirms, type SimilarMember } from "./logic";
+import { useEffect, useState } from "react";
+import { appOutcome, appYear, companySlug, firmType, fullName, isShared, memberLine, reachedLabel, similarMembers, stageRank, suggestedFirms, type SimilarMember } from "./logic";
+import { supabase } from "./live/client";
 import { usePortal } from "./store";
-import type { Application } from "./types";
+import type { Application, CompanyType, PortalData } from "./types";
 import { Badge, Card, Empty } from "./ui";
 
 const outcomeTone = (a: Application) => {
@@ -33,12 +35,48 @@ function bestAt(similar: SimilarMember[], company: string) {
  * applications other members have shared with their name: anonymous ones and
  * anything before a first round never count.
  */
+/**
+ * Live, the database ranks members (similar_members), because other members'
+ * fit ratings never leave it. Their shared, named applications are already
+ * here, so the rest of the page works the same in both modes.
+ */
+function useLiveSimilar(data: PortalData, meId: string | undefined, live: boolean) {
+  const [rows, setRows] = useState<{ member_id: string; score: number; shared_firms: string[]; shared_types: CompanyType[] }[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const appCount = data.applications.length;
+  useEffect(() => {
+    if (!live || !meId) return;
+    let stale = false;
+    supabase()
+      .rpc("similar_members", { max_results: 5 })
+      .then(({ data: d, error: e }) => {
+        if (stale) return;
+        if (e) setError(e.message);
+        else setRows(d ?? []);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [live, meId, appCount]);
+  if (!live) return { similar: null, error: null };
+  const similar: SimilarMember[] | null = rows
+    ? rows.flatMap((r) => {
+        const member = data.members.find((m) => m.id === r.member_id);
+        if (!member) return [];
+        const apps = data.applications.filter((a) => a.memberId === r.member_id && isShared(a) && !a.anonymous);
+        return [{ member, score: Number(r.score), sharedFirms: r.shared_firms ?? [], sharedTypes: r.shared_types ?? [], apps }];
+      })
+    : null;
+  return { similar, error };
+}
+
 export function SimilarMembers() {
-  const { data, me } = usePortal();
+  const { data, me, live } = usePortal();
+  const fromDb = useLiveSimilar(data, me?.id, live);
   if (!me) return null;
 
   const mine = data.applications.filter((a) => a.memberId === me.id);
-  const similar = similarMembers(data, me);
+  const similar = fromDb.similar ?? (live ? [] : similarMembers(data, me));
   const firms = suggestedFirms(data, me, similar);
   const rated = mine.filter((a) => a.fit != null).length;
 

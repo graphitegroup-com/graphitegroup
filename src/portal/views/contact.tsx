@@ -8,7 +8,7 @@ import { byline, companySlug, fmtDate, fullName, localToday, outreachStage, pct,
 import { ContactGradeCard } from "@/portal/grades";
 import { MoveContactForm, StageChip } from "@/portal/outreach";
 import type { Comment, Outreach } from "@/portal/types";
-import { Avatar, Button, Card, Check, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, Td, Textarea, Th, linkCls, rowCls } from "@/portal/ui";
+import { Avatar, Button, Card, Check, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, Td, Textarea, Th, linkCls, rowCls, PRIVATE_HINT, PrivateNote } from "@/portal/ui";
 
 const CHANNELS: Outreach["channel"][] = ["Email", "LinkedIn", "Referral", "In person"];
 const RATINGS = ["Not rated", "1", "2", "3", "4", "5"] as const;
@@ -25,6 +25,7 @@ type OutreachDraft = {
   helpfulness: string;
   referred: boolean;
   notes: string;
+  privateNotes: string;
   anonymous: boolean;
 };
 const newOutreachDraft = (): OutreachDraft => ({
@@ -36,6 +37,7 @@ const newOutreachDraft = (): OutreachDraft => ({
   helpfulness: "Not rated",
   referred: false,
   notes: "",
+  privateNotes: "",
   anonymous: false,
 });
 
@@ -90,6 +92,7 @@ export default function ContactView() {
       helpfulness: draft.helpfulness === "Not rated" ? undefined : (Number(draft.helpfulness) as Outreach["helpfulness"]),
       referred: draft.referred,
       notes: draft.notes.trim(),
+      privateNotes: draft.privateNotes.trim() || undefined,
       anonymous: draft.anonymous || undefined,
     };
     update((d) => ({ ...d, outreach: [...d.outreach, o] }));
@@ -133,6 +136,11 @@ export default function ContactView() {
               </p>
             )}
             {c.isAlum && <p>{c.alumClass ? `Graphite alum, class of ${c.alumClass}` : "Graphite alum"}</p>}
+            {c.isSchoolAlum && (
+              <p>
+                {c.alumSchool ?? "Claremont Colleges"} alum{c.schoolClass ? `, class of ${c.schoolClass}` : ""}
+              </p>
+            )}
           </>
         }
       />
@@ -196,7 +204,10 @@ export default function ContactView() {
                         <Td className="whitespace-nowrap tabular-nums">{o.responseDays != null ? days(o.responseDays) : <span className="text-faint">None</span>}</Td>
                         <Td className="tabular-nums">{o.helpfulness != null ? `${o.helpfulness} of 5` : <span className="text-faint">None</span>}</Td>
                         <Td>{o.referred ? "Yes" : "No"}</Td>
-                        <Td className="max-w-[28ch] text-[13px] text-muted">{o.notes}</Td>
+                        <Td className="max-w-[28ch] text-[13px] text-muted">
+                          {o.notes}
+                          {o.memberId === me.id && <PrivateNote text={o.privateNotes} />}
+                        </Td>
                       </tr>
                       );
                     })}
@@ -339,8 +350,11 @@ export default function ContactView() {
               <Select options={RATINGS} value={draft.helpfulness} onChange={(e) => setDraft({ ...draft, helpfulness: e.target.value })} />
             </Field>
           </div>
-          <Field label="Notes">
+          <Field label="Public notes" hint="Shown in the log above. Your name shows unless you log anonymously.">
             <Textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
+          </Field>
+          <Field label="Private notes" hint={PRIVATE_HINT}>
+            <Textarea value={draft.privateNotes} onChange={(e) => setDraft({ ...draft, privateNotes: e.target.value })} />
           </Field>
           <Check
             label="Log anonymously"

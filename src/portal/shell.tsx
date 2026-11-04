@@ -6,7 +6,7 @@ import { MarkTile } from "@/components/mark";
 import { useGo } from "@/lib/use-go";
 import { usePagePath } from "@/lib/use-page-path";
 import { STATIC_PREVIEW } from "@/lib/preview";
-import { fullName, isExec } from "./logic";
+import { fullName, isAlum, isExec } from "./logic";
 import { usePortal } from "./store";
 import { Avatar } from "./ui";
 
@@ -33,19 +33,20 @@ function Icon({ name, className = "h-4 w-4" }: { name: keyof typeof ICONS; class
   );
 }
 
-type NavItem = { href: string; label: string; icon: keyof typeof ICONS; exec?: boolean };
+/** `members`: hidden from alumni, who only need the forum and the shared pages. */
+type NavItem = { href: string; label: string; icon: keyof typeof ICONS; exec?: boolean; members?: boolean };
 
 const NAV: { section?: string; items: NavItem[] }[] = [
   {
     items: [
-      { href: "/portal", label: "Home", icon: "home" },
+      { href: "/portal", label: "Home", icon: "home", members: true },
       { href: "/portal/forum", label: "Forum", icon: "forum" },
     ],
   },
   {
     section: "Recruiting",
     items: [
-      { href: "/portal/recruiting", label: "My recruiting", icon: "recruiting" },
+      { href: "/portal/recruiting", label: "My recruiting", icon: "recruiting", members: true },
       { href: "/portal/companies", label: "Companies", icon: "companies" },
       { href: "/portal/network", label: "Network", icon: "network" },
     ],
@@ -67,32 +68,36 @@ const NAV: { section?: string; items: NavItem[] }[] = [
 ];
 
 export function PortalShell({ children }: { children: ReactNode }) {
-  const { me, ready, signOut } = usePortal();
+  const { me, ready, signOut, live, needsSetup, recovering, error, dismissError } = usePortal();
   const pathname = usePagePath();
   const go = useGo();
   const [open, setOpen] = useState(false);
 
+  // Signed out, still setting up, or here from a password-reset link: the sign-in page handles all three.
+  const toLogin = ready && (!me || needsSetup || recovering);
   useEffect(() => {
-    if (ready && !me) go("/login", { replace: true });
-  }, [ready, me, go]);
+    if (toLogin) go("/login", { replace: true });
+  }, [toLogin, go]);
 
-  if (!ready || !me) {
+  if (!ready || !me || toLogin) {
     return <div className="portal flex min-h-dvh items-center justify-center bg-white text-muted">Loading</div>;
   }
 
   const exec = isExec(me);
+  const alum = isAlum(me);
+  const home = alum ? "/portal/forum" : "/portal";
   const active = (href: string) =>
     href === "/portal" ? pathname === "/portal" : href === "/portal/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 
   const sidebar = (
     <nav className="flex h-full flex-col border-r border-edge bg-white" aria-label="Portal">
-      <Link href="/portal" className="flex h-16 shrink-0 items-center gap-2.5 px-4" aria-label="Portal home">
+      <Link href={home} className="flex h-16 shrink-0 items-center gap-2.5 px-4" aria-label="Portal home">
         <MarkTile size={28} />
         <span className="text-[19px] leading-none font-light tracking-[-0.01em]">Graphite Group</span>
       </Link>
       <div className="flex-1 overflow-y-auto px-2 pb-4">
         {NAV.map((group, gi) => {
-          const items = group.items.filter((i) => !i.exec || exec);
+          const items = group.items.filter((i) => (!i.exec || exec) && (!i.members || !alum));
           if (!items.length) return null;
           return (
             <div key={gi} className={gi ? "mt-4" : ""}>
@@ -139,7 +144,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
           className="mt-1 flex h-8 w-full items-center rounded-[3px] px-2 text-left text-[13px] text-muted hover:bg-stone hover:text-ink"
           onClick={() => {
             signOut();
-            go("/login", { replace: true });
+            if (!live) go("/login", { replace: true });
           }}
         >
           Sign out
@@ -159,7 +164,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
       )}
       <div className="lg:pl-[232px]">
         <header className="sticky top-0 z-40 flex h-12 items-center justify-between border-b border-edge bg-white px-4 lg:hidden">
-          <Link href="/portal" className="flex items-center gap-2">
+          <Link href={home} className="flex items-center gap-2">
             <MarkTile size={24} />
             <span className="text-[16px] font-light">Graphite Group</span>
           </Link>
@@ -167,9 +172,17 @@ export function PortalShell({ children }: { children: ReactNode }) {
             <Icon name="menu" className="h-5 w-5" />
           </button>
         </header>
-        {STATIC_PREVIEW && (
+        {STATIC_PREVIEW && !live && (
           <div className="border-b border-edge bg-[#fbf1da] px-4 py-1.5 text-center text-[12px] text-[#5c4300] md:px-8">
             Preview with sample data. Changes are saved in this browser only.
+          </div>
+        )}
+        {error && (
+          <div role="alert" className="flex items-start justify-between gap-3 border-b border-[#f0c9c5] bg-[#fbe9e8] px-4 py-2 text-[13px] text-[#a8261b] md:px-8">
+            <span>{error} The page has been refreshed to match what&apos;s saved.</span>
+            <button type="button" onClick={dismissError} className="shrink-0 font-medium hover:underline">
+              Dismiss
+            </button>
           </div>
         )}
         <main className="mx-auto max-w-[1180px] px-4 py-6 md:px-8 md:py-8">{children}</main>

@@ -46,8 +46,10 @@ export const gradeOutcomeTone = (o: GradeOutcome): Tone =>
 
 /** Whether the grader also tracked an application or wrote an interview report at this firm. */
 const tracked = (g: FirmGrade, data: Pick<PortalData, "applications" | "reports">) =>
-  data.applications.some((a) => a.memberId === g.memberId && companySlug(a.company) === companySlug(g.company)) ||
-  data.reports.some((r) => r.memberId === g.memberId && companySlug(r.company) === companySlug(g.company));
+  // Live data: the database works this out, since other members' applications aren't visible here.
+  g.tracked ??
+  (data.applications.some((a) => a.memberId === g.memberId && companySlug(a.company) === companySlug(g.company)) ||
+    data.reports.some((r) => r.memberId === g.memberId && companySlug(r.company) === companySlug(g.company)));
 
 const stageFromApp = (s: Stage): StageReached =>
   s === "Online Assessment" || s === "First Round" ? s : s === "Superday / Final" || s === "Offer" ? "Superday / Final" : "Applied";

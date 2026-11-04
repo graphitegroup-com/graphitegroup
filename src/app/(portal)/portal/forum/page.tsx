@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { fullName, threadActivity } from "@/portal/logic";
+import { fullName, threadActivity, isAlum } from "@/portal/logic";
 import { PostForm, ThreadRow, useThreadVote } from "@/portal/forum";
 import { usePortal } from "@/portal/store";
 import { FORUM_CHANNELS, FORUM_SPACES, type ForumChannel, type ForumPost, type ForumSpace } from "@/portal/types";
@@ -20,7 +20,8 @@ const SORTS = [
 export default function ForumPage() {
   const { data, me } = usePortal();
   const vote = useThreadVote();
-  const [space, setSpace] = useState<SpaceFilter>("all");
+  // Current members start in their own space; alumni see everything, since answering current members is why they're here.
+  const [space, setSpace] = useState<SpaceFilter>(() => (me && !isAlum(me) ? "members" : "all"));
   const [channel, setChannel] = useState<ChannelFilter>("all");
   const [sort, setSort] = useState<Sort>("active");
   const [query, setQuery] = useState("");

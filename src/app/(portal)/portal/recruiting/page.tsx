@@ -3,13 +3,14 @@
 import Link from "@/components/app-link";
 import { Fragment, useEffect, useState } from "react";
 import { usePortal } from "@/portal/store";
-import { applicationPrompt, byline, companySlug, fmtDate, followUpsDue, isShared, reachedLabel, uid, withStage, type AppPrompt } from "@/portal/logic";
+import { applicationPrompt, byline, companySlug, fmtDate, followUpsDue, isShared, matchCompany, reachedLabel, uid, withStage, type AppPrompt } from "@/portal/logic";
 import { GradeForm, ScorePicker } from "@/portal/grades";
+import { CompanyOptions } from "@/portal/forum";
 import { SimilarMembers } from "@/portal/similar";
 import { JobForm } from "@/portal/jobs";
 import { MyNetwork, myOutreachAt } from "@/portal/outreach";
 import { STAGES, type Application, type Score, type Stage } from "@/portal/types";
-import { Badge, Button, Card, Check, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, Tabs, Td, Textarea, Th, rowCls } from "@/portal/ui";
+import { Badge, Button, Card, Check, Drawer, Empty, Field, Input, PRIVATE_HINT, PageTitle, PrivateNote, Select, Stat, StatGroup, Tabs, Td, Textarea, Th, rowCls } from "@/portal/ui";
 import { ReportForm, outcomeTone } from "@/portal/views/company";
 
 type Tab = "applications" | "network" | "interviews" | "similar";
@@ -33,8 +34,8 @@ function stageTone(s: Stage) {
   return "blue" as const;
 }
 
-type Draft = { company: string; position: string; cycle: string; stage: Stage; notes: string; notesAnonymous: boolean; anonymous: boolean; effort?: Score; fit?: Score };
-const emptyDraft: Draft = { company: "", position: "", cycle: "", stage: "Applied", notes: "", notesAnonymous: false, anonymous: false };
+type Draft = { company: string; position: string; cycle: string; stage: Stage; notes: string; notesAnonymous: boolean; privateNotes: string; anonymous: boolean; effort?: Score; fit?: Score };
+const emptyDraft: Draft = { company: "", position: "", cycle: "", stage: "Applied", notes: "", notesAnonymous: false, privateNotes: "", anonymous: false };
 const NOTES_HINT = "Shown on the firm's page right away. Your name shows once you reach a first round, unless you post them anonymously.";
 
 const EFFORT_HINT = "How much work the application took";
@@ -92,20 +93,24 @@ export default function RecruitingPage() {
     }));
   const setApp = (id: string, patch: Partial<Application>) =>
     update((d) => ({ ...d, applications: d.applications.map((a) => (a.id === id ? { ...a, ...patch } : a)) }));
-  const noteControl = (a: Application) => (
-    <>
-      {a.notes && <span className="mt-0.5 block text-[12.5px] whitespace-pre-line text-muted">{a.notes}</span>}
-      <button
-        type="button"
-        onClick={() => setNoting(a)}
-        aria-label={`${a.notes ? "Edit note" : "Add a note"}: ${a.company}`}
-        className="mt-0.5 text-[12px] text-link hover:underline"
-      >
-        {a.notes ? "Edit note" : "Add a note"}
-      </button>
-      {a.notes && a.notesAnonymous && <span className="text-[12px] text-faint"> · posted anonymously</span>}
-    </>
-  );
+  const noteControl = (a: Application) => {
+    const any = !!(a.notes || a.privateNotes);
+    return (
+      <>
+        {a.notes && <span className="mt-0.5 block text-[12.5px] whitespace-pre-line text-muted">{a.notes}</span>}
+        <button
+          type="button"
+          onClick={() => setNoting(a)}
+          aria-label={`${any ? "Edit notes" : "Add notes"}: ${a.company}`}
+          className="mt-0.5 text-[12px] text-link hover:underline"
+        >
+          {any ? "Edit notes" : "Add notes"}
+        </button>
+        {a.notes && a.notesAnonymous && <span className="text-[12px] text-faint"> · posted anonymously</span>}
+        <PrivateNote text={a.privateNotes} />
+      </>
+    );
+  };
   const stageControl = (a: Application) => (
     <>
       <select
@@ -192,7 +197,8 @@ export default function RecruitingPage() {
     const app: Application = {
       id: uid(),
       memberId: me.id,
-      company: draft.company.trim(),
+      // Typing "bain & company" lands on the firm's existing page instead of starting a second one.
+      company: matchCompany(data, draft.company),
       position: draft.position.trim(),
       cycle: draft.cycle.trim(),
       stage: draft.stage,
@@ -203,6 +209,7 @@ export default function RecruitingPage() {
       fit: draft.fit,
       notes: draft.notes.trim(),
       notesAnonymous: draft.notesAnonymous,
+      privateNotes: draft.privateNotes.trim() || undefined,
       updatedAt: today(),
     };
     update((d) => ({ ...d, applications: [app, ...d.applications] }));
@@ -379,7 +386,8 @@ export default function RecruitingPage() {
       <Drawer open={adding} onClose={() => setAdding(false)} title="Add application">
         <form onSubmit={save} className="space-y-4">
           <Field label="Company">
-            <Input required value={draft.company} onChange={(e) => setDraft({ ...draft, company: e.target.value })} placeholder="e.g. Bain & Company" />
+            <Input required list="app-companies" autoComplete="off" value={draft.company} onChange={(e) => setDraft({ ...draft, company: e.target.value })} placeholder="e.g. Bain & Company" />
+            <CompanyOptions id="app-companies" data={data} />
           </Field>
           <Field label="Position">
             <Input required value={draft.position} onChange={(e) => setDraft({ ...draft, position: e.target.value })} placeholder="e.g. Associate Consultant Intern" />
@@ -406,10 +414,13 @@ export default function RecruitingPage() {
               onChange={(e) => setDraft({ ...draft, anonymous: e.target.value === "anonymous" })}
             />
           </Field>
-          <Field label="Notes on the process" hint={NOTES_HINT}>
+          <Field label="Public notes on the process" hint={NOTES_HINT}>
             <Textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} placeholder="How the process went, what to prepare, how long it took" />
           </Field>
-          <Check label="Post my notes anonymously" checked={draft.notesAnonymous} onChange={(v) => setDraft({ ...draft, notesAnonymous: v })} />
+          <Check label="Post my public notes anonymously" checked={draft.notesAnonymous} onChange={(v) => setDraft({ ...draft, notesAnonymous: v })} />
+          <Field label="Private notes" hint={PRIVATE_HINT}>
+            <Textarea value={draft.privateNotes} onChange={(e) => setDraft({ ...draft, privateNotes: e.target.value })} placeholder="Deadlines, who referred you, what to prep" />
+          </Field>
           <div className="flex gap-2 pt-2">
             <Button type="submit">Save application</Button>
             <Button variant="secondary" onClick={() => setAdding(false)}>
@@ -572,24 +583,28 @@ function RateApplication({ app, onSave, onCancel }: { app: Application; onSave: 
   );
 }
 
-/** Notes on the process for other members. They show on the firm's page right away, named unless posted anonymously. */
-function NoteForm({ app, onSave, onCancel }: { app: Application; onSave: (patch: Pick<Application, "notes" | "notesAnonymous">) => void; onCancel: () => void }) {
+/** Public notes on the process (on the firm's page, named unless anonymous) and private notes only the member sees. */
+function NoteForm({ app, onSave, onCancel }: { app: Application; onSave: (patch: Pick<Application, "notes" | "notesAnonymous" | "privateNotes">) => void; onCancel: () => void }) {
   const [notes, setNotes] = useState(app.notes);
   const [anonymous, setAnonymous] = useState(!!app.notesAnonymous);
+  const [privateNotes, setPrivateNotes] = useState(app.privateNotes ?? "");
   return (
     <form
       className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
-        onSave({ notes: notes.trim(), notesAnonymous: anonymous });
+        onSave({ notes: notes.trim(), notesAnonymous: anonymous, privateNotes: privateNotes.trim() || undefined });
       }}
     >
-      <Field label="Notes on the process" hint={NOTES_HINT}>
-        <Textarea rows={6} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="How the process went, what to prepare, how long it took" />
+      <Field label="Public notes on the process" hint={NOTES_HINT}>
+        <Textarea rows={5} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="How the process went, what to prepare, how long it took" />
       </Field>
-      <Check label="Post my notes anonymously" checked={anonymous} onChange={setAnonymous} hint="Other members see “Anonymous member”. You and exec still see your name." />
+      <Check label="Post my public notes anonymously" checked={anonymous} onChange={setAnonymous} hint="Other members see “Anonymous member”. You and exec still see your name." />
+      <Field label="Private notes" hint={PRIVATE_HINT}>
+        <Textarea rows={4} value={privateNotes} onChange={(e) => setPrivateNotes(e.target.value)} placeholder="Deadlines, who referred you, what to prep" />
+      </Field>
       <div className="flex gap-2">
-        <Button type="submit">Save note</Button>
+        <Button type="submit">Save notes</Button>
         <Button variant="secondary" onClick={onCancel}>
           Cancel
         </Button>

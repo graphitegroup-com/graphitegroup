@@ -4,14 +4,39 @@ import { useState } from "react";
 import Link from "@/components/app-link";
 import { usePortal } from "@/portal/store";
 import { MIN_GRADERS, companyNames, companySlug, contactGrade, findContact, isLinkedInUrl, matchCompany, pct, responseStats, uid, withProtocol, firmType } from "@/portal/logic";
-import { FirmOptions } from "@/portal/outreach";
-import { COMPANY_TYPES, type CompanyType, type Contact } from "@/portal/types";
+import { ContactOptions, FirmOptions, contactNamed } from "@/portal/outreach";
+import { COMPANY_TYPES, SCHOOLS, type CompanyType, type Contact, type School } from "@/portal/types";
 import { Button, Drawer, Empty, Field, GradeTile, Input, PageTitle, Stat, StatGroup, TableWrap, Td, Textarea, Th, linkCls, rowCls, Select } from "@/portal/ui";
 
-type ContactDraft = Omit<Contact, "id" | "addedBy" | "alumClass"> & { alumClass: string };
-const emptyContact: ContactDraft = { name: "", company: "", title: "", email: "", linkedin: "", isAlum: false, alumClass: "", preferences: "" };
+type ContactDraft = Omit<Contact, "id" | "addedBy" | "alumClass" | "schoolClass" | "alumSchool"> & { alumClass: string; schoolClass: string; alumSchool: School | "" };
+const emptyContact: ContactDraft = {
+  name: "",
+  company: "",
+  title: "",
+  email: "",
+  linkedin: "",
+  isAlum: false,
+  alumClass: "",
+  isSchoolAlum: false,
+  alumSchool: "",
+  schoolClass: "",
+  preferences: "",
+};
 
-const alumShort = (c: Contact) => (c.alumClass ? `Graphite '${String(c.alumClass).slice(-2)}` : "Graphite alum");
+const yy = (y?: number) => (y ? ` '${String(y).slice(-2)}` : "");
+/** "Graphite '23", "Pomona '19", or both. */
+export const alumLabels = (c: Contact) =>
+  [c.isAlum && `Graphite${yy(c.alumClass)}`, c.isSchoolAlum && `${c.alumSchool ?? "5C"}${yy(c.schoolClass)}`].filter(Boolean).join(", ");
+
+const SORTS = [
+  { value: "name", label: "Name" },
+  { value: "grade", label: "Grade" },
+  { value: "helpfulness", label: "Helpfulness" },
+  { value: "rate", label: "Response rate" },
+  { value: "reply", label: "Fastest reply" },
+  { value: "outreach", label: "Most outreach" },
+] as const;
+type SortKey = (typeof SORTS)[number]["value"];
 const none = <span className="text-faint">None</span>;
 
 function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
@@ -27,6 +52,8 @@ export default function NetworkPage() {
   const { data, me, update } = usePortal();
   const [query, setQuery] = useState("");
   const [alumOnly, setAlumOnly] = useState(false);
+  const [schoolAlumOnly, setSchoolAlumOnly] = useState(false);
+  const [sort, setSort] = useState<SortKey>("name");
   const [company, setCompany] = useState("");
   const [type, setType] = useState<"" | CompanyType>("");
   const [adding, setAdding] = useState(false);
@@ -46,11 +73,28 @@ export default function NetworkPage() {
       (c) =>
         (!q || c.name.toLowerCase().includes(q) || c.company.toLowerCase().includes(q) || c.title.toLowerCase().includes(q)) &&
         (!alumOnly || c.isAlum) &&
+        (!schoolAlumOnly || c.isSchoolAlum) &&
         (!type || firmType(data.firms, c.company) === type) &&
         atFirm(c),
     )
     .map((c) => ({ contact: c, stats: contactGrade(data.outreach.filter((o) => o.contactId === c.id)) }))
-    .sort((a, b) => a.contact.name.localeCompare(b.contact.name));
+    .sort((a, b) => {
+      // Contacts without the number being sorted on go last; ties fall back to name.
+      const by = (x?: number, y?: number, high = true) => (x == null ? (y == null ? 0 : 1) : y == null ? -1 : high ? y - x : x - y);
+      const diff =
+        sort === "grade"
+          ? by(a.stats.score, b.stats.score)
+          : sort === "helpfulness"
+            ? by(a.stats.avgHelpfulness, b.stats.avgHelpfulness)
+            : sort === "rate"
+              ? by(a.stats.total ? a.stats.rate : undefined, b.stats.total ? b.stats.rate : undefined)
+              : sort === "reply"
+                ? by(a.stats.medianDays ?? undefined, b.stats.medianDays ?? undefined, false)
+                : sort === "outreach"
+                  ? b.stats.total - a.stats.total
+                  : 0;
+      return diff || a.contact.name.localeCompare(b.contact.name);
+    });
 
   const draftFirm = contactDraft.company.trim() ? matchCompany(data, contactDraft.company) : "";
   const duplicate =
@@ -71,6 +115,7 @@ export default function NetworkPage() {
       return;
     }
     const year = Number(contactDraft.alumClass);
+    const schoolYear = Number(contactDraft.schoolClass);
     const c: Contact = {
       id: uid(),
       name: contactDraft.name.trim(),
@@ -80,6 +125,9 @@ export default function NetworkPage() {
       linkedin: withProtocol(contactDraft.linkedin),
       isAlum: contactDraft.isAlum,
       alumClass: contactDraft.isAlum && year > 0 ? year : undefined,
+      isSchoolAlum: contactDraft.isSchoolAlum || undefined,
+      alumSchool: contactDraft.isSchoolAlum && contactDraft.alumSchool ? contactDraft.alumSchool : undefined,
+      schoolClass: contactDraft.isSchoolAlum && schoolYear > 0 ? schoolYear : undefined,
       preferences: contactDraft.preferences.trim(),
       addedBy: me.id,
     };
@@ -119,7 +167,13 @@ export default function NetworkPage() {
             options={[{ value: "", label: "All types of company" }, ...COMPANY_TYPES]}
           />
         </div>
-        <Check label="Graphite alumni only" checked={alumOnly} onChange={setAlumOnly} />
+        <div className="w-full md:w-44">
+          <Select aria-label="Sort contacts by" value={sort} onChange={(e) => setSort(e.target.value as SortKey)} options={SORTS.map((s) => ({ value: s.value, label: `Sort: ${s.label}` }))} />
+        </div>
+        <div className="flex gap-4">
+          <Check label="Graphite alum" checked={alumOnly} onChange={setAlumOnly} />
+          <Check label="School alum" checked={schoolAlumOnly} onChange={setSchoolAlumOnly} />
+        </div>
         <p className="text-[13px] text-muted tabular-nums md:ml-auto">
           {rows.length} {rows.length === 1 ? "contact" : "contacts"}
         </p>
@@ -132,14 +186,26 @@ export default function NetworkPage() {
           <table className="w-full min-w-[1020px]">
             <thead>
               <tr>
-                <Th>Name</Th>
-                <Th>Grade</Th>
+                <SortTh k="name" sort={sort} setSort={setSort}>
+                  Name
+                </SortTh>
+                <SortTh k="grade" sort={sort} setSort={setSort}>
+                  Grade
+                </SortTh>
                 <Th>Company</Th>
                 <Th>Title</Th>
-                <Th className="text-right">Outreach</Th>
-                <Th className="text-right">Response rate</Th>
-                <Th className="text-right">Median reply</Th>
-                <Th className="text-right">Helpfulness</Th>
+                <SortTh k="outreach" sort={sort} setSort={setSort} right>
+                  Outreach
+                </SortTh>
+                <SortTh k="rate" sort={sort} setSort={setSort} right>
+                  Response rate
+                </SortTh>
+                <SortTh k="reply" sort={sort} setSort={setSort} right>
+                  Median reply
+                </SortTh>
+                <SortTh k="helpfulness" sort={sort} setSort={setSort} right>
+                  Helpfulness
+                </SortTh>
               </tr>
             </thead>
             <tbody>
@@ -149,7 +215,7 @@ export default function NetworkPage() {
                     <Link href={`/portal/network/${c.id}`} className="font-medium hover:underline">
                       {c.name}
                     </Link>
-                    {c.isAlum && <span className="ml-2 text-[12.5px] text-muted">{alumShort(c)}</span>}
+                    {(c.isAlum || c.isSchoolAlum) && <span className="ml-2 text-[12.5px] text-muted">{alumLabels(c)}</span>}
                   </Td>
                   <Td>
                     <span className="flex items-center gap-2" title={s.letter ? undefined : `A letter needs ${MIN_GRADERS} members' outreach`}>
@@ -180,8 +246,18 @@ export default function NetworkPage() {
 
       <Drawer open={adding} onClose={closeAdd} title="Add contact">
         <form onSubmit={saveContact} className="space-y-4">
-          <Field label="Name">
-            <Input required value={contactDraft.name} onChange={(e) => setContactDraft({ ...contactDraft, name: e.target.value })} />
+          <Field label="Name" hint="Start typing to check whether they're already in the Network.">
+            <Input
+              required
+              list="add-contact-names"
+              autoComplete="off"
+              value={contactDraft.name}
+              onChange={(e) => {
+                const known = contactNamed(data.contacts, e.target.value);
+                setContactDraft(known ? { ...contactDraft, name: e.target.value, company: known.company, title: known.title, linkedin: known.linkedin || contactDraft.linkedin } : { ...contactDraft, name: e.target.value });
+              }}
+            />
+            <ContactOptions id="add-contact-names" contacts={data.contacts} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Company">
@@ -224,9 +300,25 @@ export default function NetworkPage() {
           )}
           <Check label="Graphite alum" checked={contactDraft.isAlum} onChange={(v) => setContactDraft({ ...contactDraft, isAlum: v })} />
           {contactDraft.isAlum && (
-            <Field label="Class year">
+            <Field label="Graphite class year">
               <Input type="number" min={1990} max={2100} placeholder="For example, 2023" value={contactDraft.alumClass} onChange={(e) => setContactDraft({ ...contactDraft, alumClass: e.target.value })} />
             </Field>
+          )}
+          <Check label="School alum (Claremont Colleges)" checked={!!contactDraft.isSchoolAlum} onChange={(v) => setContactDraft({ ...contactDraft, isSchoolAlum: v })} />
+          {contactDraft.isSchoolAlum && (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="School">
+                <Select
+                  required
+                  options={[{ value: "", label: "Choose a school" }, ...SCHOOLS]}
+                  value={contactDraft.alumSchool}
+                  onChange={(e) => setContactDraft({ ...contactDraft, alumSchool: e.target.value as School | "" })}
+                />
+              </Field>
+              <Field label="Class year">
+                <Input type="number" min={1950} max={2100} placeholder="For example, 2019" value={contactDraft.schoolClass} onChange={(e) => setContactDraft({ ...contactDraft, schoolClass: e.target.value })} />
+              </Field>
+            </div>
           )}
           <Field label="How to approach" hint="How they like to be contacted, availability, anything that helps the next member.">
             <Textarea value={contactDraft.preferences} onChange={(e) => setContactDraft({ ...contactDraft, preferences: e.target.value })} />
@@ -242,5 +334,18 @@ export default function NetworkPage() {
         </form>
       </Drawer>
     </div>
+  );
+}
+
+/** A column header that sorts the table; the select above does the same on phones. */
+function SortTh({ k, sort, setSort, right, children }: { k: SortKey; sort: SortKey; setSort: (k: SortKey) => void; right?: boolean; children: React.ReactNode }) {
+  const on = sort === k;
+  return (
+    <Th className={right ? "text-right" : undefined} aria-sort={on ? (k === "name" || k === "reply" ? "ascending" : "descending") : undefined}>
+      <button type="button" onClick={() => setSort(k)} className={`uppercase hover:text-ink ${on ? "text-ink" : ""}`}>
+        {children}
+        {on && <span aria-hidden> {k === "name" || k === "reply" ? "↑" : "↓"}</span>}
+      </button>
+    </Th>
   );
 }
