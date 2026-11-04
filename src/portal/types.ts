@@ -110,8 +110,13 @@ export type Application = {
   /** 1 to 5: how well the role fits the member's interests. */
   fit?: Score;
   updatedAt: string;
-  /** Shown to every member on the firm's page without a name, separate from the application itself. */
+  /**
+   * Notes on the process, shown on the firm's page right away. They carry the
+   * member's name once the application reaches a first round, unless
+   * `notesAnonymous`; before that they show as "Anonymous member".
+   */
   notes: string;
+  notesAnonymous?: boolean;
 };
 
 export type InterviewReport = {
@@ -135,11 +140,12 @@ export const QUESTION_ROUNDS = ["Online assessment", "First round", "Final round
 export type QuestionRound = (typeof QUESTION_ROUNDS)[number];
 
 /**
- * One interview question in a firm's question bank. It keeps only the firm,
- * a broad round and the text: no author, date, year or position, and nothing
- * that points to the report it came with.
+ * One interview question in a firm's question bank: the firm, a broad round
+ * and the text, with no date, year, position or link to a report. Anonymous
+ * by default, and then no author is stored at all; `memberId` is set only
+ * when the member chose to show their name.
  */
-export type InterviewQuestion = { id: string; company: string; round: QuestionRound; question: string };
+export type InterviewQuestion = { id: string; company: string; round: QuestionRound; question: string; memberId?: string };
 
 export type Comment = {
   id: string;

@@ -13,7 +13,7 @@ Built and clickable, running on sample data in the browser (`src/portal/store.ts
 | Forum | `/portal/forum` | Bookface-style threads split into All threads, Current members and Alumni, across six channels (Recruiting, Interview prep, Referrals and intros, Opportunities, Offers, General), with replies, "helpful" votes, search and sorting. Everyone can read every space. A thread can be tagged with a firm and then also shows on that company's page. Exec can pin threads and remove any post |
 | Directory | `/portal/directory` | Members and alumni with filters, showing personal emails. Class standing and alumni status are computed from graduation year; alumni show the highest role they held. Phone is visible only to the member and exec |
 | My Recruiting | `/portal/recruiting` | Four tabs. Applications: your pipeline by stage, with one prompt at a time for what to log next (rate effort and fit once you apply, log the interview once you reach a first round, grade the process once there's an outcome, add an offer to your experience). My network: your outreach spreadsheet (add a person with their LinkedIn and current role and they join the shared Network; follow-up reminders after 7 days with no reply; one-click updates for replies, chats and thank-yous that feed the contact grades). My interviews. Similar members: who applies like you and where they did well (see Applications below) |
-| Companies | `/portal/companies` | Every firm members recruit with or worked at. Filter by type of company and by "has hired a" freshman, sophomore, junior or senior, to find where members that age have been hired (summers count the year just finished). Each firm shows member grades of its recruiting process, who worked there and in which year, which members reached a first round or further and how it ended (with the year of each offer), members' notes without names, interview overviews, an anonymous question bank, the average application effort and forum threads |
+| Companies | `/portal/companies` | Every firm members recruit with or worked at. Filter by type of company and by "has hired a" freshman, sophomore, junior or senior, to find where members that age have been hired (summers count the year just finished). Each firm shows member grades of its recruiting process, who worked there and in which year, which members reached a first round or further and how it ended (with the year of each offer), members' notes on the process, interview notes, a question bank, the average application effort and forum threads |
 | Network | `/portal/network` | Shared contacts with an outreach grade built from the outreach log (response rate, reply speed, helpfulness), searchable by firm and filterable by type of company. Any member can move a contact to a new firm or title; earlier roles are kept |
 | Projects | `/portal/projects` | Past engagements, what each team learned (tagged lessons that stack up by topic and are searchable across projects) and reusable templates |
 | Profile | `/portal/profile` | Name, emails, phone, school, grad year, practice, headshot, and Experience: internships and jobs with the year in school at the time, shared with every member. My recruiting offers to add an application here once it reaches Offer |
@@ -35,10 +35,10 @@ Modeled on how Bookface founders rate investors, and built to be trusted for the
 ### Applications and interviews
 
 - **Hidden until a first round.** Only the member (and exec) sees an application at first. Once it reaches a first round, every member sees the firm, position, cycle, how far it got and the outcome, by name or as "Anonymous member" (per application, or all at once). "How far it got" survives a rejection, so a rejection after a final still reads as a final.
-- **Notes are public, without a name.** Whatever a member writes in an application's notes shows on the firm's page right away, with only the cycle beside it. They're listed apart from the applications table so a note never sits next to a name.
+- **Notes on the process show your name, with an anonymous option.** Notes on an application (and the notes half of an interview log) show on the firm's page right away, in their own list with the cycle. The name appears unless the member posts them anonymously. One exception follows from the rule above: until the application reaches a first round, its notes show as "Anonymous member", or the name would reveal an application that is still hidden.
 - **Effort and fit.** Asked when you apply. Effort is averaged on the firm's page from the first rating. Fit is used only for Similar members.
 - **Similar members.** 60% the share of firms you both applied to, 40% the overlap in kinds of firm you each rated a 4 or 5 for fit (Jaccard on both). It reads only applications other members shared with their name, so anonymous and pre-first-round ones never count. "Where they did well" lists firms your matches reached that you haven't applied to, weighted by similarity, a final counting double and an offer triple. In the database this runs in `similar_members()`, so other members' fit ratings never reach the browser.
-- **Interview logs come in two halves.** The overview (format, how it went, advice, difficulty, outcome) is named or anonymous like everything else. The questions go into the firm's question bank as soon as they're logged, anonymously: only the firm, a broad round (online assessment, first, final, other) and the text, with no author, year, position, timestamp or link to the overview.
+- **Interview logs come in two halves.** Notes on the process (format, how it went, advice, difficulty, outcome) show the member's name unless they post them anonymously. The questions go into the firm's question bank as soon as they're logged, with the firm, a broad round (online assessment, first, final, other) and the text, but no year, position, timestamp or link to the notes. Questions are anonymous by default, and then no author is stored at all; a member can untick that to put their name on them.
 
 ### Design
 
@@ -102,10 +102,10 @@ tasks                                       -- generated instances
 
 companies           id, name, industry, website
 applications        member_id, company, position, cycle, stage, furthest, anonymous,
-                    effort 1-5, fit 1-5, notes (shown without a name)
+                    effort 1-5, fit 1-5, notes, notes_anonymous
 interview_reports   company, member_id, year, round, format, overview, tips, difficulty, anonymous
-interview_questions company, round (online assessment|first|final|other), question
-                    -- no author or time; added only through log_interview
+interview_questions company, round (online assessment|first|final|other), question,
+                    member_id (null when anonymous, the default); added only through log_interview
 comments            subject_type (contact|project), subject_id, author_id, body
 firms               name, type (consulting, banking, ... ), updated_by
 jobs                member_id, company, role, kind (summer internship|full-time|part-time),

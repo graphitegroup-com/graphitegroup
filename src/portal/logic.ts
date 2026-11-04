@@ -496,17 +496,34 @@ export function questionRound(round: string): QuestionRound {
 }
 
 /**
- * Save an interview: the report under the member (named or anonymous), and
- * the questions straight into the firm's question bank with nothing that
- * links them to the member or the report.
+ * Save an interview: the notes under the member (named or anonymous), and the
+ * questions straight into the firm's question bank. Anonymous questions keep
+ * no author at all; named ones keep only the member.
  */
-export function logInterview(d: PortalData, report: InterviewReport, questions: { round: QuestionRound; question: string }[]): PortalData {
+export function logInterview(
+  d: PortalData,
+  report: InterviewReport,
+  questions: { round: QuestionRound; question: string }[],
+  questionsAnonymous = true,
+): PortalData {
   const company = report.company.trim();
-  const added: InterviewQuestion[] = questions.map((q) => ({ id: uid(), company, ...q }));
+  const added: InterviewQuestion[] = questions.map((q) => ({ id: uid(), company, ...q, ...(questionsAnonymous ? {} : { memberId: report.memberId }) }));
   return { ...d, reports: [report, ...d.reports], questions: [...d.questions, ...added] };
 }
 
-/** Every member's notes on their applications at a firm, newest cycle first. Shown without names. */
+/**
+ * Who an application's notes show as. The name appears once the application
+ * itself is shared (a first round), unless the member posted the notes
+ * anonymously; before that they're anonymous like the application.
+ */
+export function noteByline(a: Application, viewer: Member, members: Member[]): Byline {
+  const anonymous = !!a.notesAnonymous || !isShared(a);
+  const by = byline(a.memberId, anonymous, viewer, members);
+  if (a.memberId === viewer.id && anonymous && !a.notesAnonymous) return { ...by, note: "Your name shows once you reach a first round" };
+  return by;
+}
+
+/** Every member's notes on their applications at a firm, newest cycle first. */
 export const firmNotes = (apps: Application[], company: string) =>
   apps
     .filter((a) => companySlug(a.company.trim()) === companySlug(company.trim()) && a.notes.trim())

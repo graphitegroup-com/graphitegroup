@@ -3,7 +3,7 @@
 import Link from "@/components/app-link";
 import { useState } from "react";
 import { usePortal } from "@/portal/store";
-import { byline, isExec, companyNames, companySlug, contactGrade, firmGradeSummary, fmtDate, matchCompany, nextStep, outreachStage, pct, threadActivity, uid, firmType, jobsAt, visibleApplications, isShared, appYear, appOutcome, stageRank, logInterview, questionRound, reachedLabel, firmNotes } from "@/portal/logic";
+import { byline, isExec, companyNames, companySlug, contactGrade, firmGradeSummary, fmtDate, matchCompany, nextStep, outreachStage, pct, threadActivity, uid, firmType, jobsAt, visibleApplications, isShared, appYear, appOutcome, stageRank, logInterview, questionRound, reachedLabel, firmNotes, noteByline } from "@/portal/logic";
 import { AddPersonForm, StageChip, StepPing, myOutreachAt } from "@/portal/outreach";
 import { QUESTION_ROUNDS, type ClassLevel, type CompanyType, type InterviewReport, type Job, type PortalData, type QuestionRound, type Stage } from "@/portal/types";
 import { PostForm, ThreadRow, useThreadVote } from "@/portal/forum";
@@ -88,6 +88,7 @@ type ReportDraft = {
   outcome: Outcome;
   anonymous: boolean;
   questions: string;
+  questionsAnonymous: boolean;
   /** The broad round the questions are filed under; follows the round above until changed. */
   questionRound?: QuestionRound;
 };
@@ -104,16 +105,17 @@ const newReportDraft = (company = "", prefill?: ReportPrefill): ReportDraft => (
   outcome: "Unknown",
   anonymous: false,
   questions: "",
+  questionsAnonymous: true,
 });
 
 export type ReportPrefill = { position?: string; year?: number; round?: string };
 
 /**
- * Log an interview in two parts. The overview (how it went, advice,
- * difficulty) is saved under your name or anonymously, so members know who
- * to talk to. The questions go straight into the firm's question bank with
- * only the firm and a broad round, so nobody (exec included) can see who was
- * asked them. With `company` set the firm is fixed. Mount only while open.
+ * Log an interview in two parts. Notes on the process (how it went, advice,
+ * difficulty) show your name unless you post them anonymously, so members
+ * know who to talk to. The questions go straight into the firm's question
+ * bank, anonymous by default with no author kept at all. With `company` set
+ * the firm is fixed. Mount only while open.
  */
 export function ReportForm({ company, prefill, onDone }: { company?: string; prefill?: ReportPrefill; onDone: () => void }) {
   const { data, me, update } = usePortal();
@@ -144,7 +146,7 @@ export function ReportForm({ company, prefill, onDone }: { company?: string; pre
       anonymous: draft.anonymous || undefined,
     };
     const round = draft.questionRound ?? questionRound(report.round);
-    update((d) => logInterview(d, report, questions.map((question) => ({ round, question }))));
+    update((d) => logInterview(d, report, questions.map((question) => ({ round, question })), draft.questionsAnonymous));
     onDone();
   };
 
@@ -172,8 +174,8 @@ export function ReportForm({ company, prefill, onDone }: { company?: string; pre
       </div>
 
       <fieldset className="space-y-4 rounded-[3px] border border-edge p-4">
-        <legend className="px-1 text-[13px] font-medium">1. Overview</legend>
-        <p className="-mt-1 text-[12.5px] text-muted">Shows on the company page with your name, or as &ldquo;Anonymous member&rdquo;, so people know who to ask.</p>
+        <legend className="px-1 text-[13px] font-medium">1. Notes on the process</legend>
+        <p className="-mt-1 text-[12.5px] text-muted">Shows on the company page with your name, so people know who to ask, unless you post it anonymously.</p>
         <Field label="Format">
           <Input value={draft.format} onChange={(e) => set({ format: e.target.value })} placeholder="e.g. Case and behavioral, 45 minutes" />
         </Field>
@@ -192,7 +194,7 @@ export function ReportForm({ company, prefill, onDone }: { company?: string; pre
           </Field>
         </div>
         <Check
-          label="Post the overview anonymously"
+          label="Post these notes anonymously"
           checked={draft.anonymous}
           onChange={(v) => set({ anonymous: v })}
           hint="Other members see “Anonymous member”. You and exec still see your name."
@@ -202,8 +204,8 @@ export function ReportForm({ company, prefill, onDone }: { company?: string; pre
       <fieldset className="space-y-3 rounded-[3px] border border-edge p-4">
         <legend className="px-1 text-[13px] font-medium">2. Questions you were asked</legend>
         <p className="-mt-1 text-[12.5px] text-muted">
-          One per line. They go into {company ?? "the firm"}&apos;s question bank right away, anonymously: only the firm and a broad round are kept, with no name,
-          year, position or link to your overview. Nobody, exec included, can see who added them.
+          One per line. They go into {company ?? "the firm"}&apos;s question bank right away with the firm and a broad round, and no year, position or link to your
+          notes above.
         </p>
         <Field label="Filed under">
           <Select
@@ -224,6 +226,12 @@ export function ReportForm({ company, prefill, onDone }: { company?: string; pre
             {questions.length === 1 ? "1 question" : `${questions.length} questions`} will be added.
           </p>
         )}
+        <Check
+          label="Post the questions anonymously"
+          checked={draft.questionsAnonymous}
+          onChange={(v) => set({ questionsAnonymous: v })}
+          hint="Anonymous questions are saved with no name at all, so nobody, exec included, can see who added them. Untick to show your name next to each one."
+        />
       </fieldset>
 
       <div className="flex gap-2">
@@ -383,7 +391,7 @@ export default function CompanyView() {
             }
           >
             <p className="border-b border-edge bg-[#fbfbf7] px-4 py-2 text-[12.5px] text-muted">
-              Anonymous: no names, years or positions, and no link to any overview.
+              Anonymous unless the member chose to add their name. No years, positions or links to anyone&apos;s notes.
             </p>
             {bank.length === 0 ? (
               <Empty>No questions yet. Questions you add when you log an interview show here right away.</Empty>
@@ -393,7 +401,10 @@ export default function CompanyView() {
                   <h3 className="px-4 pt-3 text-[12px] font-medium text-muted">{g.round}</h3>
                   <ul className="list-disc space-y-1 px-4 pt-1.5 pb-3 pl-8 text-[13.5px] text-ink-2">
                     {g.items.map((q) => (
-                      <li key={q.id}>{q.question}</li>
+                      <li key={q.id}>
+                        {q.question}
+                        {q.memberId && <span className="text-[12px] text-faint"> · {byline(q.memberId, false, me, data.members).name}</span>}
+                      </li>
                     ))}
                   </ul>
                 </div>
@@ -403,21 +414,25 @@ export default function CompanyView() {
 
           <Card title="Notes from members" flush>
             <p className="border-b border-edge bg-[#fbfbf7] px-4 py-2 text-[12.5px] text-muted">
-              What members wrote on their applications here. Anonymous: no names, and kept apart from the application list below.
+              What members wrote about the process here. Names show once someone reaches a first round, unless they posted anonymously.
             </p>
             {notes.length === 0 ? (
               <Empty>No notes yet. Notes members add to an application in My recruiting show here.</Empty>
             ) : (
               <ul className="divide-y divide-edge">
-                {notes.map((a) => (
-                  <li key={a.id} className="px-4 py-2.5">
-                    <p className="text-[13.5px] whitespace-pre-line text-ink-2">{a.notes}</p>
-                    <p className="mt-0.5 text-[12px] text-faint">
-                      {a.cycle || appYear(a)}
-                      {a.memberId === me.id && " · Yours"}
-                    </p>
-                  </li>
-                ))}
+                {notes.map((a) => {
+                  const by = noteByline(a, me, data.members);
+                  return (
+                    <li key={a.id} className="px-4 py-2.5">
+                      <p className="text-[13.5px] whitespace-pre-line text-ink-2">{a.notes}</p>
+                      <p className="mt-0.5 text-[12px] text-muted">
+                        <span className="font-medium text-ink-2">{by.name}</span>
+                        <span className="text-faint"> · {a.cycle || appYear(a)}</span>
+                        {by.note && <span className="text-faint"> · {by.note}</span>}
+                      </p>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </Card>

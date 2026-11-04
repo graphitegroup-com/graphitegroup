@@ -158,8 +158,9 @@ create table task_completions (
 -- ---------------------------------------------------------------- recruiting
 -- An application is private to its member until it reaches a first round.
 -- From then on members see it through applications_visible (below), by name
--- or as "Anonymous member". Notes show to every member right away, without a
--- name, through application_notes_visible. Effort and fit never show one by one.
+-- or as "Anonymous member". Notes on the process show to every member right
+-- away through application_notes_visible, named unless notes_anonymous.
+-- Effort and fit never show one by one.
 create table applications (
   id uuid primary key default gen_random_uuid(),
   member_id uuid not null references members (id) on delete cascade,
@@ -175,6 +176,7 @@ create table applications (
   effort int check (effort between 1 and 5),
   fit int check (fit between 1 and 5),
   notes text not null default '',
+  notes_anonymous boolean not null default false,
   updated_at timestamptz not null default now()
 );
 create index applications_company_idx on applications (lower(btrim(company)));
@@ -217,14 +219,17 @@ create table interview_reports (
 );
 create index interview_reports_company_idx on interview_reports (lower(btrim(company)));
 
--- Question bank. A question keeps only the firm, a broad round and its text:
--- no author, no timestamps, no year or position, no link to a report.
+-- Question bank. A question keeps the firm, a broad round and its text: no
+-- timestamps, year, position or link to a report. Anonymous by default, and
+-- then member_id is null, so no author is stored at all.
 create type question_round as enum ('Online assessment', 'First round', 'Final round', 'Other');
 create table interview_questions (
   id uuid primary key default gen_random_uuid(),
   company text not null,
   round question_round not null,
-  question text not null check (length(btrim(question)) between 1 and 1000)
+  question text not null check (length(btrim(question)) between 1 and 1000),
+  -- Set only when the member chose to show their name.
+  member_id uuid references members (id) on delete set null
 );
 create index interview_questions_company_idx on interview_questions (lower(btrim(company)));
 
@@ -507,7 +512,7 @@ create policy "edit own reports" on interview_reports for update using (member_i
 create policy "delete own reports or exec" on interview_reports for delete using (member_id = current_member_id() or is_exec());
 
 -- The bank: every member reads, exec removes. Questions arrive only through
--- log_interview, so no row ever carries who added it.
+-- log_interview, so an anonymous one never records who added it.
 create policy "read question bank" on interview_questions for select using (current_member_id() is not null);
 create policy "exec removes questions" on interview_questions for delete using (is_exec());
 create policy "read contacts" on contacts for select using (current_member_id() is not null);
@@ -573,15 +578,24 @@ from applications a
 where current_member_id() is not null
   and (a.furthest in ('First Round', 'Superday / Final', 'Offer') or a.member_id = current_member_id() or is_exec());
 
--- Every member's application notes, as soon as they're written, with no name,
--- application id or date: just the firm, the cycle and the note.
+-- Every member's notes on the process, as soon as they're written. The name
+-- shows once the application itself is shared (a first round) unless the
+-- notes were posted anonymously; the author and exec always see it. No
+-- application id or date, so an anonymous note can't be joined back.
 create view application_notes_visible with (security_invoker = false) as
-select a.company, a.cycle, a.notes
+select
+  a.company, a.cycle, a.notes,
+  (a.notes_anonymous or a.furthest not in ('First Round', 'Superday / Final', 'Offer')) as anonymous,
+  case
+    when (not a.notes_anonymous and a.furthest in ('First Round', 'Superday / Final', 'Offer')) or a.member_id = current_member_id() or is_exec()
+    then a.member_id
+  end as member_id
 from applications a
 where current_member_id() is not null and btrim(a.notes) <> '';
 
--- Log an interview: the overview under the member (named or anonymous), and
--- the questions straight into the bank with nothing pointing back to either.
+-- Log an interview: the notes under the member (named or anonymous), and the
+-- questions straight into the bank, with no author at all unless the member
+-- chose to show their name on them.
 create or replace function log_interview(
   p_company text,
   p_year int,
@@ -594,7 +608,8 @@ create or replace function log_interview(
   p_outcome text,
   p_anonymous boolean,
   p_question_round question_round,
-  p_questions text[]
+  p_questions text[],
+  p_questions_anonymous boolean default true
 ) returns uuid
 language plpgsql security definer set search_path = public as $$
 declare
@@ -608,8 +623,8 @@ begin
   values (btrim(p_company), me, p_year, p_position, p_round, p_format, p_overview, p_tips, p_difficulty, p_outcome, coalesce(p_anonymous, false))
   returning id into report_id;
 
-  insert into interview_questions (company, round, question)
-  select btrim(p_company), coalesce(p_question_round, 'Other'), btrim(q)
+  insert into interview_questions (company, round, question, member_id)
+  select btrim(p_company), coalesce(p_question_round, 'Other'), btrim(q), case when coalesce(p_questions_anonymous, true) then null else me end
   from unnest(coalesce(p_questions, '{}')) as q
   where btrim(q) <> '';
   return report_id;
