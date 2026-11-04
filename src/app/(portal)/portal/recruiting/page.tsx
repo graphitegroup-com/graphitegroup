@@ -92,6 +92,80 @@ export default function RecruitingPage() {
     }));
   const setApp = (id: string, patch: Partial<Application>) =>
     update((d) => ({ ...d, applications: d.applications.map((a) => (a.id === id ? { ...a, ...patch } : a)) }));
+  const noteControl = (a: Application) => (
+    <>
+      {a.notes && <span className="mt-0.5 block text-[12.5px] whitespace-pre-line text-muted">{a.notes}</span>}
+      <button
+        type="button"
+        onClick={() => setNoting(a)}
+        aria-label={`${a.notes ? "Edit note" : "Add a note"}: ${a.company}`}
+        className="mt-0.5 text-[12px] text-link hover:underline"
+      >
+        {a.notes ? "Edit note" : "Add a note"}
+      </button>
+      {a.notes && a.notesAnonymous && <span className="text-[12px] text-faint"> · posted anonymously</span>}
+    </>
+  );
+  const stageControl = (a: Application) => (
+    <>
+      <select
+        aria-label={`Stage for ${a.company}`}
+        value={a.stage}
+        onChange={(e) => setStage(a.id, e.target.value as Stage)}
+        className="h-8 rounded-[3px] border border-edge bg-white pr-6 pl-2 text-[13px] text-ink hover:border-[#cfcfc4] focus:border-accent focus:outline-none md:h-7 md:text-[12.5px]"
+      >
+        {STAGES.map((s) => (
+          <option key={s} value={s}>
+            {s}
+          </option>
+        ))}
+      </select>
+      {a.furthest !== a.stage && <span className="mt-1 block text-[12px] text-muted">Got to {reachedLabel(a.furthest).toLowerCase()}</span>}
+    </>
+  );
+  const shareControl = (a: Application) => (
+    <>
+      <span className="block text-[13px]">{isShared(a) ? (a.anonymous ? "Shared anonymously" : "Shared with your name") : "Not shared yet"}</span>
+      <span className="block text-[12px] text-muted">
+        {isShared(a) ? "" : `From a first round, ${a.anonymous ? "anonymously" : "with your name"}. `}
+        <button
+          type="button"
+          onClick={() => setApp(a.id, { anonymous: !a.anonymous })}
+          aria-label={`${a.company}: ${a.anonymous ? "show your name" : "make anonymous"}`}
+          className="text-link hover:underline"
+        >
+          {a.anonymous ? "Show my name" : "Make anonymous"}
+        </button>
+      </span>
+    </>
+  );
+  const promptControl = (a: Application) => {
+    const prompt = applicationPrompt(a, data);
+    return prompt ? (
+      <Button variant="secondary" onClick={() => openPrompt(a, prompt)} aria-label={`${prompt.label}: ${a.company}`}>
+        {prompt.label}
+      </Button>
+    ) : (
+      <span className="text-[12.5px] text-faint">Nothing due</span>
+    );
+  };
+  const removeControl = (a: Application) =>
+    confirming === a.id ? (
+      <span className="inline-flex items-center gap-1 text-[13px]">
+        <span className="text-muted">Remove?</span>
+        <Button variant="danger" onClick={() => remove(a.id)}>
+          Yes
+        </Button>
+        <span className="text-faint">/</span>
+        <Button variant="ghost" onClick={() => setConfirming(null)}>
+          No
+        </Button>
+      </span>
+    ) : (
+      <Button variant="ghost" onClick={() => setConfirming(a.id)} aria-label={`Remove ${a.company} application`}>
+        Remove
+      </Button>
+    );
   const allAnonymous = mine.length > 0 && mine.every((a) => a.anonymous && a.notesAnonymous);
   const setAllAnonymous = (anonymous: boolean) =>
     update((d) => ({ ...d, applications: d.applications.map((a) => (a.memberId === me.id ? { ...a, anonymous, notesAnonymous: anonymous } : a)) }));
@@ -169,9 +243,9 @@ export default function RecruitingPage() {
           onChange={setTab}
           options={[
             { value: "applications", label: "Applications", count: mine.length },
-            { value: "network", label: "My network", count: new Set(myOutreach.map((o) => o.contactId)).size },
-            { value: "interviews", label: "My interviews", count: myReports.length },
-            { value: "similar", label: "Similar members" },
+            { value: "network", label: "My network", short: "Network", count: new Set(myOutreach.map((o) => o.contactId)).size },
+            { value: "interviews", label: "My interviews", short: "Interviews", count: myReports.length },
+            { value: "similar", label: "Similar members", short: "Similar" },
           ]}
         />
       </div>
@@ -200,7 +274,41 @@ export default function RecruitingPage() {
         {mine.length === 0 ? (
           <Empty>No applications yet. Add the first one to start tracking your recruiting.</Empty>
         ) : (
-          <div className="relative overflow-x-auto">
+          <>
+          {/* Phones: one card per application, so the stage, sharing and next step are all in reach without sideways scrolling. */}
+          <ul className="md:hidden">
+            {grouped.map((g) => (
+              <Fragment key={g.stage}>
+                <li className="border-b border-edge bg-[#fbfbf7] px-4 py-1.5">
+                  <Badge tone={stageTone(g.stage)}>{g.stage}</Badge>
+                  <span className="ml-2 text-[12px] text-faint tabular-nums">{g.items.length}</span>
+                </li>
+                {g.items.map((a) => (
+                  <li key={a.id} className="space-y-2.5 border-b border-edge px-4 py-3 last:border-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <Link href={`/portal/companies/${companySlug(a.company)}`} className="font-medium hover:underline">
+                          {a.company}
+                        </Link>
+                        <span className="mt-0.5 block text-[12.5px] text-muted">{[a.position, a.cycle].filter(Boolean).join(", ")}</span>
+                      </div>
+                      <span className="shrink-0 text-[12px] text-faint">{fmtDate(a.updatedAt)}</span>
+                    </div>
+                    <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
+                      <div>{stageControl(a)}</div>
+                      <div className="min-w-0 flex-1">{shareControl(a)}</div>
+                    </div>
+                    <div>{noteControl(a)}</div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      {promptControl(a)}
+                      {removeControl(a)}
+                    </div>
+                  </li>
+                ))}
+              </Fragment>
+            ))}
+          </ul>
+          <div className="relative hidden overflow-x-auto md:block">
             <table className="w-full min-w-[1040px]">
               <thead>
                 <tr>
@@ -225,9 +333,7 @@ export default function RecruitingPage() {
                         <span className="ml-2 text-[12px] text-faint tabular-nums">{g.items.length}</span>
                       </td>
                     </tr>
-                    {g.items.map((a) => {
-                      const prompt = applicationPrompt(a, data);
-                      return (
+                    {g.items.map((a) => (
                       <tr key={a.id} className={rowCls}>
                         <Td>
                           <Link href={`/portal/companies/${companySlug(a.company)}`} className="font-medium hover:underline">
@@ -236,83 +342,22 @@ export default function RecruitingPage() {
                         </Td>
                         <Td className="max-w-xs py-2">
                           <span className="block">{a.position}</span>
-                          {a.notes && <span className="mt-0.5 block text-[12.5px] whitespace-pre-line text-muted">{a.notes}</span>}
-                          <button
-                            type="button"
-                            onClick={() => setNoting(a)}
-                            aria-label={`${a.notes ? "Edit note" : "Add a note"}: ${a.company}`}
-                            className="mt-0.5 text-[12px] text-link hover:underline"
-                          >
-                            {a.notes ? "Edit note" : "Add a note"}
-                          </button>
-                          {a.notes && a.notesAnonymous && <span className="text-[12px] text-faint"> · posted anonymously</span>}
+                          {noteControl(a)}
                         </Td>
                         <Td className="text-muted">{a.cycle}</Td>
-                        <Td>
-                          <select
-                            aria-label={`Stage for ${a.company}`}
-                            value={a.stage}
-                            onChange={(e) => setStage(a.id, e.target.value as Stage)}
-                            className="h-7 rounded-[3px] border border-edge bg-white pr-6 pl-2 text-[12.5px] text-ink hover:border-[#cfcfc4] focus:border-accent focus:outline-none"
-                          >
-                            {STAGES.map((s) => (
-                              <option key={s} value={s}>
-                                {s}
-                              </option>
-                            ))}
-                          </select>
-                          {a.furthest !== a.stage && <span className="mt-1 block text-[12px] text-muted">Got to {reachedLabel(a.furthest).toLowerCase()}</span>}
-                        </Td>
-                        <Td className="py-2">
-                          <span className="block text-[13px]">{isShared(a) ? (a.anonymous ? "Anonymously" : "With your name") : "Not yet"}</span>
-                          <span className="block text-[12px] text-muted">
-                            {isShared(a) ? "" : `From a first round, ${a.anonymous ? "anonymously" : "with your name"}. `}
-                            <button
-                              type="button"
-                              onClick={() => setApp(a.id, { anonymous: !a.anonymous })}
-                              aria-label={`${a.company}: ${a.anonymous ? "show your name" : "make anonymous"}`}
-                              className="text-link hover:underline"
-                            >
-                              {a.anonymous ? "Show my name" : "Make anonymous"}
-                            </button>
-                          </span>
-                        </Td>
-                        <Td>
-                          {prompt ? (
-                            <Button variant="secondary" onClick={() => openPrompt(a, prompt)} aria-label={`${prompt.label}: ${a.company}`}>
-                              {prompt.label}
-                            </Button>
-                          ) : (
-                            <span className="text-[12.5px] text-faint">Nothing due</span>
-                          )}
-                        </Td>
+                        <Td>{stageControl(a)}</Td>
+                        <Td className="py-2">{shareControl(a)}</Td>
+                        <Td>{promptControl(a)}</Td>
                         <Td className="whitespace-nowrap text-muted">{fmtDate(a.updatedAt)}</Td>
-                        <Td className="pr-0 text-right whitespace-nowrap">
-                          {confirming === a.id ? (
-                            <span className="inline-flex items-center gap-1 text-[13px]">
-                              <span className="text-muted">Remove?</span>
-                              <Button variant="danger" onClick={() => remove(a.id)}>
-                                Yes
-                              </Button>
-                              <span className="text-faint">/</span>
-                              <Button variant="ghost" onClick={() => setConfirming(null)}>
-                                No
-                              </Button>
-                            </span>
-                          ) : (
-                            <Button variant="ghost" onClick={() => setConfirming(a.id)} aria-label={`Remove ${a.company} application`}>
-                              Remove
-                            </Button>
-                          )}
-                        </Td>
+                        <Td className="pr-0 text-right whitespace-nowrap">{removeControl(a)}</Td>
                       </tr>
-                      );
-                    })}
+                    ))}
                   </Fragment>
                 ))}
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
 

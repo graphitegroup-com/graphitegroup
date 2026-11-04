@@ -449,7 +449,32 @@ export default function CompanyView() {
             {shownApps.length === 0 ? (
               <Empty>Nothing to show yet.</Empty>
             ) : (
-              <div className="relative overflow-x-auto">
+              <>
+              {/* Phones: one line per member instead of a table that scrolls sideways. */}
+              <ul className="divide-y divide-edge md:hidden">
+                {shownApps.map((a) => {
+                  const by = byline(a.memberId, a.anonymous, me, data.members);
+                  const outcome = appOutcome(a);
+                  return (
+                    <li key={a.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
+                      <div className="min-w-0">
+                        <span className="font-medium">{by.name}</span>
+                        <span className="block text-[12.5px] text-muted">
+                          {[a.position, a.cycle].filter(Boolean).join(", ")}
+                          {a.stage !== "Offer" && `. Got to ${reachedLabel(a.furthest).toLowerCase()}`}.
+                        </span>
+                        {(by.note || !isShared(a)) && (
+                          <span className="block text-[12px] text-faint">{!isShared(a) ? "Not shared yet: before a first round" : by.note}</span>
+                        )}
+                      </div>
+                      <Badge tone={outcome === "Offer" ? "green" : outcome === "Rejected" ? "red" : outcome === "In process" ? "blue" : "gray"}>
+                        {outcome === "Offer" ? `Offer, ${appYear(a)}` : outcome}
+                      </Badge>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="relative hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[680px]">
                   <thead>
                     <tr>
@@ -486,6 +511,7 @@ export default function CompanyView() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </Card>
 

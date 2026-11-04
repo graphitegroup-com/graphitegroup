@@ -318,9 +318,18 @@ export function Segmented<T extends string>({
 }
 
 /** Underlined tabs for switching sections of a page. */
-export function Tabs<T extends string>({ value, options, onChange }: { value: T; options: readonly { value: T; label: string; count?: number }[]; onChange: (v: T) => void }) {
+export function Tabs<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  /** `short` replaces the label on phones. */
+  options: readonly { value: T; label: string; short?: string; count?: number }[];
+  onChange: (v: T) => void;
+}) {
   return (
-    <div role="tablist" className="mb-5 flex gap-5 overflow-x-auto border-b border-edge">
+    <div role="tablist" className="mb-5 flex gap-4 overflow-x-auto border-b border-edge md:gap-5">
       {options.map((o) => (
         <button
           key={o.value}
@@ -332,7 +341,14 @@ export function Tabs<T extends string>({ value, options, onChange }: { value: T;
             value === o.value ? "border-accent font-medium text-ink" : "border-transparent text-muted hover:text-ink"
           }`}
         >
-          {o.label}
+          {o.short ? (
+            <>
+              <span className="md:hidden">{o.short}</span>
+              <span className="max-md:hidden">{o.label}</span>
+            </>
+          ) : (
+            o.label
+          )}
           {o.count !== undefined && <span className="text-[12px] text-faint tabular-nums">{o.count}</span>}
         </button>
       ))}

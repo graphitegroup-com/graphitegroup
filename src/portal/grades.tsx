@@ -78,8 +78,8 @@ export function ScorePicker({
       <legend className="text-[13px] font-medium text-ink-2">{label}</legend>
       <p className="text-[12px] text-muted">{disabledNote ?? hint}</p>
       {!disabled && (
-        <div className="mt-1.5 flex items-center gap-2">
-          <div className="inline-flex overflow-hidden rounded-[3px] border border-[#d6d6cb]">
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <div className="inline-flex shrink-0 overflow-hidden rounded-[3px] border border-[#d6d6cb]">
             {SCORES.map((n) => (
               <label key={n} className="relative border-r border-[#d6d6cb] last:border-r-0">
                 <input type="radio" name={name} value={n} checked={value === n} onChange={() => onChange(n)} className="peer sr-only" />
