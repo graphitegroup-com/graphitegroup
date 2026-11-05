@@ -50,7 +50,7 @@ const primaryBtn =
 const linkBtn = "text-[13px] text-link hover:underline";
 
 export default function LoginPage() {
-  const { data, me, ready, live, auth, needsSetup, recovering, signIn, signOut, update } = usePortal();
+  const { data, me, ready, live, auth, needsSetup, recovering, signIn, signOut, update, error: loadError } = usePortal();
   const go = useGo();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
@@ -139,14 +139,32 @@ export default function LoginPage() {
   const liveDetails = live && ready && me && needsSetup ? me : undefined;
   const demoDetails = !live && mode === "details" ? data.members.find((m) => m.id === setupId) : undefined;
   const setupMember = liveDetails ?? demoDetails;
-  // Signed in with an account whose email the roster no longer has.
-  const orphaned = live && ready && !!auth?.email && !me;
+  // Signed in, but no member came back: either loading failed, or the roster no longer has this email.
+  const noMember = live && ready && !!auth?.email && !me;
+  const loadFailed = noMember && !!loadError;
+  const orphaned = noMember && !loadError;
 
   let body: React.ReactNode;
   if (!ready && live) {
     body = <p className="text-center text-[13.5px] text-muted">Loading</p>;
   } else if (live && recovering) {
     body = <NewPasswordForm onSave={(p) => auth!.setPassword(p)} />;
+  } else if (loadFailed) {
+    body = (
+      <div className="space-y-4 text-[13.5px]">
+        <p role="alert" className="rounded-[3px] border border-[#f0c9c5] bg-[#fbe9e8] px-3 py-2 text-[#a8261b]">
+          You&apos;re signed in as {auth?.email}, but the portal couldn&apos;t load. {loadError}
+        </p>
+        <div className="flex gap-4">
+          <button type="button" className={linkBtn} onClick={() => window.location.reload()}>
+            Try again
+          </button>
+          <button type="button" className={linkBtn} onClick={signOut}>
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
   } else if (orphaned) {
     body = (
       <div className="space-y-4 text-[13.5px]">

@@ -40,7 +40,15 @@ export function emptyData(): PortalData {
 export async function loadAll(sb: SupabaseClient): Promise<PortalData> {
   const q = async (table: string) => {
     const { data, error } = await sb.from(table).select("*");
-    if (error) throw new Error(`Couldn't load ${table}: ${error.message}`);
+    if (error) {
+      // A table or view the code expects isn't there: the database is behind the code.
+      const missing = error.code === "PGRST205" || error.code === "42P01" || /could not find the table|does not exist/i.test(error.message);
+      throw new Error(
+        missing
+          ? `The database is missing an update (no "${table}"). In Supabase's SQL editor, run the newest file in supabase/migrations/, then reload this page.`
+          : `Couldn't load ${table}: ${error.message}`,
+      );
+    }
     return (data ?? []) as R.Row[];
   };
   const [
