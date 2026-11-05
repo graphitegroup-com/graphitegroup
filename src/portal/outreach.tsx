@@ -29,7 +29,7 @@ import {
   type OutreachStage,
 } from "./logic";
 import { usePortal } from "./store";
-import type { Contact, Outreach, PortalData } from "./types";
+import { SCHOOLS, type Contact, type Outreach, type PortalData, type School } from "./types";
 import { Badge, Button, Card, Check, Drawer, Empty, Field, Input, Select, Td, Textarea, Th, rowCls, type Tone, PRIVATE_HINT, PrivateNote } from "./ui";
 
 export const CHANNELS: Outreach["channel"][] = ["Email", "LinkedIn", "Referral", "In person"];
@@ -694,6 +694,99 @@ export function MoveContactForm({ contact, onDone }: { contact: Contact; onDone:
         <Button type="submit" disabled={!changed || !firm || !title.trim()}>
           Save new role
         </Button>
+        <Button variant="secondary" onClick={onDone}>
+          Cancel
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * Any member can correct a contact's details: name, email, LinkedIn, how to
+ * approach them, and whether they're a Graphite or Claremont alum. Company
+ * and title change through MoveContactForm, which keeps their old role.
+ */
+export function EditContactForm({ contact, onDone }: { contact: Contact; onDone: () => void }) {
+  const { me, update } = usePortal();
+  const [c, setC] = useState({
+    name: contact.name,
+    email: contact.email,
+    linkedin: contact.linkedin,
+    preferences: contact.preferences,
+    isAlum: contact.isAlum,
+    alumClass: contact.alumClass ? String(contact.alumClass) : "",
+    isSchoolAlum: !!contact.isSchoolAlum,
+    alumSchool: (contact.alumSchool ?? "") as School | "",
+    schoolClass: contact.schoolClass ? String(contact.schoolClass) : "",
+  });
+  const [error, setError] = useState("");
+  if (!me) return null;
+  const set = (patch: Partial<typeof c>) => setC((x) => ({ ...x, ...patch }));
+
+  const save = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!c.name.trim()) return setError("Enter their name.");
+    if (c.linkedin.trim() && !isLinkedInUrl(c.linkedin)) return setError("Paste their LinkedIn profile link, for example linkedin.com/in/their-name.");
+    const year = Number(c.alumClass);
+    const schoolYear = Number(c.schoolClass);
+    const next: Contact = {
+      ...contact,
+      name: c.name.trim(),
+      email: c.email.trim(),
+      linkedin: c.linkedin.trim() ? withProtocol(c.linkedin) : "",
+      preferences: c.preferences.trim(),
+      isAlum: c.isAlum,
+      alumClass: c.isAlum && year > 0 ? year : undefined,
+      isSchoolAlum: c.isSchoolAlum || undefined,
+      alumSchool: c.isSchoolAlum && c.alumSchool ? c.alumSchool : undefined,
+      schoolClass: c.isSchoolAlum && schoolYear > 0 ? schoolYear : undefined,
+      updatedAt: new Date().toISOString(),
+      updatedBy: me.id,
+    };
+    update((d) => ({ ...d, contacts: d.contacts.map((x) => (x.id === contact.id ? next : x)) }));
+    onDone();
+  };
+
+  return (
+    <form onSubmit={save} className="space-y-4" noValidate>
+      <Field label="Name">
+        <Input required value={c.name} onChange={(e) => set({ name: e.target.value })} />
+      </Field>
+      <Field label="Email">
+        <Input type="email" value={c.email} onChange={(e) => set({ email: e.target.value })} />
+      </Field>
+      <Field label="LinkedIn profile">
+        <Input inputMode="url" placeholder="linkedin.com/in/their-name" value={c.linkedin} onChange={(e) => set({ linkedin: e.target.value })} />
+      </Field>
+      <Check label="Graphite alum" checked={c.isAlum} onChange={(v) => set({ isAlum: v })} />
+      {c.isAlum && (
+        <Field label="Graphite class year">
+          <Input type="number" min={1990} max={2100} value={c.alumClass} onChange={(e) => set({ alumClass: e.target.value })} />
+        </Field>
+      )}
+      <Check label="School alum (Claremont Colleges)" checked={c.isSchoolAlum} onChange={(v) => set({ isSchoolAlum: v })} />
+      {c.isSchoolAlum && (
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="School">
+            <Select options={[{ value: "", label: "Choose a school" }, ...SCHOOLS]} value={c.alumSchool} onChange={(e) => set({ alumSchool: e.target.value as School | "" })} />
+          </Field>
+          <Field label="Class year">
+            <Input type="number" min={1950} max={2100} value={c.schoolClass} onChange={(e) => set({ schoolClass: e.target.value })} />
+          </Field>
+        </div>
+      )}
+      <Field label="How to approach" hint="How they like to be contacted, availability, anything that helps the next member.">
+        <Textarea value={c.preferences} onChange={(e) => set({ preferences: e.target.value })} />
+      </Field>
+      {error && (
+        <p role="alert" className="text-[12.5px] text-[#a8261b]">
+          {error}
+        </p>
+      )}
+      <p className="text-[12px] text-muted">To change where they work, use &ldquo;Update role or company&rdquo; instead, so their old role is kept.</p>
+      <div className="flex gap-2 pt-1">
+        <Button type="submit">Save details</Button>
         <Button variant="secondary" onClick={onDone}>
           Cancel
         </Button>

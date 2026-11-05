@@ -68,7 +68,7 @@ const NAV: { section?: string; items: NavItem[] }[] = [
 ];
 
 export function PortalShell({ children }: { children: ReactNode }) {
-  const { me, ready, signOut, live, needsSetup, recovering, error, dismissError } = usePortal();
+  const { me, ready, signOut, live, needsSetup, recovering, error, dismissError, viewingAs, realMe, viewAs } = usePortal();
   const pathname = usePagePath();
   const go = useGo();
   const [open, setOpen] = useState(false);
@@ -177,9 +177,30 @@ export function PortalShell({ children }: { children: ReactNode }) {
             Preview with sample data. Changes are saved in this browser only.
           </div>
         )}
+        {viewingAs && (
+          <div className="sticky top-12 z-30 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-[#b9d3ea] bg-[#e8f1fa] px-4 py-2 text-[13px] text-[#0f3b63] md:px-8 lg:top-0">
+            <span>
+              Viewing the portal as <span className="font-medium">{fullName(viewingAs)}</span> ({isAlum(viewingAs) ? `alum, class of ${viewingAs.gradYear}` : viewingAs.execTitle ?? viewingAs.role}).
+              Changes are off.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                viewAs(null);
+                go("/portal/admin");
+              }}
+              className="shrink-0 font-medium hover:underline"
+            >
+              Back to {realMe ? `${realMe.firstName}'s` : "my"} view
+            </button>
+          </div>
+        )}
         {error && (
           <div role="alert" className="flex items-start justify-between gap-3 border-b border-[#f0c9c5] bg-[#fbe9e8] px-4 py-2 text-[13px] text-[#a8261b] md:px-8">
-            <span>{error} The page has been refreshed to match what&apos;s saved.</span>
+            <span>
+              {error}
+              {!viewingAs && " The page has been refreshed to match what's saved."}
+            </span>
             <button type="button" onClick={dismissError} className="shrink-0 font-medium hover:underline">
               Dismiss
             </button>

@@ -16,6 +16,7 @@ export function emptyData(): PortalData {
     taskTemplates: [],
     taskDone: {},
     accounts: {},
+    invites: [],
     applications: [],
     reports: [],
     questions: [],
@@ -77,6 +78,7 @@ export async function loadAll(sb: SupabaseClient): Promise<PortalData> {
     lessons,
     templates,
     settings,
+    invites,
   ] = await Promise.all([
     q("members"),
     q("member_private"),
@@ -103,6 +105,7 @@ export async function loadAll(sb: SupabaseClient): Promise<PortalData> {
     q("lessons"),
     q("templates"),
     q("settings"),
+    q("invites"),
   ]);
 
   const phone = new Map(privateRows.map((r) => [r.member_id as string, String(r.phone ?? "")]));
@@ -137,6 +140,7 @@ export async function loadAll(sb: SupabaseClient): Promise<PortalData> {
     taskDone: Object.fromEntries(completions.map((r) => [R.completionKey(r), String(r.completed_at)])),
     // Who has finished setting up their account; Members and roles shows it.
     accounts: Object.fromEntries(members.filter((r) => r.setup_completed_at).map((r) => [r.id as string, String(r.setup_completed_at)])),
+    invites: invites.map((r) => ({ email: String(r.email), role: r.role, addedBy: r.added_by ?? undefined, createdAt: String(r.created_at) })),
     applications: [...own, ...sharedApps.filter((r) => !ownIds.has(r.id)).map(R.sharedApplicationFrom)],
     reports: reports.map(R.reportFrom),
     questions: questions.map(R.questionFrom),

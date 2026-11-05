@@ -13,7 +13,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { seed } from "./seed";
-import type { Member, PortalData } from "./types";
+import type { Invite, Member, PortalData } from "./types";
+import { fullName, isExec } from "./logic";
 import { LIVE, loginUrl, supabase } from "./live/client";
 import { emptyData, loadAll } from "./live/load";
 import { runSync } from "./live/sync";
@@ -24,7 +25,7 @@ const VERSION_KEY = "gg-portal-version";
  * Bump when the sample data's shape changes. Browsers holding an older shape
  * start over from the seed instead of crashing on missing fields.
  */
-const DATA_VERSION = "11";
+const DATA_VERSION = "12";
 const SESSION_KEY = "gg-session";
 
 /** Sign-in for live mode. Each call resolves to an error message for the person, or null. */
@@ -56,6 +57,15 @@ type Ctx = {
   /** The last thing that failed to save or load, for the banner. */
   error: string | null;
   dismissError: () => void;
+  /** Live: signed in with an invited email that isn't a member yet. */
+  invite?: Invite;
+  /** Live: turn the invite into a member with the details they entered. Resolves to an error message, or null. */
+  joinFromInvite?: (details: Member) => Promise<string | null>;
+  /** Exec previewing the portal as someone else: `me` is them, `realMe` is you, and changes are off. */
+  viewingAs?: Member;
+  realMe?: Member;
+  /** Exec only: preview as this member, or null to go back to your own view. */
+  viewAs: (memberId: string | null) => void;
 };
 
 const PortalContext = createContext<Ctx | null>(null);
@@ -141,6 +151,7 @@ function DemoProvider({ children }: { children: ReactNode }) {
       recovering: false,
       error: null,
       dismissError: () => {},
+      viewAs: () => {},
     }),
     [data, sessionId, update, ready],
   );
@@ -266,6 +277,27 @@ function LiveProvider({ children }: { children: ReactNode }) {
     [sb, reload, scheduleReload],
   );
 
+  const joinFromInvite = useCallback(
+    async (m: Member) => {
+      const { error: err } = await sb.rpc("join_from_invite", {
+        p_first_name: m.firstName,
+        p_last_name: m.lastName,
+        p_school_email: m.schoolEmail,
+        p_personal_email: m.personalEmail,
+        p_school: m.school,
+        p_grad_year: m.gradYear,
+        p_joined_term: m.joinedTerm,
+        p_practice: m.practice,
+        p_role: m.role,
+        p_phone: m.phone || null,
+      });
+      if (err) return friendly(err.message);
+      await reload();
+      return null;
+    },
+    [sb, reload],
+  );
+
   const auth = useMemo<LiveAuth>(
     () => ({
       email,
@@ -310,15 +342,71 @@ function LiveProvider({ children }: { children: ReactNode }) {
       recovering,
       error,
       dismissError: () => setError(null),
+      invite: !me && email ? data.invites.find((i) => i.email === email.trim().toLowerCase()) : undefined,
+      joinFromInvite,
+      viewAs: () => {},
     }),
-    [data, me, update, sb, checked, email, loaded, auth, recovering, error],
+    [data, me, update, sb, checked, email, loaded, auth, recovering, error, joinFromInvite],
   );
 
   return <PortalContext.Provider value={value}>{children}</PortalContext.Provider>;
 }
 
+const VIEW_AS_KEY = "gg-view-as";
+
+/**
+ * Exec's "View as": re-provides the portal with `me` swapped for another
+ * member, so every page renders as they'd see it from the data exec already
+ * has. Writes are switched off, since they'd be saved as exec. Kept per tab.
+ */
+function ViewAsLayer({ children }: { children: ReactNode }) {
+  const ctx = useContext(PortalContext)!;
+  const [viewId, setViewId] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setViewId(sessionStorage.getItem(VIEW_AS_KEY));
+    } catch {}
+  }, []);
+
+  const viewAs = useCallback((id: string | null) => {
+    try {
+      if (id) sessionStorage.setItem(VIEW_AS_KEY, id);
+      else sessionStorage.removeItem(VIEW_AS_KEY);
+    } catch {}
+    setViewId(id);
+    setBlocked(null);
+  }, []);
+
+  const real = ctx.me;
+  const target = real && isExec(real) && viewId && viewId !== real.id ? ctx.data.members.find((m) => m.id === viewId) : undefined;
+
+  const value = useMemo<Ctx>(() => {
+    if (!target) return { ...ctx, realMe: real, viewAs };
+    return {
+      ...ctx,
+      me: target,
+      realMe: real,
+      viewingAs: target,
+      viewAs,
+      needsSetup: false,
+      update: () => setBlocked(`You're viewing the portal as ${fullName(target)}, so changes are off. Go back to your view to make changes.`),
+      error: blocked ?? ctx.error,
+      dismissError: () => {
+        setBlocked(null);
+        ctx.dismissError();
+      },
+    };
+  }, [ctx, real, target, viewAs, blocked]);
+
+  return <PortalContext.Provider value={value}>{children}</PortalContext.Provider>;
+}
+
 export function PortalProvider({ children }: { children: ReactNode }) {
-  return LIVE ? <LiveProvider>{children}</LiveProvider> : <DemoProvider>{children}</DemoProvider>;
+  const inner = <ViewAsLayer>{children}</ViewAsLayer>;
+  return LIVE ? <LiveProvider>{inner}</LiveProvider> : <DemoProvider>{inner}</DemoProvider>;
 }
 
 export function usePortal() {

@@ -78,6 +78,11 @@ export const seed: PortalData = {
   ],
   taskDone: { "t1:F2026:m1": "2026-09-02T12:00:00Z", "t4:F2026:m2": "2026-08-12T12:00:00Z", "t2:F2026:m4": "2026-08-18T12:00:00Z" },
   // Everyone has set up their sign-in except Leo, added this fall and not yet signed in.
+  // Approved to join, not set up yet. Try "Set up your account" with one of these in the preview.
+  invites: [
+    { email: "maya.rivera@pomona.edu", role: "Associate Consultant", addedBy: "m1", createdAt: "2026-10-30T18:00:00Z" },
+    { email: "jt.nakamura@cmc.edu", role: "Associate Consultant", addedBy: "m1", createdAt: "2026-10-30T18:00:00Z" },
+  ],
   accounts: Object.fromEntries(
     Array.from({ length: 21 }, (_, i) => `m${i + 1}`)
       .filter((id) => id !== "m16")

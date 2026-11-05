@@ -9,7 +9,7 @@ Two modes, one codebase (`src/portal/store.tsx`):
 - **Live**, when the build has `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (the deploy job passes the repo's `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` Variables): real sign-in and the club's data in Supabase. `src/portal/live/` loads what the signed-in member may see (`load.ts`), maps rows to the portal's types (`rows.ts`) and turns every change into the matching inserts, updates and deletes (`sync.ts`). The database's access rules decide what's allowed; anything refused shows a banner and the page reloads from what's saved.
 - **Demo**, without those settings: fictional sample data in the browser. The preview's sign-in page lists sample people to try it as, and any password works.
 
-Who sees what: alumni land on the forum and don't get tasks or My recruiting. Current members see their tasks, applications and follow-ups; only exec sees member counts. Executive board access ends at graduation even though alumni keep their highest role.
+Who sees what: alumni land on the forum and don't get tasks or My recruiting. Exec can **View as** any member from Members and roles to check what they see; changes are off while viewing, and live it shows only what exec itself may see (never anyone's private notes). Current members see their tasks, applications and follow-ups; only exec sees member counts. Executive board access ends at graduation even though alumni keep their highest role.
 
 | Module | Route | What it does |
 | --- | --- | --- |
@@ -63,7 +63,7 @@ The portal mirrors Bookface on a plain white page: panels with hairline borders 
    - **URL Configuration:** set **Site URL** to the portal's sign-in page (for example `https://graphitegroup-com.github.io/graphitegroup/login.html`) and add the site with `/**` (for example `https://graphitegroup-com.github.io/graphitegroup/**`) under **Redirect URLs**. Confirmation and password-reset links land there.
    - **Emails → SMTP Settings:** connect a sender. Supabase's built-in one only delivers to your Supabase team's own addresses, a few an hour, so members wouldn't get their confirmation emails. A free option is the club Gmail with an app password (host `smtp.gmail.com`, port 465).
 5. Add the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` Variables and the deploy builds the live portal (see [`OPERATIONS.md`](OPERATIONS.md)).
-6. The Managing Director opens the portal, chooses **Set up your account**, confirms the email and fills in their details. Then they add everyone else in **Members and roles** (or import a spreadsheet into `members` in the Table editor). Real member data goes in the database only, never into this repo.
+6. The Managing Director opens the portal, chooses **Set up your account**, confirms the email and fills in their details. Then they add everyone else in **Members and roles**: **Invite by email** takes a pasted list of any length (each person fills in their own name, school and class when they set up), or **Add one member** with full details. Real member data goes in the database only, never into this repo.
 
 Later:
 - Move headshots to Supabase Storage (they're stored as resized data URLs for now).

@@ -100,6 +100,25 @@ export function planSync(prev: PortalData, next: PortalData, meId: string): { op
     }
   }
 
+  /* Invites are keyed by email. Exec adds and removes them; joining removes them in the database. */
+  if (prev.invites !== next.invites) {
+    const before = new Map(prev.invites.map((i) => [i.email, i]));
+    const after = new Map(next.invites.map((i) => [i.email, i]));
+    const added = next.invites.filter((i) => !before.has(i.email));
+    if (added.length) {
+      ops.push({
+        label: "invite",
+        run: (c) => check(c.sb.from("invites").insert(added.map((i) => ({ email: i.email, role: i.role, added_by: meId }))), "Couldn't save the invites").then(() => {}),
+      });
+    }
+    for (const i of prev.invites.filter((x) => !after.has(x.email))) {
+      ops.push({ label: "remove invite", run: (c) => check(c.sb.from("invites").delete().eq("email", i.email), "Couldn't remove the invite").then(() => {}) });
+    }
+    for (const i of next.invites.filter((x) => before.has(x.email) && before.get(x.email)!.role !== x.role)) {
+      ops.push({ label: "change invite", run: (c) => check(c.sb.from("invites").update({ role: i.role }).eq("email", i.email), "Couldn't change the invite").then(() => {}) });
+    }
+  }
+
   if (prev.roleChanges !== next.roleChanges) tableOps(ops, "role_changes", "role change", prev.roleChanges, next.roleChanges, R.roleChangeTo);
   if (prev.taskTemplates !== next.taskTemplates) tableOps(ops, "task_templates", "task", prev.taskTemplates, next.taskTemplates, R.templateTaskTo);
 

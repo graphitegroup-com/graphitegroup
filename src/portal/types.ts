@@ -39,6 +39,12 @@ export type Member = {
   showOnWebsite: boolean;
 };
 
+/**
+ * An email exec has approved to join. The person fills in their own name,
+ * school and class when they set up, and becomes a member then.
+ */
+export type Invite = { email: string; role: Role; addedBy?: string; createdAt: string };
+
 export type RoleChange = { id: string; memberId: string; from: Role; to: Role; term: Term; approvedBy: string };
 
 export type Audience =
@@ -395,6 +401,8 @@ export type PortalData = {
   taskDone: Record<string, string>;
   /** Preview stand-in for sign-in accounts: member id -> when they set up their password. */
   accounts: Record<string, string>;
+  /** Emails approved to join that haven't set up yet. Exec sees all; an invited person sees their own. */
+  invites: Invite[];
   applications: Application[];
   reports: InterviewReport[];
   questions: InterviewQuestion[];

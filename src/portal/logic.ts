@@ -10,6 +10,8 @@ import {
   type Application,
   type Audience,
   type FirmAppStats,
+  type Invite,
+  type School,
   type InterviewQuestion,
   type InterviewReport,
   type QuestionRound,
@@ -100,6 +102,47 @@ export function highestRole(m: Member, changes: RoleChange[]): Role {
 }
 
 /** Finds the member an email belongs to, school or personal, ignoring case and spaces. */
+/** Every email address in pasted text, in any format (one per line, commas, "Name <email>", a spreadsheet column), lowercased and without repeats. */
+export function parseEmails(text: string): string[] {
+  const found = text.match(/[a-z0-9._%+'-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}/gi) ?? [];
+  return [...new Set(found.map((e) => e.toLowerCase().replace(/^[.']+|[.']+$/g, "")))];
+}
+
+const SCHOOL_DOMAINS: [RegExp, School][] = [
+  [/(^|\.)(cmc\.edu|claremontmckenna\.edu)$/, "CMC"],
+  [/(^|\.)pomona\.edu$/, "Pomona"],
+  [/(^|\.)hmc\.edu$/, "Harvey Mudd"],
+  [/(^|\.)scrippscollege\.edu$/, "Scripps"],
+  [/(^|\.)pitzer\.edu$/, "Pitzer"],
+];
+
+/** The Claremont college a school email belongs to, if it's one of theirs. */
+export function schoolForEmail(email: string): School | undefined {
+  const domain = email.trim().toLowerCase().split("@")[1] ?? "";
+  return SCHOOL_DOMAINS.find(([re]) => re.test(domain))?.[1];
+}
+
+export const inviteFor = (invites: Invite[], email: string) => invites.find((i) => i.email === email.trim().toLowerCase());
+
+/** A blank member for someone joining from an invite; they fill in the rest during setup. */
+export function memberFromInvite(inv: Invite, now = new Date()): Member {
+  const school = schoolForEmail(inv.email);
+  return {
+    id: uid(),
+    firstName: "",
+    lastName: "",
+    schoolEmail: school ? inv.email : "",
+    personalEmail: school ? "" : inv.email,
+    phone: "",
+    school: school ?? "CMC",
+    gradYear: 0,
+    practice: "Strategy",
+    role: inv.role,
+    joinedTerm: currentTerm(now),
+    showOnWebsite: true,
+  };
+}
+
 export function memberByEmail(members: Member[], email: string) {
   const e = email.trim().toLowerCase();
   if (!e.includes("@")) return undefined;
