@@ -12,6 +12,9 @@ import {
   type FirmAppStats,
   type Invite,
   type School,
+  type Project,
+  type ProjectTask,
+  type Settings,
   type InterviewQuestion,
   type InterviewReport,
   type QuestionRound,
@@ -536,6 +539,80 @@ export function applicationPrompt(a: Application, data: Pick<PortalData, "report
   }
   if (a.stage === "Offer" && !data.jobs.some((j) => j.memberId === a.memberId && at(j.company))) return { kind: "experience", label: "Add to my experience" };
   return undefined;
+}
+
+/* ---------------------------------------------------------------- teams */
+
+/** "F2026" for a Fall 2026 project. */
+export const projectTerm = (p: Pick<Project, "term" | "year">): Term => `${p.term === "Fall" ? "F" : "S"}${p.year}`;
+
+/** "Fall 2026" from "F2026". */
+export const termName = (t: Term) => `${t[0] === "F" ? "Fall" : "Spring"} ${t.slice(1)}`;
+
+/** This semester's projects, the one you're on first. */
+export function currentProjects(data: Pick<PortalData, "projects" | "projectTeam">, me?: Member, now = new Date()) {
+  const term = currentTerm(now);
+  const mine = (p: Project) => !!me && onTeam(data, p, me.id);
+  return data.projects.filter((p) => projectTerm(p) === term).sort((a, b) => Number(mine(b)) - Number(mine(a)) || a.client.localeCompare(b.client));
+}
+
+/** Everyone on a project's team: its lead, then the members exec or the lead added. */
+export function teamOf(data: Pick<PortalData, "projectTeam">, p: Project) {
+  const ids = data.projectTeam.filter((t) => t.projectId === p.id).map((t) => t.memberId);
+  return [...new Set([p.lead, ...ids].filter(Boolean))];
+}
+
+export const onTeam = (data: Pick<PortalData, "projectTeam">, p: Project, memberId: string) => teamOf(data, p).includes(memberId);
+
+/** Exec runs every team; a project's lead runs theirs. */
+export const runsTeam = (me: Member | undefined, p: Project) => !!me && (isExec(me) || p.lead === me.id);
+
+/** The member's project this semester, if they're on one. */
+export const projectFor = (data: Pick<PortalData, "projects" | "projectTeam">, memberId: string, now = new Date()) =>
+  data.projects.find((p) => projectTerm(p) === currentTerm(now) && onTeam(data, p, memberId));
+
+/** Which week of the semester today falls in (1 = the first week of classes), clamped to the semester. */
+export function semesterWeek(term: Term, settings: Settings, now = new Date()) {
+  const sem = term[0] === "F" ? settings.calendar.fall : settings.calendar.spring;
+  const w = Math.floor((now.getTime() - weekOneMonday(sem).getTime()) / (7 * 86_400_000)) + 1;
+  return Math.min(Math.max(w, 1), sem.weeks);
+}
+
+/** The semester's length in weeks, from exec's calendar. */
+export const semesterWeeks = (term: Term, settings: Settings) => (term[0] === "F" ? settings.calendar.fall : settings.calendar.spring).weeks;
+
+/** The Friday of a week of the project's semester, from exec's semester calendar. */
+export function projectTaskDue(p: Project, week: number, settings: Settings) {
+  const sem = p.term === "Fall" ? settings.calendar.fall : settings.calendar.spring;
+  return taskDueDate(sem, { anchor: "week", n: week });
+}
+
+export type TeamTask = { task: ProjectTask; project: Project; due: Date; done?: string; key: string };
+
+/**
+ * Put someone on a project's team, taking them off any other team that
+ * semester; null takes them off this semester's teams. A project's lead
+ * stays on the project they lead either way.
+ */
+export function assignToProject(d: PortalData, memberId: string, projectId: string | null, now = new Date()): PortalData {
+  const target = d.projects.find((p) => p.id === projectId);
+  const term = target ? projectTerm(target) : currentTerm(now);
+  const sameTerm = new Set(d.projects.filter((p) => projectTerm(p) === term).map((p) => p.id));
+  const kept = d.projectTeam.filter((t) => !(t.memberId === memberId && sameTerm.has(t.projectId)));
+  return { ...d, projectTeam: target && target.lead !== memberId ? [...kept, { projectId: target.id, memberId }] : kept };
+}
+
+/** Your team's tasks this semester: the whole team's and yours, by due date. */
+export function teamTasksFor(me: Member, data: Pick<PortalData, "projects" | "projectTeam" | "projectTasks" | "projectTaskDone" | "settings">, now = new Date()): TeamTask[] {
+  const p = projectFor(data, me.id, now);
+  if (!p) return [];
+  return data.projectTasks
+    .filter((t) => t.projectId === p.id && (!t.assigneeId || t.assigneeId === me.id))
+    .map((task) => {
+      const key = `${task.id}:${me.id}`;
+      return { task, project: p, due: projectTaskDue(p, task.week, data.settings), done: data.projectTaskDone[key], key };
+    })
+    .sort((a, b) => a.due.getTime() - b.due.getTime() || a.task.title.localeCompare(b.task.title));
 }
 
 /* ---------------------------------------------------------------- question bank */

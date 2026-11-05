@@ -18,6 +18,7 @@ const ICONS = {
   companies: "M5 20.5V4.5h9v16M14 9.5h5v11M3 20.5h18M8 8h3M8 11.5h3M8 15h3",
   network: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20a6.5 6.5 0 0 1 13 0M16 4.3a3.5 3.5 0 0 1 0 6.4M18.5 14a6.5 6.5 0 0 1 3 6",
   directory: "M5 3.5h14v17H5zM12 12a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5zM8 17.5a4 4 0 0 1 8 0",
+  teams: "M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6.5 20a5.5 5.5 0 0 1 11 0M5.5 10.5a2.25 2.25 0 1 1 0-4.5M18.5 10.5a2.25 2.25 0 1 0 0-4.5M2.5 18a4 4 0 0 1 2.6-3.7M21.5 18a4 4 0 0 0-2.6-3.7",
   projects: "M3.5 6.5a1.5 1.5 0 0 1 1.5-1.5h4l2 2h8a1.5 1.5 0 0 1 1.5 1.5v9.5a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z",
   members: "M12 3.5 4.5 6.5v5.5c0 4.2 3.2 7.6 7.5 8.5 4.3-.9 7.5-4.3 7.5-8.5V6.5z",
   tasks: "M4.5 12a7.5 7.5 0 0 1 13-5.1L19.5 9M19.5 4v5h-5M19.5 12a7.5 7.5 0 0 1-13 5.1L4.5 15M4.5 20v-5h5",
@@ -55,6 +56,7 @@ const NAV: { section?: string; items: NavItem[] }[] = [
     section: "Graphite",
     items: [
       { href: "/portal/directory", label: "Directory", icon: "directory" },
+      { href: "/portal/teams", label: "Teams", icon: "teams", members: true },
       { href: "/portal/projects", label: "Projects", icon: "projects" },
     ],
   },

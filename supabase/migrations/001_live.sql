@@ -1,7 +1,7 @@
 -- Graphite portal: changes since the first run of schema.sql (November 2026).
 -- Run once in the Supabase SQL editor on a project that already has the
--- original schema. Safe to run twice. A new project only needs schema.sql,
--- which already includes all of this.
+-- original schema. Safe to run twice. A new project runs schema.sql and then
+-- every migration in order; this one is safe on top.
 
 -- Executive board access ends at graduation; alumni keep the role for the record only.
 create or replace function is_exec() returns boolean

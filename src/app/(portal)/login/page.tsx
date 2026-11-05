@@ -59,6 +59,8 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [setupId, setSetupId] = useState<string | null>(null);
+  // Sign-in failed because the email was never confirmed: offer to send the link again.
+  const [unconfirmed, setUnconfirmed] = useState(false);
   // Demo: setting up from an invite rather than an existing roster entry.
   const [setupInvite, setSetupInvite] = useState<string | null>(null);
 
@@ -71,6 +73,7 @@ export default function LoginPage() {
   const switchTo = (m: Mode) => {
     setMode(m);
     setError(null);
+    setUnconfirmed(false);
     setPassword("");
     setConfirm("");
   };
@@ -84,8 +87,10 @@ export default function LoginPage() {
     if (!password) return setError("Enter your password.");
     if (live && auth) {
       setBusy(true);
-      setError(await auth.signIn(email, password));
+      const err = await auth.signIn(email, password);
       setBusy(false);
+      setError(err);
+      setUnconfirmed(!!err && /confirm your email/i.test(err));
       return;
     }
     const m = memberByEmail(data.members, email);
@@ -235,8 +240,9 @@ export default function LoginPage() {
       <div className="space-y-4">
         <p role="status" className="rounded-[3px] border border-edge bg-stone px-3 py-3 text-[13.5px]">
           Check your inbox. We sent a link to <span className="font-medium">{email.trim()}</span>. Open it on any device to confirm your email, then finish setting up
-          your details.
+          your details. It can take a few minutes, and sometimes lands in spam.
         </p>
+        <ResendConfirmation email={email} send={live && auth ? auth.resendConfirmation : undefined} />
         <BackLink onClick={() => switchTo("signin")} />
       </div>
     );
@@ -273,6 +279,7 @@ export default function LoginPage() {
           <Input id="signin-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </Field>
         {error && <FormError>{error}</FormError>}
+        {unconfirmed && <ResendConfirmation email={email} send={auth?.resendConfirmation} />}
         <button type="submit" className={primaryBtn} disabled={busy}>
           {busy ? "Signing in" : "Sign in"}
         </button>
@@ -461,5 +468,43 @@ function DetailsForm({ member, lockedEmail, onDone }: { member: Member; lockedEm
         {busy ? "Saving" : "Finish and open the portal"}
       </button>
     </form>
+  );
+}
+
+/** "Didn't get it?" Sends the confirmation link again, at most once a minute. */
+function ResendConfirmation({ email, send }: { email: string; send?: (email: string) => Promise<string | null> }) {
+  const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
+  const [error, setError] = useState<string | null>(null);
+  const [wait, setWait] = useState(0);
+  useEffect(() => {
+    if (wait <= 0) return;
+    const t = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(t);
+  }, [wait]);
+  return (
+    <div className="text-[13px]">
+      <button
+        type="button"
+        className={`${linkBtn} disabled:cursor-not-allowed disabled:text-faint disabled:no-underline`}
+        disabled={state === "sending" || wait > 0 || !email.includes("@")}
+        onClick={async () => {
+          setState("sending");
+          setError(null);
+          const err = send ? await send(email) : null;
+          if (err) {
+            setError(err);
+            setState("idle");
+          } else {
+            setState("sent");
+            setWait(60);
+          }
+        }}
+      >
+        {wait > 0 ? `Sent. You can send another in ${wait}s` : state === "sending" ? "Sending" : "Didn't get it? Send the confirmation email again"}
+      </button>
+      {state === "sent" && wait === 0 && <span className="ml-1 text-muted">Sent.</span>}
+      {!send && state === "sent" && <p className="mt-1 text-[12.5px] text-muted">(The preview doesn&apos;t send email.)</p>}
+      {error && <p className="mt-1 text-[12.5px] text-[#a8261b]">{error}</p>}
+    </div>
   );
 }

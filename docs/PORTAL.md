@@ -6,22 +6,23 @@ Goal: institutional memory that doesn't graduate. Everything members learn (who'
 
 Two modes, one codebase (`src/portal/store.tsx`):
 
-- **Live**, when the build has `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (the deploy job passes the repo's `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` Variables): real sign-in and the club's data in Supabase. `src/portal/live/` loads what the signed-in member may see (`load.ts`), maps rows to the portal's types (`rows.ts`) and turns every change into the matching inserts, updates and deletes (`sync.ts`). The database's access rules decide what's allowed; anything refused shows a banner and the page reloads from what's saved.
+- **Live**, when the build has `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (the deploy job passes the repo's `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` Variables): real sign-in and the club's data in Supabase. `src/portal/live/` loads what the signed-in member may see (`load.ts`, a page of 1,000 rows at a time, so nothing is cut off at Supabase's per-request cap), maps rows to the portal's types (`rows.ts`) and turns every change into the matching inserts, updates and deletes (`sync.ts`). The database's access rules decide what's allowed; anything refused shows a banner and the page reloads from what's saved.
 - **Demo**, without those settings: fictional sample data in the browser. The preview's sign-in page lists sample people to try it as, and any password works.
 
-Who sees what: alumni land on the forum and don't get tasks or My recruiting. Exec can **View as** any member from Members and roles to check what they see; changes are off while viewing, and live it shows only what exec itself may see (never anyone's private notes). Current members see their tasks, applications and follow-ups; only exec sees member counts. Executive board access ends at graduation even though alumni keep their highest role.
+Who sees what: alumni land on the forum and don't get tasks or My recruiting. Exec can **View as** any member from Members and roles to check what they see; changes are off while viewing, and live it shows only what exec itself may see (never anyone's private notes). Current members see their tasks, applications and follow-ups, plus their project team's tasks; only exec sees member counts. Executive board access ends at graduation even though alumni keep their highest role.
 
 | Module | Route | What it does |
 | --- | --- | --- |
-| Sign-in | `/login` | Invite-only. Exec adds a member's school and/or personal email; the member chooses "Set up your account", sets a password and confirms their details (school, class, start term, practice, role other than Executive Board). Either email signs in afterwards |
-| Home | `/portal` | This semester's tasks, follow-ups due from your network, the most active forum threads, your applications and (for exec) items that need approval |
+| Sign-in | `/login` | Invite-only. Exec adds a member's school and/or personal email; the member chooses "Set up your account", sets a password and confirms their details (school, class, start term, practice, role other than Executive Board). Someone invited by email alone fills in their own name too. If the confirmation email doesn't arrive, "Didn't get it?" sends it again (once a minute), from the check-your-inbox screen or after a sign-in that fails for want of confirming. Either email signs in afterwards |
+| Home | `/portal` | This semester's tasks, your project team's next tasks, follow-ups due from your network, the most active forum threads, your applications and (for exec) items that need approval |
 | Forum | `/portal/forum` | Bookface-style threads split into All threads, Current members and Alumni, across six channels (Recruiting, Interview prep, Referrals and intros, Opportunities, Offers, General), with replies, "helpful" votes, search and sorting. Everyone can read every space. A thread can be tagged with a firm and then also shows on that company's page. Exec can pin threads and remove any post |
-| Directory | `/portal/directory` | Members and alumni with filters, showing personal emails. Class standing and alumni status are computed from graduation year; alumni show the highest role they held. Phone is visible only to the member and exec |
+| Directory | `/portal/directory` | Members and alumni with filters, showing personal emails. Class standing and alumni status are computed from graduation year; alumni show the highest role they held. Phone is visible only to the member and exec. Each current member's profile shows their project this semester; exec can put anyone on any team from here, and a team lead can add someone who isn't on a team yet to their own |
+| Teams | `/portal/teams` | This semester's projects, each with its team and its tasks week by week (due that week's Friday on the semester calendar). Exec staffs any team and a project's lead (set in Projects) staffs theirs; one team per member per semester, so adding someone moves them off their other team. Leads and exec set tasks for the whole team or one person; each member checks off their own, and the lead sees "3 of 5 done". Other teams' tasks are folded away. Alumni don't see it |
 | My Recruiting | `/portal/recruiting` | Four tabs. Applications: your pipeline by stage, with one prompt at a time for what to log next (rate effort and fit once you apply, log the interview once you reach a first round, grade the process once there's an outcome, add an offer to your experience). My network: your outreach spreadsheet (add a person with their LinkedIn and current role and they join the shared Network; follow-up reminders after 7 days with no reply; one-click updates for replies, chats and thank-yous that feed the contact grades). My interviews. Similar members: who applies like you and where they did well (see Applications below) |
 | Companies | `/portal/companies` | Every firm members recruit with or worked at. Filter by type of company and by "has hired a" freshman, sophomore, junior or senior, to find where members that age have been hired (summers count the year just finished). Each firm shows member grades of its recruiting process, who worked there and in which year, which members reached a first round or further and how it ended (with the year of each offer), members' notes on the process, interview notes, a question bank, the average application effort and forum threads |
 | Network | `/portal/network` | Shared contacts with an outreach grade built from the outreach log (response rate, reply speed, helpfulness), searchable by firm and filterable by type of company. Any member can move a contact to a new firm or title; earlier roles are kept |
 | Projects | `/portal/projects` | Past engagements, what each team learned (tagged lessons that stack up by topic and are searchable across projects) and reusable templates |
-| Profile | `/portal/profile` | Name, emails, phone, school, grad year, practice, headshot, and Experience: internships and jobs with the year in school at the time, shared with every member. My recruiting offers to add an application here once it reaches Offer |
+| Profile | `/portal/profile` | Name, emails, phone, school, grad year, practice, headshot (stored in Supabase Storage in each member's own folder; only the address sits on their row), and Experience: internships and jobs with the year in school at the time, shared with every member. My recruiting offers to add an application here once it reaches Offer |
 | Members & Roles (exec) | `/portal/admin` | The full roster, current and alumni. Add members by email, see who has set up their sign-in, edit roles and exec titles, and approve the one automatic proposal: Associate Consultant to Consultant after two semesters. Alumni keep the highest role they held |
 | Recurring Tasks (exec) | `/portal/admin/tasks` | Exec sets each semester's first day of classes and length once a year; tasks are set as "week 3", "2 weeks before classes start" or "the last week" and date themselves, aimed at everyone, a role, or whoever holds an exec title |
 | Website (exec) | `/portal/admin/website` | Out of the sidebar while the public site stays on Webflow. Edits the public pages kept in this repo |
@@ -51,7 +52,7 @@ The portal mirrors Bookface on a plain white page: panels with hairline borders 
 
 ## Going live
 
-1. Create a Supabase project under a club-owned account and run `supabase/schema.sql` in the SQL editor. A project that ran an earlier version runs each file in `supabase/migrations/` once, in order; each is safe to run twice.
+1. Create a Supabase project under a club-owned account and run `supabase/schema.sql` in the SQL editor, then each file in `supabase/migrations/` in order (`003_teams_headshots.sql` is the only place the `headshots` storage bucket is created). A project that ran an earlier version runs the migrations it hasn't had yet; each is safe to run twice. If one is missing, the portal says which table it can't find.
 2. Optional: run `supabase/starter-tasks.sql` for the club's usual recurring tasks. Exec can edit them in Recurring tasks.
 3. Add the first Managing Director by hand, since only exec can add members and there's no exec yet (SQL editor):
    ```sql
@@ -61,12 +62,11 @@ The portal mirrors Bookface on a plain white page: panels with hairline borders 
 4. Authentication settings:
    - **Sign In / Providers → Email:** keep **Confirm email** on, so nobody can claim a member's account by knowing their email. The `auth_users_roster_only` trigger already rejects emails that aren't on the roster.
    - **URL Configuration:** set **Site URL** to the portal's sign-in page (for example `https://graphitegroup-com.github.io/graphitegroup/login.html`) and add the site with `/**` (for example `https://graphitegroup-com.github.io/graphitegroup/**`) under **Redirect URLs**. Confirmation and password-reset links land there.
-   - **Emails → SMTP Settings:** connect a sender. Supabase's built-in one only delivers to your Supabase team's own addresses, a few an hour, so members wouldn't get their confirmation emails. A free option is the club Gmail with an app password (host `smtp.gmail.com`, port 465).
+   - **Emails → SMTP Settings:** connect a sender. Supabase's built-in one only delivers to your Supabase team's own addresses, a few an hour for the whole project, so members wouldn't get their confirmation emails (the portal tells them when that cap is hit). A free option is the club Gmail with an app password (host `smtp.gmail.com`, port 465). Then raise **Rate Limits → emails sent per hour** to cover an invite wave (30 is plenty).
 5. Add the `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` Variables and the deploy builds the live portal (see [`OPERATIONS.md`](OPERATIONS.md)).
 6. The Managing Director opens the portal, chooses **Set up your account**, confirms the email and fills in their details. Then they add everyone else in **Members and roles**: **Invite by email** takes a pasted list of any length (each person fills in their own name, school and class when they set up), or **Add one member** with full details. Real member data goes in the database only, never into this repo.
 
 Later:
-- Move headshots to Supabase Storage (they're stored as resized data URLs for now).
 - Add a daily scheduled job for alumni transitions and promotion proposals each term.
 - Turn on Supabase Realtime for `forum_posts` and `forum_replies` so new threads appear without a refresh; for now the portal reloads when you come back to the tab.
 - Members can't be deleted from the portal; remove them in Supabase's Table editor.
@@ -138,7 +138,10 @@ outreach            member_id, contact_id, sent_at, channel, responded bool,
                     -> response rate / median response time per contact, computed in a view
 
 projects            client, year, term, practice, sector, categories[], summary,
-                    deliverables (Drive links), team (member ids), search tsvector
+                    deliverables (Drive links), lead (member id), search tsvector
+project_members     project_id, member_id, added_by     -- the semester team; lead staffs it
+project_tasks       project_id, title, body, week, assignee_id (null = whole team), created_by
+project_task_done   task_id, member_id, done_at        -- each member checks off their own
 templates           title, category, source_project_id, file link, description
 ```
 

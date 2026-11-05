@@ -25,7 +25,7 @@ const VERSION_KEY = "gg-portal-version";
  * Bump when the sample data's shape changes. Browsers holding an older shape
  * start over from the seed instead of crashing on missing fields.
  */
-const DATA_VERSION = "12";
+const DATA_VERSION = "13";
 const SESSION_KEY = "gg-session";
 
 /** Sign-in for live mode. Each call resolves to an error message for the person, or null. */
@@ -34,6 +34,8 @@ export type LiveAuth = {
   /** Creates the account; Supabase then emails a link to confirm it. */
   signUp: (email: string, password: string) => Promise<{ error: string | null; confirm: boolean }>;
   sendReset: (email: string) => Promise<string | null>;
+  /** Sends the confirmation email again, for a link that expired or never arrived. */
+  resendConfirmation: (email: string) => Promise<string | null>;
   setPassword: (password: string) => Promise<string | null>;
   /** The email the current session signed in with. */
   email?: string;
@@ -171,6 +173,9 @@ function friendly(message: string) {
   if (m.includes("database error saving new user") || m.includes("not on the graphite roster"))
     return "That email isn't on the Graphite roster. Ask the executive board to add it in Members and roles.";
   if (m.includes("already registered")) return "This email already has an account. Sign in, or reset your password if you've forgotten it.";
+  // Supabase's built-in sender allows only a few auth emails an hour for the whole project.
+  if (m.includes("email rate limit"))
+    return "The portal has sent all the emails it can for now. Try again in an hour, and tell the executive board so they can raise the limit.";
   if (m.includes("rate limit") || m.includes("too many")) return "Too many tries for now. Wait a few minutes and try again.";
   if (m.includes("failed to fetch") || m.includes("network") || m.includes("load failed"))
     return "Couldn't reach the portal's server. Check your internet connection and try again.";
@@ -312,6 +317,10 @@ function LiveProvider({ children }: { children: ReactNode }) {
       },
       sendReset: async (e) => {
         const { error: err } = await sb.auth.resetPasswordForEmail(e.trim(), { redirectTo: loginUrl() });
+        return err ? friendly(err.message) : null;
+      },
+      resendConfirmation: async (e) => {
+        const { error: err } = await sb.auth.resend({ type: "signup", email: e.trim(), options: { emailRedirectTo: loginUrl() } });
         return err ? friendly(err.message) : null;
       },
       setPassword: async (p) => {

@@ -1,6 +1,6 @@
 -- Graphite portal: invite many members at once by email (November 2026).
 -- Run once in the Supabase SQL editor after 001_live.sql. Safe to run twice.
--- A new project only needs schema.sql, which already includes this.
+-- A new project runs schema.sql and then every migration in order; this one is safe on top.
 
 -- Emails exec has approved to join. The person fills in their own name,
 -- school and class during setup, and join_from_invite turns the invite into

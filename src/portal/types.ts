@@ -342,6 +342,23 @@ export const COMPANY_TYPES = [
 ] as const;
 export type CompanyType = (typeof COMPANY_TYPES)[number];
 
+/** Someone on a project's team for the semester the project runs. The project's lead is on it too. */
+export type ProjectMember = { projectId: string; memberId: string };
+
+/** A task a project's lead sets for one week of the semester, for the whole team or one person. */
+export type ProjectTask = {
+  id: string;
+  projectId: string;
+  title: string;
+  body: string;
+  /** Week of the semester, 1 being the first week of classes; due that Friday. */
+  week: number;
+  /** One person; unset means everyone on the team. */
+  assigneeId?: string;
+  createdBy: string;
+  createdAt: string;
+};
+
 /** What members know about a firm itself. Any member can set or correct its type. */
 export type Firm = { name: string; type: CompanyType; updatedBy?: string; updatedAt?: string };
 
@@ -419,6 +436,11 @@ export type PortalData = {
   posts: ForumPost[];
   replies: ForumReply[];
   projects: Project[];
+  /** This and past semesters' project teams. */
+  projectTeam: ProjectMember[];
+  projectTasks: ProjectTask[];
+  /** `${taskId}:${memberId}` -> when that person checked it off. */
+  projectTaskDone: Record<string, string>;
   lessons: Lesson[];
   templates: Template[];
   settings: Settings;

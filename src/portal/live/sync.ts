@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { companySlug } from "../logic";
+import { companySlug, uid } from "../logic";
 import type { PortalData } from "../types";
 import * as R from "./rows";
 
@@ -66,6 +66,31 @@ function tableOps<T extends { id: string }>(
   }
 }
 
+/* ---------------------------------------------------------------- headshots */
+
+/**
+ * Photos live in Supabase Storage, not in the members table: a data URL from
+ * the photo picker is uploaded to headshots/<member id>/<random>.<ext> and
+ * the row keeps only its public address, so loading the roster stays small.
+ */
+export const HEADSHOTS = "headshots";
+
+async function uploadHeadshot(c: Ctx, memberId: string, dataUrl: string): Promise<string> {
+  const blob = await (await fetch(dataUrl)).blob();
+  const type = blob.type || "image/jpeg";
+  const ext = type.includes("png") ? "png" : type.includes("webp") ? "webp" : "jpg";
+  const path = `${memberId}/${uid()}.${ext}`;
+  const { error } = await c.sb.storage.from(HEADSHOTS).upload(path, blob, { contentType: type, upsert: false, cacheControl: "31536000" });
+  if (error) throw new Error(`Couldn't upload the photo: ${error.message}`);
+  return c.sb.storage.from(HEADSHOTS).getPublicUrl(path).data.publicUrl;
+}
+
+/** Where a headshot lives in storage, if the address is one of ours. */
+export function headshotPath(url?: string) {
+  const m = url?.match(new RegExp(`/storage/v1/object/public/${HEADSHOTS}/([^?#]+)`));
+  return m ? decodeURIComponent(m[1]) : undefined;
+}
+
 /** The writes that turn `prev` into `next`, in a safe order, and what to reload afterwards. */
 export function planSync(prev: PortalData, next: PortalData, meId: string): { ops: Op[]; reload: Set<Reload> } {
   const ops: Op[] = [];
@@ -83,8 +108,17 @@ export function planSync(prev: PortalData, next: PortalData, meId: string): { op
       if (!m || added.includes(m)) continue;
       const row = R.memberTo(m);
       if (setupDone.includes(id)) row.setup_completed_at = next.accounts[id];
-      ops.push({ label: "update member", run: (c) => updateRow(c, "members", id, row, "Couldn't save the profile") });
       const old = before.get(id);
+      ops.push({
+        label: "update member",
+        run: async (c) => {
+          if (typeof row.photo_url === "string" && row.photo_url.startsWith("data:")) row.photo_url = await uploadHeadshot(c, id, row.photo_url);
+          await updateRow(c, "members", id, row, "Couldn't save the profile");
+          // Best effort: the old file goes once the new address is saved.
+          const was = headshotPath(old?.photo);
+          if (was && old?.photo !== row.photo_url) await c.sb.storage.from(HEADSHOTS).remove([was]);
+        },
+      });
       if (old && old.phone !== m.phone) {
         ops.push({
           label: "save phone",
@@ -251,6 +285,43 @@ export function planSync(prev: PortalData, next: PortalData, meId: string): { op
   }
 
   if (prev.projects !== next.projects) tableOps(ops, "projects", "project", prev.projects, next.projects, R.projectTo);
+  /* Teams: membership is keyed by project and member; check-offs by task and member. */
+  if (prev.projectTeam !== next.projectTeam) {
+    const key = (t: { projectId: string; memberId: string }) => `${t.projectId}:${t.memberId}`;
+    const was = new Set(prev.projectTeam.map(key));
+    const now = new Set(next.projectTeam.map(key));
+    for (const t of prev.projectTeam.filter((x) => !now.has(key(x)))) {
+      ops.push({
+        label: "remove from team",
+        run: (c) => check(c.sb.from("project_members").delete().match({ project_id: t.projectId, member_id: t.memberId }), "Couldn't change the team").then(() => {}),
+      });
+    }
+    const added = next.projectTeam.filter((x) => !was.has(key(x)));
+    if (added.length) {
+      ops.push({
+        label: "add to team",
+        run: (c) => check(c.sb.from("project_members").insert(added.map((t) => ({ project_id: t.projectId, member_id: t.memberId, added_by: meId }))), "Couldn't change the team").then(() => {}),
+      });
+    }
+  }
+  if (prev.projectTasks !== next.projectTasks) tableOps(ops, "project_tasks", "team task", prev.projectTasks, next.projectTasks, R.projectTaskTo);
+  if (prev.projectTaskDone !== next.projectTaskDone) {
+    const row = (k: string) => {
+      const [task_id, member_id] = k.split(":");
+      return { task_id, member_id };
+    };
+    for (const k of Object.keys(prev.projectTaskDone).filter((x) => !next.projectTaskDone[x])) {
+      ops.push({ label: "uncheck team task", run: (c) => check(c.sb.from("project_task_done").delete().match(row(k)), "Couldn't update the task").then(() => {}) });
+    }
+    const added = Object.keys(next.projectTaskDone).filter((x) => !prev.projectTaskDone[x]);
+    if (added.length) {
+      ops.push({
+        label: "check team task",
+        run: (c) => check(c.sb.from("project_task_done").insert(added.map((k) => ({ ...row(k), done_at: next.projectTaskDone[k] }))), "Couldn't update the task").then(() => {}),
+      });
+    }
+  }
+
   if (prev.lessons !== next.lessons) tableOps(ops, "lessons", "lesson", prev.lessons, next.lessons, R.lessonTo);
   if (prev.templates !== next.templates) tableOps(ops, "templates", "template", prev.templates, next.templates, R.docTemplateTo);
 

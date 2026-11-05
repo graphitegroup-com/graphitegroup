@@ -21,6 +21,7 @@ import type {
   Member,
   Outreach,
   Project,
+  ProjectTask,
   RoleChange,
   TaskTemplate,
   Template,
@@ -431,4 +432,25 @@ export const docTemplateTo = (t: Template): Row => ({
   description: t.description,
   source_project_id: t.sourceProjectId ?? null,
   url: t.url,
+});
+
+export const projectTaskFrom = (r: Row): ProjectTask => ({
+  id: r.id,
+  projectId: r.project_id,
+  title: str(r.title),
+  body: str(r.body),
+  week: r.week,
+  assigneeId: opt(r.assignee_id),
+  createdBy: str(r.created_by),
+  createdAt: str(r.created_at),
+});
+export const projectTaskTo = (t: ProjectTask): Row => ({
+  id: t.id,
+  project_id: t.projectId,
+  title: t.title.trim(),
+  body: t.body,
+  week: t.week,
+  assignee_id: t.assigneeId ?? null,
+  created_by: t.createdBy || null,
+  created_at: t.createdAt || undefined,
 });

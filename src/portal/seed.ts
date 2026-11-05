@@ -258,6 +258,8 @@ export const seed: PortalData = {
     { id: "fr11", postId: "f8", memberId: "m2", body: "One week, then a short nudge that makes it easy for them: include a two-line blurb about you they can forward.", createdAt: "2026-11-01T02:00:00Z", upvotes: ["m9"] },
   ],
   projects: [
+    { id: "pr8", client: "Arroyo Capital", year: 2026, term: "Fall", practice: "Strategy", sector: "Investing", categories: ["Due diligence", "Market sizing"], summary: "Commercial diligence on a regional HVAC services roll-up.", deliverables: [], lead: "m6" },
+    { id: "pr9", client: "Kiln Labs", year: 2026, term: "Fall", practice: "Digital", sector: "Climate tech", categories: ["Pricing", "Dashboard"], summary: "Usage-based pricing model and a customer dashboard prototype.", deliverables: [], lead: "m7" },
     { id: "pr1", client: "vals.ai", year: 2025, term: "Spring", practice: "Digital", sector: "AI / LLM", categories: ["Benchmarking", "Data pipeline", "Statistical analysis"], summary: "Pipeline injecting racial bias into 2,000 MedQA questions; evaluated 5 bias types across 15+ LLMs. Benchmark published on vals.ai.", deliverables: [{ label: "Final report", url: "#" }, { label: "Pipeline repo", url: "#" }], lead: "m19" },
     { id: "pr2", client: "IBM InstructLab", year: 2024, term: "Fall", practice: "Digital", sector: "SaaS", categories: ["Product design", "Prototype", "User research"], summary: "Functional prototype for reviewing synthetic training data, circulated across IBM teams.", deliverables: [{ label: "Prototype", url: "#" }, { label: "Final deck", url: "#" }], lead: "m20" },
     { id: "pr3", client: "Paulaner Sunset", year: 2024, term: "Spring", practice: "Strategy", sector: "Consumer", categories: ["Market entry", "Customer research", "Survey"], summary: "Customer behavior analysis and student sentiment study for US market entry of a non-alcoholic beverage.", deliverables: [{ label: "Final deck", url: "#" }, { label: "Survey data", url: "#" }], lead: "m21" },
@@ -266,6 +268,27 @@ export const seed: PortalData = {
     { id: "pr6", client: "Mesopetania AI", year: 2023, term: "Spring", practice: "Strategy", sector: "Consumer AI", categories: ["Customer research", "Product strategy", "Retention"], summary: "Research on creators' use of generative AI and recommended features to boost retention.", deliverables: [{ label: "Final deck", url: "#" }], lead: "m20" },
     { id: "pr7", client: "National agriculture transportation team", year: 2023, term: "Spring", practice: "Digital", sector: "Logistics", categories: ["Data cleaning", "Optimization"], summary: "Cleaned and optimized large logistics and supply-chain datasets.", deliverables: [{ label: "Notebook", url: "#" }], lead: "m20" },
   ],
+  // This semester's teams. Each project's lead is on its team automatically.
+  projectTeam: [
+    { projectId: "pr8", memberId: "m9" },
+    { projectId: "pr8", memberId: "m13" },
+    { projectId: "pr8", memberId: "m14" },
+    { projectId: "pr9", memberId: "m11" },
+    { projectId: "pr9", memberId: "m12" },
+    { projectId: "pr9", memberId: "m15" },
+  ],
+  projectTasks: [
+    { id: "pt1", projectId: "pr8", title: "Read the data room index", body: "Skim every folder and flag what's missing for the market model.", week: 8, createdBy: "m6", createdAt: "2026-10-12T17:00:00Z" },
+    { id: "pt2", projectId: "pr8", title: "Market sizing first draft", body: "Top-down and bottom-up TAM for residential HVAC services in the Inland Empire.", week: 10, assigneeId: "m13", createdBy: "m6", createdAt: "2026-10-12T17:00:00Z" },
+    { id: "pt3", projectId: "pr8", title: "Expert call notes", body: "Two calls with former operators; write up in the team doc.", week: 10, assigneeId: "m9", createdBy: "m6", createdAt: "2026-10-12T17:00:00Z" },
+    { id: "pt4", projectId: "pr8", title: "Midpoint deck dry run", body: "Everyone presents their section; 10 minutes each.", week: 11, createdBy: "m6", createdAt: "2026-10-26T17:00:00Z" },
+    { id: "pt5", projectId: "pr9", title: "Pricing interviews", body: "Three customer interviews each; log quotes in the tracker.", week: 9, createdBy: "m7", createdAt: "2026-10-12T17:00:00Z" },
+    { id: "pt6", projectId: "pr9", title: "Dashboard wireframes", body: "Low-fidelity screens for the usage view.", week: 11, assigneeId: "m12", createdBy: "m7", createdAt: "2026-10-26T17:00:00Z" },
+  ],
+  projectTaskDone: {
+    "pt1:m13": "2026-10-28T20:00:00Z",
+    "pt1:m9": "2026-10-29T18:00:00Z",
+  },
   lessons: [
     { id: "l1", projectId: "pr3", memberId: "m21", body: "Screen survey respondents for the exact buyer before launch. A third of our first 200 responses came from people who never buy the category, and we had to rerun the survey.", tags: ["Survey", "Customer research"], createdAt: "2024-05-10T12:00:00Z" },
     { id: "l2", projectId: "pr3", memberId: "m21", body: "Agree on the final deliverable's format in week one. The client wanted a one-page memo for their board, not a 40-slide deck.", tags: ["Scoping", "Client management"], createdAt: "2024-05-12T12:00:00Z" },

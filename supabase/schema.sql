@@ -3,6 +3,10 @@
 -- SQL editor. Sign-in is email + password, invite-only: exec adds a member's
 -- school and/or personal email, and only those emails can create an account
 -- (see "sign-in" below and docs/PORTAL.md).
+--
+-- A new project: run this file, then every file in supabase/migrations/ in
+-- order. They're written to be safe on top of this one, and the last one
+-- sets up photo storage, which needs Supabase's storage schema.
 
 create extension if not exists "pgcrypto";
 
@@ -838,6 +842,74 @@ select
   case when not r.anonymous or r.member_id = current_member_id() or is_exec() then r.member_id end as member_id
 from interview_reports r
 where current_member_id() is not null;
+
+-- ---------------------------------------------------------------- teams
+-- Who's on each project's team for the semester it runs. A project's lead
+-- (projects.lead) is on its team without a row here.
+create table project_members (
+  project_id uuid not null references projects (id) on delete cascade,
+  member_id uuid not null references members (id) on delete cascade,
+  added_by uuid references members (id) on delete set null,
+  created_at timestamptz not null default now(),
+  primary key (project_id, member_id)
+);
+
+-- Tasks a project's lead sets week by week, for the whole team (no assignee)
+-- or one person. Due the Friday of that week of the semester.
+create table project_tasks (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects (id) on delete cascade,
+  title text not null check (length(btrim(title)) between 1 and 200),
+  body text not null default '',
+  week int not null check (week between 1 and 30),
+  assignee_id uuid references members (id) on delete set null,
+  created_by uuid references members (id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create index project_tasks_project_idx on project_tasks (project_id);
+
+-- Each person checks off their own copy of a team task.
+create table project_task_done (
+  task_id uuid not null references project_tasks (id) on delete cascade,
+  member_id uuid not null references members (id) on delete cascade,
+  done_at timestamptz not null default now(),
+  primary key (task_id, member_id)
+);
+
+create or replace function leads_project(p uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from projects where id = p and lead = current_member_id())
+$$;
+
+create or replace function on_project(p uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select leads_project(p) or exists (select 1 from project_members where project_id = p and member_id = current_member_id())
+$$;
+
+alter table project_members enable row level security;
+alter table project_tasks enable row level security;
+alter table project_task_done enable row level security;
+
+-- Every member can see the teams and their tasks; exec runs every team, a
+-- project's lead runs theirs.
+create policy "read teams" on project_members for select using (current_member_id() is not null);
+create policy "exec or lead staff the team" on project_members for all
+  using (is_exec() or leads_project(project_id))
+  with check (is_exec() or leads_project(project_id));
+
+create policy "read team tasks" on project_tasks for select using (current_member_id() is not null);
+create policy "exec or lead set team tasks" on project_tasks for all
+  using (is_exec() or leads_project(project_id))
+  with check (is_exec() or leads_project(project_id));
+
+-- Leads see who's done what; you can only check off a task on your own team.
+create policy "read check-offs" on project_task_done for select using (current_member_id() is not null);
+create policy "check off your own team tasks" on project_task_done for insert with check (
+  member_id = current_member_id()
+  and exists (select 1 from project_tasks t where t.id = task_id and on_project(t.project_id) and (t.assignee_id is null or t.assignee_id = current_member_id()))
+);
+create policy "uncheck your own" on project_task_done for delete using (member_id = current_member_id());
+
 
 -- The public website reads site_content anonymously; only exec can change it.
 create policy "public read site" on site_content for select using (true);

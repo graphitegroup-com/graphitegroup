@@ -31,26 +31,57 @@ export function emptyData(): PortalData {
     posts: [],
     replies: [],
     projects: [],
+    projectTeam: [],
+    projectTasks: [],
+    projectTaskDone: {},
     lessons: [],
     templates: [],
     settings: { calendar: defaultCalendar() },
   };
 }
 
+const PAGE = 1000;
+
+/** Columns that order each table's pages; tables not listed have an id. */
+const ORDER: Record<string, string[]> = {
+  member_private: ["member_id"],
+  task_completions: ["template_id", "term", "member_id"],
+  application_notes_visible: ["company", "cycle", "notes", "member_id"],
+  company_application_stats: ["company_key"],
+  outreach_private_notes: ["outreach_id"],
+  forum_votes: ["member_id", "post_id", "reply_id"],
+  settings: ["key"],
+  invites: ["email"],
+  firms: ["id"],
+  project_members: ["project_id", "member_id"],
+  project_task_done: ["task_id", "member_id"],
+};
+
 /** Everything the signed-in member may see, in one round of parallel queries. */
 export async function loadAll(sb: SupabaseClient): Promise<PortalData> {
+  // Supabase returns at most 1,000 rows a request (its "max rows" setting). Each
+  // table is read in pages, in a fixed order so no row is skipped or repeated,
+  // until the count the database reports has arrived.
   const q = async (table: string) => {
-    const { data, error } = await sb.from(table).select("*");
-    if (error) {
-      // A table or view the code expects isn't there: the database is behind the code.
-      const missing = error.code === "PGRST205" || error.code === "42P01" || /could not find the table|does not exist/i.test(error.message);
-      throw new Error(
-        missing
-          ? `The database is missing an update (no "${table}"). In Supabase's SQL editor, run the newest file in supabase/migrations/, then reload this page.`
-          : `Couldn't load ${table}: ${error.message}`,
-      );
+    const order = ORDER[table] ?? ["id"];
+    const rows: R.Row[] = [];
+    for (;;) {
+      let req = sb.from(table).select("*", { count: "exact" });
+      for (const col of order) req = req.order(col, { ascending: true, nullsFirst: true });
+      const { data, error, count } = await req.range(rows.length, rows.length + PAGE - 1);
+      if (error) throw loadError(table, error);
+      rows.push(...((data ?? []) as R.Row[]));
+      if (!data?.length || count == null || rows.length >= count) return rows;
     }
-    return (data ?? []) as R.Row[];
+  };
+  const loadError = (table: string, error: { code?: string; message: string }) => {
+    // A table or view the code expects isn't there: the database is behind the code.
+    const missing = error.code === "PGRST205" || error.code === "42P01" || /could not find the table|does not exist/i.test(error.message);
+    return new Error(
+      missing
+        ? `The database is missing an update (no "${table}"). In Supabase's SQL editor, run the newest file in supabase/migrations/, then reload this page.`
+        : `Couldn't load ${table}: ${error.message}`,
+    );
   };
   const [
     members,
@@ -79,6 +110,9 @@ export async function loadAll(sb: SupabaseClient): Promise<PortalData> {
     templates,
     settings,
     invites,
+    team,
+    projectTasks,
+    projectTaskDone,
   ] = await Promise.all([
     q("members"),
     q("member_private"),
@@ -106,6 +140,9 @@ export async function loadAll(sb: SupabaseClient): Promise<PortalData> {
     q("templates"),
     q("settings"),
     q("invites"),
+    q("project_members"),
+    q("project_tasks"),
+    q("project_task_done"),
   ]);
 
   const phone = new Map(privateRows.map((r) => [r.member_id as string, String(r.phone ?? "")]));
@@ -155,6 +192,9 @@ export async function loadAll(sb: SupabaseClient): Promise<PortalData> {
     posts: posts.map((r) => R.postFrom(r, vs)),
     replies: replies.map((r) => R.replyFrom(r, vs)),
     projects: projects.map(R.projectFrom),
+    projectTeam: team.map((r) => ({ projectId: String(r.project_id), memberId: String(r.member_id) })),
+    projectTasks: projectTasks.map(R.projectTaskFrom),
+    projectTaskDone: Object.fromEntries(projectTaskDone.map((r) => [`${r.task_id}:${r.member_id}`, String(r.done_at)])),
     lessons: lessons.map(R.lessonFrom),
     templates: templates.map(R.docTemplateFrom),
     settings: { calendar: calendar ?? defaultCalendar() },
