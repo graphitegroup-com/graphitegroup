@@ -359,6 +359,73 @@ export type ProjectTask = {
   createdAt: string;
 };
 
+/* ---------------------------------------------------------------- casing */
+
+export const CASE_TYPES = ["Profitability", "Market entry", "Market sizing", "Growth", "Pricing", "M&A", "Operations", "New product", "Turnaround", "Other"] as const;
+export type CaseType = (typeof CASE_TYPES)[number];
+export const CASE_FORMATS = ["Interviewer-led", "Candidate-led"] as const;
+export type CaseFormat = (typeof CASE_FORMATS)[number];
+
+/** A casebook: a PDF or folder of practice cases that opens in Google Drive. */
+export type Casebook = {
+  id: string;
+  title: string;
+  /** Where it's from, e.g. "Graphite Group, 2025". */
+  source: string;
+  driveUrl: string;
+  description: string;
+  addedBy: string;
+  createdAt: string;
+};
+
+/** One practice case, inside one casebook. */
+export type CaseStudy = {
+  id: string;
+  casebookId: string;
+  title: string;
+  /** Where to find it in the casebook, e.g. "12" or "12-15". */
+  page: string;
+  type: CaseType;
+  format: CaseFormat;
+  industry: string;
+  /** The setup in a sentence, with no answers: everyone sees it. */
+  summary: string;
+  addedBy: string;
+  createdAt: string;
+};
+
+/** What a member rates once they've done a case, each 1 to 5. Difficulty and math are required. */
+export const CASE_RATINGS = [
+  { key: "difficulty", label: "Difficulty", hint: "Overall, how hard was it?", scale: "1 easy, 5 very hard" },
+  { key: "math", label: "Math", hint: "Calculations: sizing, breakevens, mental math.", scale: "1 almost none, 5 heavy" },
+  { key: "exhibits", label: "Charts and data", hint: "Reading exhibits and tables and pulling out what matters.", scale: "1 none, 5 dense" },
+  { key: "structure", label: "Structuring", hint: "How hard it was to build the framework.", scale: "1 obvious, 5 tricky" },
+  { key: "creativity", label: "Creativity", hint: "Brainstorming and judgment calls.", scale: "1 little, 5 a lot" },
+  { key: "quality", label: "Worth practicing", hint: "Would you recommend it to another member?", scale: "1 skip it, 5 must do" },
+] as const;
+export type CaseRatingKey = (typeof CASE_RATINGS)[number]["key"];
+export const CASE_ROLES = ["Candidate", "Interviewer"] as const;
+export type CaseRole = (typeof CASE_ROLES)[number];
+
+/**
+ * A member's record of doing a case: saving one is what marks it done. Other
+ * members' reviews of a case stay hidden until you've done it yourself.
+ */
+export type CaseReview = {
+  caseId: string;
+  memberId: string;
+  completedAt: string;
+  role: CaseRole;
+  ratings: Partial<Record<CaseRatingKey, Score>>;
+  /** How long it took, in minutes. */
+  minutes?: number;
+  notes: string;
+  updatedAt?: string;
+};
+
+/** Totals over every member's review of a case, visible before you've done it. */
+export type CaseStats = { done: number; rated: number; written: number; avg: Partial<Record<CaseRatingKey, number>> };
+
 /** What members know about a firm itself. Any member can set or correct its type. */
 export type Firm = { name: string; type: CompanyType; updatedBy?: string; updatedAt?: string };
 
@@ -441,6 +508,12 @@ export type PortalData = {
   projectTasks: ProjectTask[];
   /** `${taskId}:${memberId}` -> when that person checked it off. */
   projectTaskDone: Record<string, string>;
+  casebooks: Casebook[];
+  cases: CaseStudy[];
+  /** Your own reviews, plus other members' on cases you've done. */
+  caseReviews: CaseReview[];
+  /** Live data only: totals over every member's review (case_stats), by case id. */
+  caseStats?: Record<string, CaseStats>;
   lessons: Lesson[];
   templates: Template[];
   settings: Settings;

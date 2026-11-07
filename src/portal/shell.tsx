@@ -19,6 +19,7 @@ const ICONS = {
   network: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20a6.5 6.5 0 0 1 13 0M16 4.3a3.5 3.5 0 0 1 0 6.4M18.5 14a6.5 6.5 0 0 1 3 6",
   directory: "M5 3.5h14v17H5zM12 12a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5zM8 17.5a4 4 0 0 1 8 0",
   teams: "M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6.5 20a5.5 5.5 0 0 1 11 0M5.5 10.5a2.25 2.25 0 1 1 0-4.5M18.5 10.5a2.25 2.25 0 1 0 0-4.5M2.5 18a4 4 0 0 1 2.6-3.7M21.5 18a4 4 0 0 0-2.6-3.7",
+  casing: "M5 4.5h11.5a2 2 0 0 1 2 2v13H7a2 2 0 0 1-2-2zM5 17.5a2 2 0 0 1 2-2h11.5M9 8.5h6M9 11.5h4",
   projects: "M3.5 6.5a1.5 1.5 0 0 1 1.5-1.5h4l2 2h8a1.5 1.5 0 0 1 1.5 1.5v9.5a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z",
   members: "M12 3.5 4.5 6.5v5.5c0 4.2 3.2 7.6 7.5 8.5 4.3-.9 7.5-4.3 7.5-8.5V6.5z",
   tasks: "M4.5 12a7.5 7.5 0 0 1 13-5.1L19.5 9M19.5 4v5h-5M19.5 12a7.5 7.5 0 0 1-13 5.1L4.5 15M4.5 20v-5h5",
@@ -48,6 +49,7 @@ const NAV: { section?: string; items: NavItem[] }[] = [
     section: "Recruiting",
     items: [
       { href: "/portal/recruiting", label: "My recruiting", icon: "recruiting", members: true },
+      { href: "/portal/casing", label: "Casing", icon: "casing", members: true },
       { href: "/portal/companies", label: "Companies", icon: "companies" },
       { href: "/portal/network", label: "Network", icon: "network" },
     ],

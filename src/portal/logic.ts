@@ -4,9 +4,13 @@
  */
 
 import {
+  CASE_RATINGS,
   FIRM_DIMENSIONS,
   STAGES_REACHED,
   type AppNote,
+  type CaseReview,
+  type CaseStats,
+  type CaseStudy,
   type Application,
   type Audience,
   type FirmAppStats,
@@ -827,3 +831,49 @@ export const withProtocol = (url: string) => (/^https?:\/\//i.test(url.trim()) ?
 
 /** Whether a pasted link points at a LinkedIn profile. */
 export const isLinkedInUrl = (url: string) => /^linkedin\.com\/(in|pub)\/[^/]+/.test(normalizeLinkedIn(url));
+
+/* ---------------------------------------------------------------- casing */
+
+/** Your review of a case, if you've done it. Saving one is what marks it done. */
+export const caseDoneBy = (data: Pick<PortalData, "caseReviews">, caseId: string, memberId: string) =>
+  data.caseReviews.find((r) => r.caseId === caseId && r.memberId === memberId);
+
+/**
+ * Totals over every member's review of a case, which everyone sees before
+ * doing it. Live, the database works them out (case_stats), since other
+ * members' reviews only reach your browser for cases you've done.
+ */
+export function caseStats(data: Pick<PortalData, "caseReviews" | "caseStats">, caseId: string): CaseStats {
+  if (data.caseStats) return data.caseStats[caseId] ?? { done: 0, rated: 0, written: 0, avg: {} };
+  const rs = data.caseReviews.filter((r) => r.caseId === caseId);
+  const avg: CaseStats["avg"] = {};
+  for (const { key } of CASE_RATINGS) {
+    const xs = rs.map((r) => r.ratings[key]).filter((x): x is NonNullable<typeof x> => x != null);
+    if (xs.length) avg[key] = xs.reduce((a, b) => a + b, 0) / xs.length;
+  }
+  return { done: rs.length, rated: rs.filter((r) => r.ratings.difficulty != null).length, written: rs.filter((r) => r.notes.trim()).length, avg };
+}
+
+/**
+ * Reviews of a case the viewer may read: none until they've done it, so
+ * nobody's thoughts spoil it; then everyone's, theirs first, then newest.
+ */
+export function caseReviewsFor(data: Pick<PortalData, "caseReviews">, caseId: string, viewerId: string): CaseReview[] {
+  if (!caseDoneBy(data, caseId, viewerId)) return [];
+  return data.caseReviews
+    .filter((r) => r.caseId === caseId)
+    .sort((a, b) => (a.memberId === viewerId ? -1 : b.memberId === viewerId ? 1 : b.completedAt.localeCompare(a.completedAt)));
+}
+
+/** Whether a review still needs its required ratings. */
+export const caseNeedsRating = (r?: CaseReview) => !!r && (r.ratings.difficulty == null || r.ratings.math == null);
+
+/** "p. 12" for display, or "" when no page was given. */
+export const casePage = (c: Pick<CaseStudy, "page">) => (c.page.trim() ? `p. ${c.page.trim().replace(/^p(age)?\.?\s*/i, "")}` : "");
+
+/** Another case with this title in the same casebook, ignoring case and spacing. */
+export const duplicateCase = (cases: CaseStudy[], casebookId: string, title: string, except?: string) =>
+  cases.find((c) => c.id !== except && c.casebookId === casebookId && c.title.trim().toLowerCase().replace(/\s+/g, " ") === title.trim().toLowerCase().replace(/\s+/g, " "));
+
+/** Links that open in a browser: http(s) only, so a pasted "javascript:" link can't run. */
+export const isWebUrl = (url: string) => /^https?:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?([/?#]\S*)?$/i.test(url.trim());

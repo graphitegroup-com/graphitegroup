@@ -322,6 +322,46 @@ export function planSync(prev: PortalData, next: PortalData, meId: string): { op
     }
   }
 
+  /*
+    Casing: casebooks are added before their cases and removed after them (a
+    casebook can only go once it's empty). A review is keyed by case and
+    member; saving one marks the case done, removing it marks it not done.
+  */
+  if (prev.casebooks !== next.casebooks) tableOps(ops, "casebooks", "casebook", prev.casebooks, next.casebooks, R.casebookTo, { remove: false });
+  if (prev.cases !== next.cases) tableOps(ops, "cases", "case", prev.cases, next.cases, R.caseTo);
+  if (prev.caseReviews !== next.caseReviews) {
+    const key = (r: { caseId: string; memberId: string }) => `${r.caseId}:${r.memberId}`;
+    const before = new Map(prev.caseReviews.map((r) => [key(r), r]));
+    const after = new Map(next.caseReviews.map((r) => [key(r), r]));
+    const gone = new Set(prev.cases.filter((c) => !next.cases.some((x) => x.id === c.id)).map((c) => c.id));
+    // A removed case takes its reviews with it in the database.
+    for (const r of prev.caseReviews.filter((x) => !after.has(key(x)) && !gone.has(x.caseId))) {
+      ops.push({
+        label: "remove case review",
+        run: (c) => check(c.sb.from("case_reviews").delete().match({ case_id: r.caseId, member_id: r.memberId }), "Couldn't mark the case not done").then(() => {}),
+      });
+    }
+    const added = next.caseReviews.filter((x) => !before.has(key(x)));
+    if (added.length) ops.push({ label: "add case review", run: (c) => check(c.sb.from("case_reviews").insert(added.map(R.caseReviewTo)), "Couldn't save the review").then(() => {}) });
+    for (const r of next.caseReviews.filter((x) => before.has(key(x)) && !same(before.get(key(x)), x))) {
+      ops.push({
+        label: "update case review",
+        run: async (c) => {
+          const rows = await check(
+            c.sb.from("case_reviews").update(R.caseReviewTo(r)).match({ case_id: r.caseId, member_id: r.memberId }).select("case_id"),
+            "Couldn't save the review",
+          );
+          if (!rows?.length) throw new Error("Couldn't save the review: you can only change your own");
+        },
+      });
+    }
+  }
+  if (prev.casebooks !== next.casebooks) {
+    for (const b of prev.casebooks.filter((x) => !next.casebooks.some((y) => y.id === x.id))) {
+      ops.push({ label: "remove casebook", run: (c) => check(c.sb.from("casebooks").delete().eq("id", b.id), "Couldn't remove the casebook").then(() => {}) });
+    }
+  }
+
   if (prev.lessons !== next.lessons) tableOps(ops, "lessons", "lesson", prev.lessons, next.lessons, R.lessonTo);
   if (prev.templates !== next.templates) tableOps(ops, "templates", "template", prev.templates, next.templates, R.docTemplateTo);
 

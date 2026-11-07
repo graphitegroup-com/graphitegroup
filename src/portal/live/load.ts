@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { companySlug } from "../logic";
-import type { FirmAppStats, PortalData, Settings } from "../types";
+import type { CaseStats, FirmAppStats, PortalData, Settings } from "../types";
 import * as R from "./rows";
 
 /** Until exec sets this year's semester dates in Recurring tasks. */
@@ -34,6 +34,10 @@ export function emptyData(): PortalData {
     projectTeam: [],
     projectTasks: [],
     projectTaskDone: {},
+    casebooks: [],
+    cases: [],
+    caseReviews: [],
+    caseStats: {},
     lessons: [],
     templates: [],
     settings: { calendar: defaultCalendar() },
@@ -55,6 +59,8 @@ const ORDER: Record<string, string[]> = {
   firms: ["id"],
   project_members: ["project_id", "member_id"],
   project_task_done: ["task_id", "member_id"],
+  case_reviews: ["case_id", "member_id"],
+  case_stats: ["case_id"],
 };
 
 /** Everything the signed-in member may see, in one round of parallel queries. */
@@ -113,6 +119,10 @@ export async function loadAll(sb: SupabaseClient): Promise<PortalData> {
     team,
     projectTasks,
     projectTaskDone,
+    casebooks,
+    cases,
+    caseReviews,
+    caseStatRows,
   ] = await Promise.all([
     q("members"),
     q("member_private"),
@@ -143,6 +153,10 @@ export async function loadAll(sb: SupabaseClient): Promise<PortalData> {
     q("project_members"),
     q("project_tasks"),
     q("project_task_done"),
+    q("casebooks"),
+    q("cases"),
+    q("case_reviews"),
+    q("case_stats"),
   ]);
 
   const phone = new Map(privateRows.map((r) => [r.member_id as string, String(r.phone ?? "")]));
@@ -195,6 +209,10 @@ export async function loadAll(sb: SupabaseClient): Promise<PortalData> {
     projectTeam: team.map((r) => ({ projectId: String(r.project_id), memberId: String(r.member_id) })),
     projectTasks: projectTasks.map(R.projectTaskFrom),
     projectTaskDone: Object.fromEntries(projectTaskDone.map((r) => [`${r.task_id}:${r.member_id}`, String(r.done_at)])),
+    casebooks: casebooks.map(R.casebookFrom),
+    cases: cases.map(R.caseFrom),
+    caseReviews: caseReviews.map(R.caseReviewFrom),
+    caseStats: Object.fromEntries(caseStatRows.map((r): [string, CaseStats] => [String(r.case_id), R.caseStatsFrom(r)])),
     lessons: lessons.map(R.lessonFrom),
     templates: templates.map(R.docTemplateFrom),
     settings: { calendar: calendar ?? defaultCalendar() },

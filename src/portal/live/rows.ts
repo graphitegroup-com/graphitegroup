@@ -5,26 +5,31 @@
   anonymous row; a blank member becomes "" and reads as "Anonymous member".
 */
 
-import type {
-  AppNote,
-  Application,
-  Comment,
-  Contact,
-  Firm,
-  FirmGrade,
-  ForumPost,
-  ForumReply,
-  InterviewQuestion,
-  InterviewReport,
-  Job,
-  Lesson,
-  Member,
-  Outreach,
-  Project,
-  ProjectTask,
-  RoleChange,
-  TaskTemplate,
-  Template,
+import {
+  CASE_RATINGS,
+  type AppNote,
+  type Application,
+  type CaseReview,
+  type CaseStats,
+  type CaseStudy,
+  type Casebook,
+  type Comment,
+  type Contact,
+  type Firm,
+  type FirmGrade,
+  type ForumPost,
+  type ForumReply,
+  type InterviewQuestion,
+  type InterviewReport,
+  type Job,
+  type Lesson,
+  type Member,
+  type Outreach,
+  type Project,
+  type ProjectTask,
+  type RoleChange,
+  type TaskTemplate,
+  type Template,
 } from "../types";
 
 // Rows come back from PostgREST as JSON; each mapper reads the columns it needs.
@@ -453,4 +458,78 @@ export const projectTaskTo = (t: ProjectTask): Row => ({
   assignee_id: t.assigneeId ?? null,
   created_by: t.createdBy || null,
   created_at: t.createdAt || undefined,
+});
+
+/* ---------------------------------------------------------------- casing */
+
+export const casebookFrom = (r: Row): Casebook => ({
+  id: r.id,
+  title: str(r.title),
+  source: str(r.source),
+  driveUrl: str(r.drive_url),
+  description: str(r.description),
+  addedBy: str(r.added_by),
+  createdAt: str(r.created_at),
+});
+export const casebookTo = (b: Casebook): Row => ({
+  id: b.id,
+  title: b.title.trim(),
+  source: b.source.trim(),
+  drive_url: b.driveUrl.trim(),
+  description: b.description.trim(),
+  added_by: b.addedBy || null,
+  created_at: b.createdAt || undefined,
+});
+
+export const caseFrom = (r: Row): CaseStudy => ({
+  id: r.id,
+  casebookId: r.casebook_id,
+  title: str(r.title),
+  page: str(r.page),
+  type: r.case_type,
+  format: r.format,
+  industry: str(r.industry),
+  summary: str(r.summary),
+  addedBy: str(r.added_by),
+  createdAt: str(r.created_at),
+});
+export const caseTo = (c: CaseStudy): Row => ({
+  id: c.id,
+  casebook_id: c.casebookId,
+  title: c.title.trim(),
+  page: c.page.trim(),
+  case_type: c.type,
+  format: c.format,
+  industry: c.industry.trim(),
+  summary: c.summary.trim(),
+  added_by: c.addedBy || null,
+  created_at: c.createdAt || undefined,
+});
+
+export const caseReviewFrom = (r: Row): CaseReview => ({
+  caseId: r.case_id,
+  memberId: r.member_id,
+  completedAt: str(r.completed_at),
+  role: r.role,
+  ratings: Object.fromEntries(CASE_RATINGS.filter(({ key }) => r[key] != null).map(({ key }) => [key, Number(r[key])])),
+  minutes: r.minutes == null ? undefined : Number(r.minutes),
+  notes: str(r.notes),
+  updatedAt: opt(r.updated_at),
+});
+export const caseReviewTo = (v: CaseReview): Row => ({
+  case_id: v.caseId,
+  member_id: v.memberId,
+  completed_at: v.completedAt,
+  role: v.role,
+  ...Object.fromEntries(CASE_RATINGS.map(({ key }) => [key, v.ratings[key] ?? null])),
+  minutes: v.minutes ?? null,
+  notes: v.notes.trim(),
+  updated_at: v.updatedAt ?? new Date().toISOString(),
+});
+
+export const caseStatsFrom = (r: Row): CaseStats => ({
+  done: Number(r.done) || 0,
+  rated: Number(r.rated) || 0,
+  written: Number(r.written) || 0,
+  avg: Object.fromEntries(CASE_RATINGS.filter(({ key }) => r[key] != null).map(({ key }) => [key, Number(r[key])])),
 });
