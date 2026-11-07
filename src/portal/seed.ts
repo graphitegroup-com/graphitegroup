@@ -78,6 +78,11 @@ export const seed: PortalData = {
   ],
   taskDone: { "t1:F2026:m1": "2026-09-02T12:00:00Z", "t4:F2026:m2": "2026-08-12T12:00:00Z", "t2:F2026:m4": "2026-08-18T12:00:00Z" },
   // Everyone has set up their sign-in except Leo, added this fall and not yet signed in.
+  // Approved to join, not set up yet. Try "Set up your account" with one of these in the preview.
+  invites: [
+    { email: "maya.rivera@pomona.edu", role: "Associate Consultant", addedBy: "m1", createdAt: "2026-10-30T18:00:00Z" },
+    { email: "jt.nakamura@cmc.edu", role: "Associate Consultant", addedBy: "m1", createdAt: "2026-10-30T18:00:00Z" },
+  ],
   accounts: Object.fromEntries(
     Array.from({ length: 21 }, (_, i) => `m${i + 1}`)
       .filter((id) => id !== "m16")
@@ -253,6 +258,8 @@ export const seed: PortalData = {
     { id: "fr11", postId: "f8", memberId: "m2", body: "One week, then a short nudge that makes it easy for them: include a two-line blurb about you they can forward.", createdAt: "2026-11-01T02:00:00Z", upvotes: ["m9"] },
   ],
   projects: [
+    { id: "pr8", client: "Arroyo Capital", year: 2026, term: "Fall", practice: "Strategy", sector: "Investing", categories: ["Due diligence", "Market sizing"], summary: "Commercial diligence on a regional HVAC services roll-up.", deliverables: [], lead: "m6" },
+    { id: "pr9", client: "Kiln Labs", year: 2026, term: "Fall", practice: "Digital", sector: "Climate tech", categories: ["Pricing", "Dashboard"], summary: "Usage-based pricing model and a customer dashboard prototype.", deliverables: [], lead: "m7" },
     { id: "pr1", client: "vals.ai", year: 2025, term: "Spring", practice: "Digital", sector: "AI / LLM", categories: ["Benchmarking", "Data pipeline", "Statistical analysis"], summary: "Pipeline injecting racial bias into 2,000 MedQA questions; evaluated 5 bias types across 15+ LLMs. Benchmark published on vals.ai.", deliverables: [{ label: "Final report", url: "#" }, { label: "Pipeline repo", url: "#" }], lead: "m19" },
     { id: "pr2", client: "IBM InstructLab", year: 2024, term: "Fall", practice: "Digital", sector: "SaaS", categories: ["Product design", "Prototype", "User research"], summary: "Functional prototype for reviewing synthetic training data, circulated across IBM teams.", deliverables: [{ label: "Prototype", url: "#" }, { label: "Final deck", url: "#" }], lead: "m20" },
     { id: "pr3", client: "Paulaner Sunset", year: 2024, term: "Spring", practice: "Strategy", sector: "Consumer", categories: ["Market entry", "Customer research", "Survey"], summary: "Customer behavior analysis and student sentiment study for US market entry of a non-alcoholic beverage.", deliverables: [{ label: "Final deck", url: "#" }, { label: "Survey data", url: "#" }], lead: "m21" },
@@ -260,6 +267,60 @@ export const seed: PortalData = {
     { id: "pr5", client: "Gem Real Estate", year: 2023, term: "Fall", practice: "Strategy", sector: "Real Estate", categories: ["Competitive benchmarking", "Positioning"], summary: "Benchmarking and amenity recommendations to lift ADR and length of stay for a new resort.", deliverables: [{ label: "Final deck", url: "#" }], lead: "m21" },
     { id: "pr6", client: "Mesopetania AI", year: 2023, term: "Spring", practice: "Strategy", sector: "Consumer AI", categories: ["Customer research", "Product strategy", "Retention"], summary: "Research on creators' use of generative AI and recommended features to boost retention.", deliverables: [{ label: "Final deck", url: "#" }], lead: "m20" },
     { id: "pr7", client: "National agriculture transportation team", year: 2023, term: "Spring", practice: "Digital", sector: "Logistics", categories: ["Data cleaning", "Optimization"], summary: "Cleaned and optimized large logistics and supply-chain datasets.", deliverables: [{ label: "Notebook", url: "#" }], lead: "m20" },
+  ],
+  // This semester's teams. Each project's lead is on its team automatically.
+  projectTeam: [
+    { projectId: "pr8", memberId: "m9" },
+    { projectId: "pr8", memberId: "m13" },
+    { projectId: "pr8", memberId: "m14" },
+    { projectId: "pr9", memberId: "m11" },
+    { projectId: "pr9", memberId: "m12" },
+    { projectId: "pr9", memberId: "m15" },
+  ],
+  projectTasks: [
+    { id: "pt1", projectId: "pr8", title: "Read the data room index", body: "Skim every folder and flag what's missing for the market model.", week: 8, createdBy: "m6", createdAt: "2026-10-12T17:00:00Z" },
+    { id: "pt2", projectId: "pr8", title: "Market sizing first draft", body: "Top-down and bottom-up TAM for residential HVAC services in the Inland Empire.", week: 10, assigneeId: "m13", createdBy: "m6", createdAt: "2026-10-12T17:00:00Z" },
+    { id: "pt3", projectId: "pr8", title: "Expert call notes", body: "Two calls with former operators; write up in the team doc.", week: 10, assigneeId: "m9", createdBy: "m6", createdAt: "2026-10-12T17:00:00Z" },
+    { id: "pt4", projectId: "pr8", title: "Midpoint deck dry run", body: "Everyone presents their section; 10 minutes each.", week: 11, createdBy: "m6", createdAt: "2026-10-26T17:00:00Z" },
+    { id: "pt5", projectId: "pr9", title: "Pricing interviews", body: "Three customer interviews each; log quotes in the tracker.", week: 9, createdBy: "m7", createdAt: "2026-10-12T17:00:00Z" },
+    { id: "pt6", projectId: "pr9", title: "Dashboard wireframes", body: "Low-fidelity screens for the usage view.", week: 11, assigneeId: "m12", createdBy: "m7", createdAt: "2026-10-26T17:00:00Z" },
+  ],
+  projectTaskDone: {
+    "pt1:m13": "2026-10-28T20:00:00Z",
+    "pt1:m9": "2026-10-29T18:00:00Z",
+  },
+  casebooks: [
+    { id: "cb1", title: "Graphite Casebook", source: "Graphite Group, 2025 edition", driveUrl: "https://drive.google.com/", description: "Cases written by Graphite's exec board, from first-round to final-round difficulty. Start here.", addedBy: "m5", createdAt: "2025-09-02T17:00:00Z" },
+    { id: "cb2", title: "Claremont Consulting Casebook", source: "5C consulting clubs, 2024", driveUrl: "https://drive.google.com/", description: "Interviewer-led cases in the style of most first rounds, with full math solutions.", addedBy: "m4", createdAt: "2025-09-10T17:00:00Z" },
+    { id: "cb3", title: "Healthcare Case Pack", source: "Graphite alumni, 2023", driveUrl: "https://drive.google.com/", description: "Short cases on hospitals, pharma and health tech.", addedBy: "m19", createdAt: "2024-02-14T17:00:00Z" },
+  ],
+  cases: [
+    { id: "cs1", casebookId: "cb1", title: "Coffee chain profit decline", page: "4", type: "Profitability", format: "Interviewer-led", industry: "Restaurants", summary: "A regional coffee chain's profit fell 20% in two years while revenue grew. Why, and what should it do?", addedBy: "m5", createdAt: "2025-09-02T17:00:00Z" },
+    { id: "cs2", casebookId: "cb1", title: "Electric scooters in a new city", page: "11", type: "Market entry", format: "Candidate-led", industry: "Transportation", summary: "A scooter-sharing company is deciding whether to launch in a mid-sized US city.", addedBy: "m5", createdAt: "2025-09-02T17:00:00Z" },
+    { id: "cs3", casebookId: "cb1", title: "Tennis balls sold in the US", page: "18", type: "Market sizing", format: "Interviewer-led", industry: "Consumer goods", summary: "Estimate how many tennis balls are sold in the US each year.", addedBy: "m5", createdAt: "2025-09-02T17:00:00Z" },
+    { id: "cs4", casebookId: "cb1", title: "Pricing a new diabetes drug", page: "23", type: "Pricing", format: "Interviewer-led", industry: "Pharmaceuticals", summary: "A drugmaker is launching a once-weekly diabetes treatment. How should it set the price?", addedBy: "m5", createdAt: "2025-09-02T17:00:00Z" },
+    { id: "cs5", casebookId: "cb2", title: "Regional bank going digital", page: "7", type: "Growth", format: "Candidate-led", industry: "Financial services", summary: "A regional bank is losing younger customers to online banks. How should it grow its deposit base?", addedBy: "m4", createdAt: "2025-09-10T17:00:00Z" },
+    { id: "cs6", casebookId: "cb2", title: "Pet food brand acquisition", page: "15", type: "M&A", format: "Interviewer-led", industry: "Private equity", summary: "A private equity fund is weighing an offer for a premium pet food brand.", addedBy: "m4", createdAt: "2025-09-10T17:00:00Z" },
+    { id: "cs7", casebookId: "cb2", title: "Airline lounge expansion", page: "22", type: "Operations", format: "Interviewer-led", industry: "Airlines", summary: "An airline's lounges are overcrowded at peak times. Should it build more or change who gets in?", addedBy: "m4", createdAt: "2025-09-10T17:00:00Z" },
+    { id: "cs8", casebookId: "cb3", title: "Hospital supply costs", page: "3", type: "Operations", format: "Interviewer-led", industry: "Healthcare", summary: "A hospital system's supply costs per patient rose faster than its peers'.", addedBy: "m19", createdAt: "2024-02-14T17:00:00Z" },
+    { id: "cs9", casebookId: "cb3", title: "Telehealth startup launch", page: "9", type: "New product", format: "Candidate-led", industry: "Health tech", summary: "A telehealth startup wants to add a mental health service. Is it worth it?", addedBy: "m19", createdAt: "2024-02-14T17:00:00Z" },
+  ],
+  caseReviews: [
+    { caseId: "cs1", memberId: "m9", completedAt: "2026-09-20T18:00:00Z", role: "Candidate", ratings: { difficulty: 3, math: 3, exhibits: 4, structure: 2, creativity: 3, quality: 5 }, minutes: 30, notes: "The revenue growth is a distraction: it all comes from new stores, and same-store margins are what fell. Ask for cost per cup early. The exhibit on rent is the key one." },
+    { caseId: "cs1", memberId: "m10", completedAt: "2026-09-24T18:00:00Z", role: "Interviewer", ratings: { difficulty: 3, math: 2, exhibits: 4, structure: 3, creativity: 2, quality: 4 }, minutes: 35, notes: "Good first case to give. Push the candidate to quantify the margin drop before brainstorming causes." },
+    { caseId: "cs1", memberId: "m13", completedAt: "2026-10-15T18:00:00Z", role: "Candidate", ratings: { difficulty: 2, math: 2, exhibits: 3, structure: 2, creativity: 3, quality: 4 }, minutes: 25, notes: "I got stuck on the store-count math; write the table out before calculating." },
+    { caseId: "cs1", memberId: "m6", completedAt: "2026-02-11T18:00:00Z", role: "Candidate", ratings: { difficulty: 3, math: 3, exhibits: 3, structure: 3, creativity: 2, quality: 4 }, notes: "" },
+    { caseId: "cs2", memberId: "m10", completedAt: "2026-10-02T18:00:00Z", role: "Candidate", ratings: { difficulty: 4, math: 3, exhibits: 2, structure: 4, creativity: 4, quality: 4 }, minutes: 40, notes: "Candidate-led, so you have to drive. The city regulation question decides it; nobody mentions it unless you ask." },
+    { caseId: "cs2", memberId: "m11", completedAt: "2026-10-09T18:00:00Z", role: "Candidate", ratings: { difficulty: 4, math: 2, exhibits: 2, structure: 5, creativity: 4, quality: 3 }, notes: "Hard to structure. Breakeven per scooter is the only real math." },
+    { caseId: "cs3", memberId: "m9", completedAt: "2026-09-12T18:00:00Z", role: "Candidate", ratings: { difficulty: 2, math: 4, structure: 2, creativity: 2, quality: 3 }, minutes: 15, notes: "Segment by casual and club players; the interviewer accepts anything between 250 and 400 million if your logic is clean." },
+    { caseId: "cs3", memberId: "m17", completedAt: "2026-10-01T18:00:00Z", role: "Candidate", ratings: { difficulty: 2, math: 4, structure: 1, creativity: 2, quality: 3 }, minutes: 15, notes: "" },
+    { caseId: "cs3", memberId: "m13", completedAt: "2026-11-04T18:00:00Z", role: "Candidate", ratings: {}, notes: "" },
+    { caseId: "cs4", memberId: "m6", completedAt: "2026-03-05T18:00:00Z", role: "Candidate", ratings: { difficulty: 5, math: 4, exhibits: 5, structure: 4, creativity: 4, quality: 5 }, minutes: 45, notes: "Value-based pricing against insulin costs, then check the payer exhibit. The last exhibit changes the answer." },
+    { caseId: "cs4", memberId: "m2", completedAt: "2026-04-01T18:00:00Z", role: "Interviewer", ratings: { difficulty: 5, math: 5, exhibits: 4, structure: 4, creativity: 3, quality: 5 }, notes: "Save this for people with a few cases behind them." },
+    { caseId: "cs6", memberId: "m10", completedAt: "2026-10-20T18:00:00Z", role: "Candidate", ratings: { difficulty: 4, math: 5, exhibits: 3, structure: 3, creativity: 2, quality: 4 }, minutes: 40, notes: "Heavy on the deal math: multiples, synergies, payback. Bring a calculator mindset." },
+    { caseId: "cs6", memberId: "m1", completedAt: "2026-10-22T18:00:00Z", role: "Interviewer", ratings: { difficulty: 4, math: 5, exhibits: 3, structure: 3, creativity: 3, quality: 4 }, notes: "" },
+    { caseId: "cs6", memberId: "m4", completedAt: "2026-10-25T18:00:00Z", role: "Candidate", ratings: { difficulty: 3, math: 4, exhibits: 3, structure: 3, creativity: 2, quality: 3 }, notes: "The synergy numbers in the casebook have a typo on page 17; use the exhibit instead." },
+    { caseId: "cs8", memberId: "m15", completedAt: "2026-10-28T18:00:00Z", role: "Candidate", ratings: { difficulty: 3, math: 3, exhibits: 4, structure: 3, creativity: 3, quality: 4 }, minutes: 30, notes: "Compare to peers by procedure type, not by total spend." },
   ],
   lessons: [
     { id: "l1", projectId: "pr3", memberId: "m21", body: "Screen survey respondents for the exact buyer before launch. A third of our first 200 responses came from people who never buy the category, and we had to rerun the survey.", tags: ["Survey", "Customer research"], createdAt: "2024-05-10T12:00:00Z" },

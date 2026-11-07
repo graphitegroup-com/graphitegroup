@@ -18,6 +18,8 @@ const ICONS = {
   companies: "M5 20.5V4.5h9v16M14 9.5h5v11M3 20.5h18M8 8h3M8 11.5h3M8 15h3",
   network: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20a6.5 6.5 0 0 1 13 0M16 4.3a3.5 3.5 0 0 1 0 6.4M18.5 14a6.5 6.5 0 0 1 3 6",
   directory: "M5 3.5h14v17H5zM12 12a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5zM8 17.5a4 4 0 0 1 8 0",
+  teams: "M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6.5 20a5.5 5.5 0 0 1 11 0M5.5 10.5a2.25 2.25 0 1 1 0-4.5M18.5 10.5a2.25 2.25 0 1 0 0-4.5M2.5 18a4 4 0 0 1 2.6-3.7M21.5 18a4 4 0 0 0-2.6-3.7",
+  casing: "M5 4.5h11.5a2 2 0 0 1 2 2v13H7a2 2 0 0 1-2-2zM5 17.5a2 2 0 0 1 2-2h11.5M9 8.5h6M9 11.5h4",
   projects: "M3.5 6.5a1.5 1.5 0 0 1 1.5-1.5h4l2 2h8a1.5 1.5 0 0 1 1.5 1.5v9.5a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z",
   members: "M12 3.5 4.5 6.5v5.5c0 4.2 3.2 7.6 7.5 8.5 4.3-.9 7.5-4.3 7.5-8.5V6.5z",
   tasks: "M4.5 12a7.5 7.5 0 0 1 13-5.1L19.5 9M19.5 4v5h-5M19.5 12a7.5 7.5 0 0 1-13 5.1L4.5 15M4.5 20v-5h5",
@@ -47,6 +49,7 @@ const NAV: { section?: string; items: NavItem[] }[] = [
     section: "Recruiting",
     items: [
       { href: "/portal/recruiting", label: "My recruiting", icon: "recruiting", members: true },
+      { href: "/portal/casing", label: "Casing", icon: "casing", members: true },
       { href: "/portal/companies", label: "Companies", icon: "companies" },
       { href: "/portal/network", label: "Network", icon: "network" },
     ],
@@ -55,6 +58,7 @@ const NAV: { section?: string; items: NavItem[] }[] = [
     section: "Graphite",
     items: [
       { href: "/portal/directory", label: "Directory", icon: "directory" },
+      { href: "/portal/teams", label: "Teams", icon: "teams", members: true },
       { href: "/portal/projects", label: "Projects", icon: "projects" },
     ],
   },
@@ -68,7 +72,7 @@ const NAV: { section?: string; items: NavItem[] }[] = [
 ];
 
 export function PortalShell({ children }: { children: ReactNode }) {
-  const { me, ready, signOut, live, needsSetup, recovering, error, dismissError } = usePortal();
+  const { me, ready, signOut, live, needsSetup, recovering, error, dismissError, viewingAs, realMe, viewAs } = usePortal();
   const pathname = usePagePath();
   const go = useGo();
   const [open, setOpen] = useState(false);
@@ -177,9 +181,30 @@ export function PortalShell({ children }: { children: ReactNode }) {
             Preview with sample data. Changes are saved in this browser only.
           </div>
         )}
+        {viewingAs && (
+          <div className="sticky top-12 z-30 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-[#b9d3ea] bg-[#e8f1fa] px-4 py-2 text-[13px] text-[#0f3b63] md:px-8 lg:top-0">
+            <span>
+              Viewing the portal as <span className="font-medium">{fullName(viewingAs)}</span> ({isAlum(viewingAs) ? `alum, class of ${viewingAs.gradYear}` : viewingAs.execTitle ?? viewingAs.role}).
+              Changes are off.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                viewAs(null);
+                go("/portal/admin");
+              }}
+              className="shrink-0 font-medium hover:underline"
+            >
+              Back to {realMe ? `${realMe.firstName}'s` : "my"} view
+            </button>
+          </div>
+        )}
         {error && (
           <div role="alert" className="flex items-start justify-between gap-3 border-b border-[#f0c9c5] bg-[#fbe9e8] px-4 py-2 text-[13px] text-[#a8261b] md:px-8">
-            <span>{error} The page has been refreshed to match what&apos;s saved.</span>
+            <span>
+              {error}
+              {!viewingAs && " The page has been refreshed to match what's saved."}
+            </span>
             <button type="button" onClick={dismissError} className="shrink-0 font-medium hover:underline">
               Dismiss
             </button>

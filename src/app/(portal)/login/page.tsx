@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MarkTile } from "@/components/mark";
 import { STATIC_PREVIEW } from "@/lib/preview";
 import { useGo } from "@/lib/use-go";
-import { fullName, isAlum, memberByEmail } from "@/portal/logic";
+import { fullName, inviteFor, isAlum, memberByEmail, memberFromInvite } from "@/portal/logic";
 import { usePortal } from "@/portal/store";
 import { ROLES, SCHOOLS, type Member, type Role, type School, type Term } from "@/portal/types";
 import { Field, Input, Select, fieldCls } from "@/portal/ui";
@@ -50,7 +50,7 @@ const primaryBtn =
 const linkBtn = "text-[13px] text-link hover:underline";
 
 export default function LoginPage() {
-  const { data, me, ready, live, auth, needsSetup, recovering, signIn, signOut, update } = usePortal();
+  const { data, me, ready, live, auth, needsSetup, recovering, signIn, signOut, update, error: loadError, invite, joinFromInvite } = usePortal();
   const go = useGo();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
@@ -59,6 +59,10 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [setupId, setSetupId] = useState<string | null>(null);
+  // Sign-in failed because the email was never confirmed: offer to send the link again.
+  const [unconfirmed, setUnconfirmed] = useState(false);
+  // Demo: setting up from an invite rather than an existing roster entry.
+  const [setupInvite, setSetupInvite] = useState<string | null>(null);
 
   // Live: once signed in and set up, the portal is the next stop.
   const done = live && ready && !!me && !needsSetup && !recovering;
@@ -69,6 +73,7 @@ export default function LoginPage() {
   const switchTo = (m: Mode) => {
     setMode(m);
     setError(null);
+    setUnconfirmed(false);
     setPassword("");
     setConfirm("");
   };
@@ -82,8 +87,10 @@ export default function LoginPage() {
     if (!password) return setError("Enter your password.");
     if (live && auth) {
       setBusy(true);
-      setError(await auth.signIn(email, password));
+      const err = await auth.signIn(email, password);
       setBusy(false);
+      setError(err);
+      setUnconfirmed(!!err && /confirm your email/i.test(err));
       return;
     }
     const m = memberByEmail(data.members, email);
@@ -107,9 +114,16 @@ export default function LoginPage() {
       return;
     }
     const m = memberByEmail(data.members, email);
-    if (!m) return setError(notOnRoster);
+    if (!m) {
+      const inv = inviteFor(data.invites, email);
+      if (!inv) return setError(notOnRoster);
+      setSetupInvite(inv.email);
+      setSetupId(null);
+      return switchTo("details");
+    }
     if (data.accounts[m.id]) return setError("This account is already set up. Sign in, or reset your password if you've forgotten it.");
     setSetupId(m.id);
+    setSetupInvite(null);
     switchTo("details");
   };
 
@@ -125,28 +139,66 @@ export default function LoginPage() {
     switchTo("reset-sent");
   };
 
-  const finishSetup = (details: Member) => {
+  // A new member built from an invite, kept stable so the form doesn't reset while typing.
+  const inviteEmail = live ? invite?.email : setupInvite;
+  const invitedMember = useMemo(() => {
+    const inv = live ? invite : setupInvite ? inviteFor(data.invites, setupInvite) : undefined;
+    return inv ? memberFromInvite(inv) : undefined;
+    // Rebuild only when a different invite is being set up.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inviteEmail]);
+
+  const finishSetup = async (details: Member): Promise<string | null> => {
+    const isNew = !data.members.some((x) => x.id === details.id);
+    if (isNew && live) {
+      // Invited, not a member yet: the database creates the member and removes the invite.
+      const err = await joinFromInvite?.(details);
+      if (err) return err;
+      go("/portal");
+      return null;
+    }
+    const emails = [details.schoolEmail, details.personalEmail].map((e) => e.trim().toLowerCase()).filter(Boolean);
     update((d) => ({
       ...d,
-      members: d.members.map((x) => (x.id === details.id ? details : x)),
+      members: isNew ? [...d.members, details] : d.members.map((x) => (x.id === details.id ? details : x)),
       accounts: { ...d.accounts, [details.id]: new Date().toISOString() },
+      invites: d.invites.filter((i) => !emails.includes(i.email)),
     }));
     if (!live) signIn(details.id);
     go("/portal");
+    return null;
   };
 
-  // Live: arrived from a password-reset link, or signed in but not set up yet.
-  const liveDetails = live && ready && me && needsSetup ? me : undefined;
-  const demoDetails = !live && mode === "details" ? data.members.find((m) => m.id === setupId) : undefined;
+  // Live: signed in but not set up yet, either as a member or from an invite.
+  const liveDetails = live && ready ? (me && needsSetup ? me : !me && invite ? invitedMember : undefined) : undefined;
+  const demoDetails = !live && mode === "details" ? (setupInvite ? invitedMember : data.members.find((m) => m.id === setupId)) : undefined;
   const setupMember = liveDetails ?? demoDetails;
-  // Signed in with an account whose email the roster no longer has.
-  const orphaned = live && ready && !!auth?.email && !me;
+  // Signed in, but no member came back: either loading failed, or the roster no longer has this email.
+  const noMember = live && ready && !!auth?.email && !me && !invite;
+  const loadFailed = noMember && !!loadError;
+  const orphaned = noMember && !loadError;
 
   let body: React.ReactNode;
   if (!ready && live) {
     body = <p className="text-center text-[13.5px] text-muted">Loading</p>;
   } else if (live && recovering) {
     body = <NewPasswordForm onSave={(p) => auth!.setPassword(p)} />;
+  } else if (loadFailed) {
+    body = (
+      <div className="space-y-4 text-[13.5px]">
+        <p role="alert" className="rounded-[3px] border border-[#f0c9c5] bg-[#fbe9e8] px-3 py-2 text-[#a8261b]">
+          You&apos;re signed in as {auth?.email}, but the portal couldn&apos;t load. {loadError}
+        </p>
+        <div className="flex gap-4">
+          <button type="button" className={linkBtn} onClick={() => window.location.reload()}>
+            Try again
+          </button>
+          <button type="button" className={linkBtn} onClick={signOut}>
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
   } else if (orphaned) {
     body = (
       <div className="space-y-4 text-[13.5px]">
@@ -188,8 +240,9 @@ export default function LoginPage() {
       <div className="space-y-4">
         <p role="status" className="rounded-[3px] border border-edge bg-stone px-3 py-3 text-[13.5px]">
           Check your inbox. We sent a link to <span className="font-medium">{email.trim()}</span>. Open it on any device to confirm your email, then finish setting up
-          your details.
+          your details. It can take a few minutes, and sometimes lands in spam.
         </p>
+        <ResendConfirmation email={email} send={live && auth ? auth.resendConfirmation : undefined} />
         <BackLink onClick={() => switchTo("signin")} />
       </div>
     );
@@ -226,6 +279,7 @@ export default function LoginPage() {
           <Input id="signin-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </Field>
         {error && <FormError>{error}</FormError>}
+        {unconfirmed && <ResendConfirmation email={email} send={auth?.resendConfirmation} />}
         <button type="submit" className={primaryBtn} disabled={busy}>
           {busy ? "Signing in" : "Sign in"}
         </button>
@@ -346,8 +400,10 @@ function NewPasswordForm({ onSave }: { onSave: (password: string) => Promise<str
  * they know. The email they signed in with can't be changed here, or the
  * account would lose its link to the roster.
  */
-function DetailsForm({ member, lockedEmail, onDone }: { member: Member; lockedEmail?: string; onDone: (m: Member) => void }) {
+function DetailsForm({ member, lockedEmail, onDone }: { member: Member; lockedEmail?: string; onDone: (m: Member) => Promise<string | null> }) {
   const [f, setF] = useState<Member>(() => ({ ...member }));
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const set = <K extends keyof Member>(k: K, v: Member[K]) => setF((x) => ({ ...x, [k]: v }));
   const exec = member.role === "Executive Board";
   const lockSchool = !!lockedEmail && lockedEmail.trim().toLowerCase() === member.schoolEmail.trim().toLowerCase();
@@ -357,13 +413,17 @@ function DetailsForm({ member, lockedEmail, onDone }: { member: Member; lockedEm
   return (
     <form
       className="space-y-4"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        if (valid) onDone({ ...f, firstName: f.firstName.trim(), lastName: f.lastName.trim(), personalEmail: f.personalEmail.trim(), schoolEmail: f.schoolEmail.trim() });
+        if (!valid) return;
+        setBusy(true);
+        setError(await onDone({ ...f, firstName: f.firstName.trim(), lastName: f.lastName.trim(), personalEmail: f.personalEmail.trim(), schoolEmail: f.schoolEmail.trim() }));
+        setBusy(false);
       }}
     >
       <p className="text-[13.5px] text-ink-2">
-        {lockedEmail ? "Step 2 of 2. " : ""}Hi {member.firstName}. Check your details; you can change most of them later in your profile.
+        {lockedEmail ? "Step 2 of 2. " : ""}
+        {member.firstName ? `Hi ${member.firstName}. Check your details; you can change most of them later in your profile.` : "Welcome to Graphite. Tell us who you are; you can change most of this later in your profile."}
       </p>
       <div className="grid grid-cols-2 gap-3">
         <Field label="First name">
@@ -384,7 +444,7 @@ function DetailsForm({ member, lockedEmail, onDone }: { member: Member; lockedEm
           <Select id="d-school" options={SCHOOLS} value={f.school} onChange={(e) => set("school", e.target.value as School)} />
         </Field>
         <Field label="Graduation year">
-          <Input id="d-year" type="number" min={2015} max={2100} value={f.gradYear} onChange={(e) => set("gradYear", Number(e.target.value) || f.gradYear)} />
+          <Input id="d-year" type="number" min={2015} max={2100} placeholder="e.g. 2029" value={f.gradYear || ""} onChange={(e) => set("gradYear", Number(e.target.value) || 0)} />
         </Field>
         <Field label="Joined Graphite">
           <Select id="d-joined" options={termOptions()} value={f.joinedTerm} onChange={(e) => set("joinedTerm", e.target.value as Term)} />
@@ -403,9 +463,48 @@ function DetailsForm({ member, lockedEmail, onDone }: { member: Member; lockedEm
       <Field label="Phone" hint="Optional. Only you and the executive board can see it.">
         <Input id="d-phone" type="tel" value={f.phone} onChange={(e) => set("phone", e.target.value)} />
       </Field>
-      <button type="submit" disabled={!valid} className={primaryBtn}>
-        Finish and open the portal
+      {error && <FormError>{error}</FormError>}
+      <button type="submit" disabled={!valid || busy} className={primaryBtn}>
+        {busy ? "Saving" : "Finish and open the portal"}
       </button>
     </form>
+  );
+}
+
+/** "Didn't get it?" Sends the confirmation link again, at most once a minute. */
+function ResendConfirmation({ email, send }: { email: string; send?: (email: string) => Promise<string | null> }) {
+  const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
+  const [error, setError] = useState<string | null>(null);
+  const [wait, setWait] = useState(0);
+  useEffect(() => {
+    if (wait <= 0) return;
+    const t = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(t);
+  }, [wait]);
+  return (
+    <div className="text-[13px]">
+      <button
+        type="button"
+        className={`${linkBtn} disabled:cursor-not-allowed disabled:text-faint disabled:no-underline`}
+        disabled={state === "sending" || wait > 0 || !email.includes("@")}
+        onClick={async () => {
+          setState("sending");
+          setError(null);
+          const err = send ? await send(email) : null;
+          if (err) {
+            setError(err);
+            setState("idle");
+          } else {
+            setState("sent");
+            setWait(60);
+          }
+        }}
+      >
+        {wait > 0 ? `Sent. You can send another in ${wait}s` : state === "sending" ? "Sending" : "Didn't get it? Send the confirmation email again"}
+      </button>
+      {state === "sent" && wait === 0 && <span className="ml-1 text-muted">Sent.</span>}
+      {!send && state === "sent" && <p className="mt-1 text-[12.5px] text-muted">(The preview doesn&apos;t send email.)</p>}
+      {error && <p className="mt-1 text-[12.5px] text-[#a8261b]">{error}</p>}
+    </div>
   );
 }

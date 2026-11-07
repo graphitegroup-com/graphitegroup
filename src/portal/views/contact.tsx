@@ -6,7 +6,7 @@ import { useRouteParam } from "@/lib/use-route-param";
 import { usePortal } from "@/portal/store";
 import { byline, companySlug, fmtDate, fullName, localToday, outreachStage, pct, responseStats, uid } from "@/portal/logic";
 import { ContactGradeCard } from "@/portal/grades";
-import { MoveContactForm, StageChip } from "@/portal/outreach";
+import { MoveContactForm, StageChip, EditContactForm } from "@/portal/outreach";
 import type { Comment, Outreach } from "@/portal/types";
 import { Avatar, Button, Card, Check, Drawer, Empty, Field, Input, PageTitle, Select, Stat, StatGroup, Td, Textarea, Th, linkCls, rowCls, PRIVATE_HINT, PrivateNote } from "@/portal/ui";
 
@@ -46,6 +46,7 @@ export default function ContactView() {
   const { data, me, update } = usePortal();
   const [logging, setLogging] = useState(false);
   const [moving, setMoving] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<OutreachDraft>(newOutreachDraft);
   const [comment, setComment] = useState("");
 
@@ -118,9 +119,14 @@ export default function ContactView() {
         back={{ href: "/portal/network", label: "Network" }}
         title={c.name}
         actions={
-          <Button variant="secondary" onClick={() => setMoving(true)}>
-            Update role or company
-          </Button>
+          <span className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => setMoving(true)}>
+              Update role or company
+            </Button>
+            <Button variant="secondary" onClick={() => setEditing(true)}>
+              Edit details
+            </Button>
+          </span>
         }
         sub={
           <>
@@ -321,6 +327,9 @@ export default function ContactView() {
         </div>
       </div>
 
+      <Drawer open={editing} onClose={() => setEditing(false)} title={`Edit ${c.name}`}>
+        {editing && <EditContactForm contact={c} onDone={() => setEditing(false)} />}
+      </Drawer>
       <Drawer open={moving} onClose={() => setMoving(false)} title={`Update ${c.name}'s role`}>
         {moving && <MoveContactForm contact={c} onDone={() => setMoving(false)} />}
       </Drawer>

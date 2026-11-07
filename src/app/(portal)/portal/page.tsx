@@ -3,7 +3,7 @@
 import Link from "@/components/app-link";
 import { useEffect, useState } from "react";
 import { useGo } from "@/lib/use-go";
-import { academicYearLabel, classStanding, companySlug, fmtDate, followUpsDue, isAlum, isExec, promotionSuggestions, tasksFor, threadActivity, whenLabel, type TaskInstance } from "@/portal/logic";
+import { academicYearLabel, classStanding, companySlug, fmtDate, followUpsDue, fullName, isAlum, isExec, projectFor, promotionSuggestions, tasksFor, teamTasksFor, threadActivity, whenLabel, type TaskInstance, type TeamTask } from "@/portal/logic";
 import { ThreadRow, useThreadVote } from "@/portal/forum";
 import { usePortal } from "@/portal/store";
 import { Badge, ButtonLink, Card, Empty, PageTitle, Stat, StatGroup } from "@/portal/ui";
@@ -31,6 +31,17 @@ export default function PortalHome() {
   const overdue = open.filter((t) => t.due.getTime() < now.getTime());
   const upcoming = open.filter((t) => t.due.getTime() >= now.getTime());
   const done = tasks.filter((t) => t.done);
+  // This semester's project team and the tasks its lead set for you or the whole team.
+  const project = projectFor(data, me.id, now);
+  const teamTasks = teamTasksFor(me, data, now);
+  const teamOpen = teamTasks.filter((t) => !t.done);
+  const toggleTeam = (t: TeamTask) =>
+    update((d) => {
+      const next = { ...d.projectTaskDone };
+      if (next[t.key]) delete next[t.key];
+      else next[t.key] = new Date().toISOString();
+      return { ...d, projectTaskDone: next };
+    });
 
   const toggle = (t: TaskInstance) =>
     update((d) => {
@@ -57,7 +68,11 @@ export default function PortalHome() {
       <PageTitle title="Home" sub={`${dateLine}. ${me.execTitle ?? me.role}, ${me.practice}, academic year ${academicYearLabel()}.`} />
 
       <StatGroup className={isExec(me) ? "" : "md:grid-cols-3!"}>
-        <Stat label="Open tasks" value={open.length} sub={overdue.length ? `${overdue.length} overdue` : "Nothing overdue"} />
+        <Stat
+          label="Open tasks"
+          value={open.length + teamOpen.length}
+          sub={[overdue.length ? `${overdue.length} overdue` : "Nothing overdue", teamOpen.length ? `${teamOpen.length} from your team` : ""].filter(Boolean).join(", ")}
+        />
         <Stat label="Active applications" value={activeApps.length} sub={`${myApps.length} tracked`} />
         <Stat label="Follow-ups due" value={due.length} sub={`${new Set(myChats.map((o) => o.contactId)).size} people in your network`} />
         {isExec(me) && <Stat label="Active members" value={active.length} sub={`${seniors.length} seniors this year`} />}
@@ -110,6 +125,53 @@ export default function PortalHome() {
         </div>
 
         <div className="space-y-6">
+          {project && (
+            <Card
+              title={`Your team: ${project.client}`}
+              flush
+              action={
+                <Link href="/portal/teams" className="text-link hover:underline">
+                  See the team
+                </Link>
+              }
+            >
+              {teamOpen.length === 0 ? (
+                <Empty>Nothing due from your team right now.</Empty>
+              ) : (
+                <ul className="divide-y divide-edge">
+                  {teamOpen.slice(0, 5).map((t) => {
+                    const late = t.due.getTime() < now.getTime() - DAY;
+                    const who = t.task.assigneeId ? "You" : "Everyone";
+                    return (
+                      <li key={t.key} className="flex gap-3 px-4 py-2.5">
+                        <input
+                          type="checkbox"
+                          checked={false}
+                          onChange={() => toggleTeam(t)}
+                          className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-accent)]"
+                          aria-label={`Mark "${t.task.title}" done`}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-medium">{t.task.title}</span>
+                          <span className={`block text-[12px] ${late ? "font-medium text-[#a8261b]" : "text-faint"}`}>
+                            Week {t.task.week}, due {fmtDate(t.due)} · {who}
+                          </span>
+                        </span>
+                      </li>
+                    );
+                  })}
+                  {teamOpen.length > 5 && <li className="px-4 py-2 text-[12.5px] text-muted">And {teamOpen.length - 5} more on the Teams page</li>}
+                </ul>
+              )}
+              <p className="border-t border-edge bg-[#fbfbf7] px-4 py-1.5 text-[12px] text-muted">
+                Led by {(() => {
+                  const lead = data.members.find((m) => m.id === project.lead);
+                  return lead ? (lead.id === me.id ? "you" : fullName(lead)) : "nobody yet";
+                })()}
+              </p>
+            </Card>
+          )}
+
           {isExec(me) && (
             <Card title="Needs attention" flush>
               <ul className="divide-y divide-edge">

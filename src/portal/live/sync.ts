@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { companySlug } from "../logic";
+import { companySlug, uid } from "../logic";
 import type { PortalData } from "../types";
 import * as R from "./rows";
 
@@ -66,6 +66,31 @@ function tableOps<T extends { id: string }>(
   }
 }
 
+/* ---------------------------------------------------------------- headshots */
+
+/**
+ * Photos live in Supabase Storage, not in the members table: a data URL from
+ * the photo picker is uploaded to headshots/<member id>/<random>.<ext> and
+ * the row keeps only its public address, so loading the roster stays small.
+ */
+export const HEADSHOTS = "headshots";
+
+async function uploadHeadshot(c: Ctx, memberId: string, dataUrl: string): Promise<string> {
+  const blob = await (await fetch(dataUrl)).blob();
+  const type = blob.type || "image/jpeg";
+  const ext = type.includes("png") ? "png" : type.includes("webp") ? "webp" : "jpg";
+  const path = `${memberId}/${uid()}.${ext}`;
+  const { error } = await c.sb.storage.from(HEADSHOTS).upload(path, blob, { contentType: type, upsert: false, cacheControl: "31536000" });
+  if (error) throw new Error(`Couldn't upload the photo: ${error.message}`);
+  return c.sb.storage.from(HEADSHOTS).getPublicUrl(path).data.publicUrl;
+}
+
+/** Where a headshot lives in storage, if the address is one of ours. */
+export function headshotPath(url?: string) {
+  const m = url?.match(new RegExp(`/storage/v1/object/public/${HEADSHOTS}/([^?#]+)`));
+  return m ? decodeURIComponent(m[1]) : undefined;
+}
+
 /** The writes that turn `prev` into `next`, in a safe order, and what to reload afterwards. */
 export function planSync(prev: PortalData, next: PortalData, meId: string): { ops: Op[]; reload: Set<Reload> } {
   const ops: Op[] = [];
@@ -83,8 +108,17 @@ export function planSync(prev: PortalData, next: PortalData, meId: string): { op
       if (!m || added.includes(m)) continue;
       const row = R.memberTo(m);
       if (setupDone.includes(id)) row.setup_completed_at = next.accounts[id];
-      ops.push({ label: "update member", run: (c) => updateRow(c, "members", id, row, "Couldn't save the profile") });
       const old = before.get(id);
+      ops.push({
+        label: "update member",
+        run: async (c) => {
+          if (typeof row.photo_url === "string" && row.photo_url.startsWith("data:")) row.photo_url = await uploadHeadshot(c, id, row.photo_url);
+          await updateRow(c, "members", id, row, "Couldn't save the profile");
+          // Best effort: the old file goes once the new address is saved.
+          const was = headshotPath(old?.photo);
+          if (was && old?.photo !== row.photo_url) await c.sb.storage.from(HEADSHOTS).remove([was]);
+        },
+      });
       if (old && old.phone !== m.phone) {
         ops.push({
           label: "save phone",
@@ -97,6 +131,25 @@ export function planSync(prev: PortalData, next: PortalData, meId: string): { op
     }
     if (prev.members.some((m) => !next.members.some((x) => x.id === m.id))) {
       throw new Error("Members can't be deleted from the portal. Ask the Managing Director to remove them in Supabase.");
+    }
+  }
+
+  /* Invites are keyed by email. Exec adds and removes them; joining removes them in the database. */
+  if (prev.invites !== next.invites) {
+    const before = new Map(prev.invites.map((i) => [i.email, i]));
+    const after = new Map(next.invites.map((i) => [i.email, i]));
+    const added = next.invites.filter((i) => !before.has(i.email));
+    if (added.length) {
+      ops.push({
+        label: "invite",
+        run: (c) => check(c.sb.from("invites").insert(added.map((i) => ({ email: i.email, role: i.role, added_by: meId }))), "Couldn't save the invites").then(() => {}),
+      });
+    }
+    for (const i of prev.invites.filter((x) => !after.has(x.email))) {
+      ops.push({ label: "remove invite", run: (c) => check(c.sb.from("invites").delete().eq("email", i.email), "Couldn't remove the invite").then(() => {}) });
+    }
+    for (const i of next.invites.filter((x) => before.has(x.email) && before.get(x.email)!.role !== x.role)) {
+      ops.push({ label: "change invite", run: (c) => check(c.sb.from("invites").update({ role: i.role }).eq("email", i.email), "Couldn't change the invite").then(() => {}) });
     }
   }
 
@@ -232,6 +285,83 @@ export function planSync(prev: PortalData, next: PortalData, meId: string): { op
   }
 
   if (prev.projects !== next.projects) tableOps(ops, "projects", "project", prev.projects, next.projects, R.projectTo);
+  /* Teams: membership is keyed by project and member; check-offs by task and member. */
+  if (prev.projectTeam !== next.projectTeam) {
+    const key = (t: { projectId: string; memberId: string }) => `${t.projectId}:${t.memberId}`;
+    const was = new Set(prev.projectTeam.map(key));
+    const now = new Set(next.projectTeam.map(key));
+    for (const t of prev.projectTeam.filter((x) => !now.has(key(x)))) {
+      ops.push({
+        label: "remove from team",
+        run: (c) => check(c.sb.from("project_members").delete().match({ project_id: t.projectId, member_id: t.memberId }), "Couldn't change the team").then(() => {}),
+      });
+    }
+    const added = next.projectTeam.filter((x) => !was.has(key(x)));
+    if (added.length) {
+      ops.push({
+        label: "add to team",
+        run: (c) => check(c.sb.from("project_members").insert(added.map((t) => ({ project_id: t.projectId, member_id: t.memberId, added_by: meId }))), "Couldn't change the team").then(() => {}),
+      });
+    }
+  }
+  if (prev.projectTasks !== next.projectTasks) tableOps(ops, "project_tasks", "team task", prev.projectTasks, next.projectTasks, R.projectTaskTo);
+  if (prev.projectTaskDone !== next.projectTaskDone) {
+    const row = (k: string) => {
+      const [task_id, member_id] = k.split(":");
+      return { task_id, member_id };
+    };
+    for (const k of Object.keys(prev.projectTaskDone).filter((x) => !next.projectTaskDone[x])) {
+      ops.push({ label: "uncheck team task", run: (c) => check(c.sb.from("project_task_done").delete().match(row(k)), "Couldn't update the task").then(() => {}) });
+    }
+    const added = Object.keys(next.projectTaskDone).filter((x) => !prev.projectTaskDone[x]);
+    if (added.length) {
+      ops.push({
+        label: "check team task",
+        run: (c) => check(c.sb.from("project_task_done").insert(added.map((k) => ({ ...row(k), done_at: next.projectTaskDone[k] }))), "Couldn't update the task").then(() => {}),
+      });
+    }
+  }
+
+  /*
+    Casing: casebooks are added before their cases and removed after them (a
+    casebook can only go once it's empty). A review is keyed by case and
+    member; saving one marks the case done, removing it marks it not done.
+  */
+  if (prev.casebooks !== next.casebooks) tableOps(ops, "casebooks", "casebook", prev.casebooks, next.casebooks, R.casebookTo, { remove: false });
+  if (prev.cases !== next.cases) tableOps(ops, "cases", "case", prev.cases, next.cases, R.caseTo);
+  if (prev.caseReviews !== next.caseReviews) {
+    const key = (r: { caseId: string; memberId: string }) => `${r.caseId}:${r.memberId}`;
+    const before = new Map(prev.caseReviews.map((r) => [key(r), r]));
+    const after = new Map(next.caseReviews.map((r) => [key(r), r]));
+    const gone = new Set(prev.cases.filter((c) => !next.cases.some((x) => x.id === c.id)).map((c) => c.id));
+    // A removed case takes its reviews with it in the database.
+    for (const r of prev.caseReviews.filter((x) => !after.has(key(x)) && !gone.has(x.caseId))) {
+      ops.push({
+        label: "remove case review",
+        run: (c) => check(c.sb.from("case_reviews").delete().match({ case_id: r.caseId, member_id: r.memberId }), "Couldn't mark the case not done").then(() => {}),
+      });
+    }
+    const added = next.caseReviews.filter((x) => !before.has(key(x)));
+    if (added.length) ops.push({ label: "add case review", run: (c) => check(c.sb.from("case_reviews").insert(added.map(R.caseReviewTo)), "Couldn't save the review").then(() => {}) });
+    for (const r of next.caseReviews.filter((x) => before.has(key(x)) && !same(before.get(key(x)), x))) {
+      ops.push({
+        label: "update case review",
+        run: async (c) => {
+          const rows = await check(
+            c.sb.from("case_reviews").update(R.caseReviewTo(r)).match({ case_id: r.caseId, member_id: r.memberId }).select("case_id"),
+            "Couldn't save the review",
+          );
+          if (!rows?.length) throw new Error("Couldn't save the review: you can only change your own");
+        },
+      });
+    }
+  }
+  if (prev.casebooks !== next.casebooks) {
+    for (const b of prev.casebooks.filter((x) => !next.casebooks.some((y) => y.id === x.id))) {
+      ops.push({ label: "remove casebook", run: (c) => check(c.sb.from("casebooks").delete().eq("id", b.id), "Couldn't remove the casebook").then(() => {}) });
+    }
+  }
+
   if (prev.lessons !== next.lessons) tableOps(ops, "lessons", "lesson", prev.lessons, next.lessons, R.lessonTo);
   if (prev.templates !== next.templates) tableOps(ops, "templates", "template", prev.templates, next.templates, R.docTemplateTo);
 

@@ -4,12 +4,21 @@
  */
 
 import {
+  CASE_RATINGS,
   FIRM_DIMENSIONS,
   STAGES_REACHED,
   type AppNote,
+  type CaseReview,
+  type CaseStats,
+  type CaseStudy,
   type Application,
   type Audience,
   type FirmAppStats,
+  type Invite,
+  type School,
+  type Project,
+  type ProjectTask,
+  type Settings,
   type InterviewQuestion,
   type InterviewReport,
   type QuestionRound,
@@ -100,6 +109,47 @@ export function highestRole(m: Member, changes: RoleChange[]): Role {
 }
 
 /** Finds the member an email belongs to, school or personal, ignoring case and spaces. */
+/** Every email address in pasted text, in any format (one per line, commas, "Name <email>", a spreadsheet column), lowercased and without repeats. */
+export function parseEmails(text: string): string[] {
+  const found = text.match(/[a-z0-9._%+'-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}/gi) ?? [];
+  return [...new Set(found.map((e) => e.toLowerCase().replace(/^[.']+|[.']+$/g, "")))];
+}
+
+const SCHOOL_DOMAINS: [RegExp, School][] = [
+  [/(^|\.)(cmc\.edu|claremontmckenna\.edu)$/, "CMC"],
+  [/(^|\.)pomona\.edu$/, "Pomona"],
+  [/(^|\.)hmc\.edu$/, "Harvey Mudd"],
+  [/(^|\.)scrippscollege\.edu$/, "Scripps"],
+  [/(^|\.)pitzer\.edu$/, "Pitzer"],
+];
+
+/** The Claremont college a school email belongs to, if it's one of theirs. */
+export function schoolForEmail(email: string): School | undefined {
+  const domain = email.trim().toLowerCase().split("@")[1] ?? "";
+  return SCHOOL_DOMAINS.find(([re]) => re.test(domain))?.[1];
+}
+
+export const inviteFor = (invites: Invite[], email: string) => invites.find((i) => i.email === email.trim().toLowerCase());
+
+/** A blank member for someone joining from an invite; they fill in the rest during setup. */
+export function memberFromInvite(inv: Invite, now = new Date()): Member {
+  const school = schoolForEmail(inv.email);
+  return {
+    id: uid(),
+    firstName: "",
+    lastName: "",
+    schoolEmail: school ? inv.email : "",
+    personalEmail: school ? "" : inv.email,
+    phone: "",
+    school: school ?? "CMC",
+    gradYear: 0,
+    practice: "Strategy",
+    role: inv.role,
+    joinedTerm: currentTerm(now),
+    showOnWebsite: true,
+  };
+}
+
 export function memberByEmail(members: Member[], email: string) {
   const e = email.trim().toLowerCase();
   if (!e.includes("@")) return undefined;
@@ -495,6 +545,80 @@ export function applicationPrompt(a: Application, data: Pick<PortalData, "report
   return undefined;
 }
 
+/* ---------------------------------------------------------------- teams */
+
+/** "F2026" for a Fall 2026 project. */
+export const projectTerm = (p: Pick<Project, "term" | "year">): Term => `${p.term === "Fall" ? "F" : "S"}${p.year}`;
+
+/** "Fall 2026" from "F2026". */
+export const termName = (t: Term) => `${t[0] === "F" ? "Fall" : "Spring"} ${t.slice(1)}`;
+
+/** This semester's projects, the one you're on first. */
+export function currentProjects(data: Pick<PortalData, "projects" | "projectTeam">, me?: Member, now = new Date()) {
+  const term = currentTerm(now);
+  const mine = (p: Project) => !!me && onTeam(data, p, me.id);
+  return data.projects.filter((p) => projectTerm(p) === term).sort((a, b) => Number(mine(b)) - Number(mine(a)) || a.client.localeCompare(b.client));
+}
+
+/** Everyone on a project's team: its lead, then the members exec or the lead added. */
+export function teamOf(data: Pick<PortalData, "projectTeam">, p: Project) {
+  const ids = data.projectTeam.filter((t) => t.projectId === p.id).map((t) => t.memberId);
+  return [...new Set([p.lead, ...ids].filter(Boolean))];
+}
+
+export const onTeam = (data: Pick<PortalData, "projectTeam">, p: Project, memberId: string) => teamOf(data, p).includes(memberId);
+
+/** Exec runs every team; a project's lead runs theirs. */
+export const runsTeam = (me: Member | undefined, p: Project) => !!me && (isExec(me) || p.lead === me.id);
+
+/** The member's project this semester, if they're on one. */
+export const projectFor = (data: Pick<PortalData, "projects" | "projectTeam">, memberId: string, now = new Date()) =>
+  data.projects.find((p) => projectTerm(p) === currentTerm(now) && onTeam(data, p, memberId));
+
+/** Which week of the semester today falls in (1 = the first week of classes), clamped to the semester. */
+export function semesterWeek(term: Term, settings: Settings, now = new Date()) {
+  const sem = term[0] === "F" ? settings.calendar.fall : settings.calendar.spring;
+  const w = Math.floor((now.getTime() - weekOneMonday(sem).getTime()) / (7 * 86_400_000)) + 1;
+  return Math.min(Math.max(w, 1), sem.weeks);
+}
+
+/** The semester's length in weeks, from exec's calendar. */
+export const semesterWeeks = (term: Term, settings: Settings) => (term[0] === "F" ? settings.calendar.fall : settings.calendar.spring).weeks;
+
+/** The Friday of a week of the project's semester, from exec's semester calendar. */
+export function projectTaskDue(p: Project, week: number, settings: Settings) {
+  const sem = p.term === "Fall" ? settings.calendar.fall : settings.calendar.spring;
+  return taskDueDate(sem, { anchor: "week", n: week });
+}
+
+export type TeamTask = { task: ProjectTask; project: Project; due: Date; done?: string; key: string };
+
+/**
+ * Put someone on a project's team, taking them off any other team that
+ * semester; null takes them off this semester's teams. A project's lead
+ * stays on the project they lead either way.
+ */
+export function assignToProject(d: PortalData, memberId: string, projectId: string | null, now = new Date()): PortalData {
+  const target = d.projects.find((p) => p.id === projectId);
+  const term = target ? projectTerm(target) : currentTerm(now);
+  const sameTerm = new Set(d.projects.filter((p) => projectTerm(p) === term).map((p) => p.id));
+  const kept = d.projectTeam.filter((t) => !(t.memberId === memberId && sameTerm.has(t.projectId)));
+  return { ...d, projectTeam: target && target.lead !== memberId ? [...kept, { projectId: target.id, memberId }] : kept };
+}
+
+/** Your team's tasks this semester: the whole team's and yours, by due date. */
+export function teamTasksFor(me: Member, data: Pick<PortalData, "projects" | "projectTeam" | "projectTasks" | "projectTaskDone" | "settings">, now = new Date()): TeamTask[] {
+  const p = projectFor(data, me.id, now);
+  if (!p) return [];
+  return data.projectTasks
+    .filter((t) => t.projectId === p.id && (!t.assigneeId || t.assigneeId === me.id))
+    .map((task) => {
+      const key = `${task.id}:${me.id}`;
+      return { task, project: p, due: projectTaskDue(p, task.week, data.settings), done: data.projectTaskDone[key], key };
+    })
+    .sort((a, b) => a.due.getTime() - b.due.getTime() || a.task.title.localeCompare(b.task.title));
+}
+
 /* ---------------------------------------------------------------- question bank */
 
 /** The broad round a report's free-text round falls in. */
@@ -707,3 +831,49 @@ export const withProtocol = (url: string) => (/^https?:\/\//i.test(url.trim()) ?
 
 /** Whether a pasted link points at a LinkedIn profile. */
 export const isLinkedInUrl = (url: string) => /^linkedin\.com\/(in|pub)\/[^/]+/.test(normalizeLinkedIn(url));
+
+/* ---------------------------------------------------------------- casing */
+
+/** Your review of a case, if you've done it. Saving one is what marks it done. */
+export const caseDoneBy = (data: Pick<PortalData, "caseReviews">, caseId: string, memberId: string) =>
+  data.caseReviews.find((r) => r.caseId === caseId && r.memberId === memberId);
+
+/**
+ * Totals over every member's review of a case, which everyone sees before
+ * doing it. Live, the database works them out (case_stats), since other
+ * members' reviews only reach your browser for cases you've done.
+ */
+export function caseStats(data: Pick<PortalData, "caseReviews" | "caseStats">, caseId: string): CaseStats {
+  if (data.caseStats) return data.caseStats[caseId] ?? { done: 0, rated: 0, written: 0, avg: {} };
+  const rs = data.caseReviews.filter((r) => r.caseId === caseId);
+  const avg: CaseStats["avg"] = {};
+  for (const { key } of CASE_RATINGS) {
+    const xs = rs.map((r) => r.ratings[key]).filter((x): x is NonNullable<typeof x> => x != null);
+    if (xs.length) avg[key] = xs.reduce((a, b) => a + b, 0) / xs.length;
+  }
+  return { done: rs.length, rated: rs.filter((r) => r.ratings.difficulty != null).length, written: rs.filter((r) => r.notes.trim()).length, avg };
+}
+
+/**
+ * Reviews of a case the viewer may read: none until they've done it, so
+ * nobody's thoughts spoil it; then everyone's, theirs first, then newest.
+ */
+export function caseReviewsFor(data: Pick<PortalData, "caseReviews">, caseId: string, viewerId: string): CaseReview[] {
+  if (!caseDoneBy(data, caseId, viewerId)) return [];
+  return data.caseReviews
+    .filter((r) => r.caseId === caseId)
+    .sort((a, b) => (a.memberId === viewerId ? -1 : b.memberId === viewerId ? 1 : b.completedAt.localeCompare(a.completedAt)));
+}
+
+/** Whether a review still needs its required ratings. */
+export const caseNeedsRating = (r?: CaseReview) => !!r && (r.ratings.difficulty == null || r.ratings.math == null);
+
+/** "p. 12" for display, or "" when no page was given. */
+export const casePage = (c: Pick<CaseStudy, "page">) => (c.page.trim() ? `p. ${c.page.trim().replace(/^p(age)?\.?\s*/i, "")}` : "");
+
+/** Another case with this title in the same casebook, ignoring case and spacing. */
+export const duplicateCase = (cases: CaseStudy[], casebookId: string, title: string, except?: string) =>
+  cases.find((c) => c.id !== except && c.casebookId === casebookId && c.title.trim().toLowerCase().replace(/\s+/g, " ") === title.trim().toLowerCase().replace(/\s+/g, " "));
+
+/** Links that open in a browser: http(s) only, so a pasted "javascript:" link can't run. */
+export const isWebUrl = (url: string) => /^https?:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?([/?#]\S*)?$/i.test(url.trim());

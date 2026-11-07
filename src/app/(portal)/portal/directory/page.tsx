@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { usePortal } from "@/portal/store";
-import { classAtTimeLabel, classStanding, companySlug, fullName, highestRole, isAlum, isExec, semestersCompleted } from "@/portal/logic";
+import { assignToProject, classAtTimeLabel, classStanding, companySlug, currentProjects, currentTerm, fullName, highestRole, isAlum, isExec, projectFor, semestersCompleted, termName } from "@/portal/logic";
 import Link from "@/components/app-link";
 import { ROLES, SCHOOLS, type Member, type Term } from "@/portal/types";
 import { Avatar, Badge, Button, Drawer, Empty, Input, PageTitle, Select, TableWrap, Tabs, Td, Th, rowCls } from "@/portal/ui";
@@ -35,7 +35,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export default function DirectoryPage() {
-  const { data, me } = usePortal();
+  const { data, me, update } = usePortal();
   const [view, setView] = useState<View>("current");
   const [q, setQ] = useState("");
   const [school, setSchool] = useState(ALL);
@@ -79,6 +79,34 @@ export default function DirectoryPage() {
   );
 
   const selected = data.members.find((m) => m.id === openId);
+
+  // This semester's project: exec assigns anyone; a project's lead adds people to their own team.
+  const projectControl = (m: Member) => {
+    const current = currentProjects(data);
+    const on = projectFor(data, m.id);
+    const leads = current.find((x) => x.lead === m.id);
+    if (leads) return <>Leads {leads.client}</>;
+    const mine = me ? current.filter((x) => isExec(me) || x.lead === me.id) : [];
+    const canSet = mine.length > 0 && (!!me && isExec(me) ? true : !on || mine.some((x) => x.id === on.id));
+    if (!canSet) {
+      return on ? (
+        <Link href="/portal/teams" className="text-link hover:underline" onClick={() => setOpenId(null)}>
+          {on.client}
+        </Link>
+      ) : (
+        <span className="text-muted">{current.length ? "Not on a team" : "No projects set up this semester"}</span>
+      );
+    }
+    return (
+      <Select
+        aria-label={`Project for ${fullName(m)}`}
+        value={on?.id ?? ""}
+        onChange={(e) => update((d) => assignToProject(d, m.id, e.target.value || null))}
+        options={[{ value: "", label: "Not on a team" }, ...mine.map((x) => ({ value: x.id, label: x.client }))]}
+        className="!h-7 text-[13px]"
+      />
+    );
+  };
 
   if (!me) return null;
 
@@ -237,6 +265,7 @@ export default function DirectoryPage() {
               <Row label="Practice">{selected.practice}</Row>
               <Row label={isAlum(selected) ? "Final role" : "Role"}>{roleOf(selected)}</Row>
               {selected.execTitle && <Row label="Exec title">{selected.execTitle}</Row>}
+              {!isAlum(selected) && <Row label={`Project, ${termName(currentTerm())}`}>{projectControl(selected)}</Row>}
               <Row label="Email">
                 {emailOf(selected) ? (
                   <a href={`mailto:${emailOf(selected)}`} className="text-link hover:underline">
